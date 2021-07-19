@@ -108,7 +108,7 @@ def devPathPartitionToDiskAndPartitionId(partitionDevPath):
 
 @staticmethod
 def devPathPartitionToDisk(partitionDevPath):
-    return _Util.devPathPartitionToDiskAndPartitionId(partitionDevPath)[0]
+    return util.devPathPartitionToDiskAndPartitionId(partitionDevPath)[0]
 
 @staticmethod
 def devPathDiskToPartition(diskDevPath, partitionId):
@@ -185,7 +185,7 @@ def bcacheMakeDevice(devPath, backingDeviceOrCacheDevice, blockSize=None, bucket
     if blockSize is None:
         st = os.stat(devPath)
         if stat.S_ISBLK(st.st_mode):
-            out = _Util.cmdCall("/sbin/blockdev", "--getss", devPath)
+            out = util.cmdCall("/sbin/blockdev", "--getss", devPath)
             blockSize = int(out) // 512
         else:
             blockSize = st.st_blksize // 512
@@ -263,7 +263,7 @@ def bcacheMakeDevice(devPath, backingDeviceOrCacheDevice, blockSize=None, bucket
             p += struct.calcsize("Q")
     else:
         # cache_sb.nbuckets
-        value = _Util.getBlkDevSize(devPath) // 512 // bucketSize
+        value = util.getBlkDevSize(devPath) // 512 // bucketSize
         if value < 0x80:
             raise Exception("not enough buckets: %d, need %d", value, 0x80)
         struct.pack_into("Q", bcacheSb, p, value)
@@ -308,15 +308,15 @@ def bcacheMakeDevice(devPath, backingDeviceOrCacheDevice, blockSize=None, bucket
 
 @staticmethod
 def bcacheIsBackingDevice(devPath):
-    return _Util._bcacheIsBackingDeviceOrCachDevice(devPath, True)
+    return util._bcacheIsBackingDeviceOrCachDevice(devPath, True)
 
 @staticmethod
 def bcacheIsCacheDevice(devPath):
-    return _Util._bcacheIsBackingDeviceOrCachDevice(devPath, False)
+    return util._bcacheIsBackingDeviceOrCachDevice(devPath, False)
 
 @staticmethod
 def _bcacheIsBackingDeviceOrCachDevice(devPath, backingDeviceOrCacheDevice):
-    # see C struct definition in _Util.bcacheMakeDevice()
+    # see C struct definition in util.bcacheMakeDevice()
     bcacheSbMagicPreFmt = "QQQ"
     bcacheSbMagicFmt = "16B"
     bcacheSbVersionPreFmt = "QQ"
@@ -351,11 +351,11 @@ def _bcacheIsBackingDeviceOrCachDevice(devPath, backingDeviceOrCacheDevice):
 
 @staticmethod
 def bcacheGetSetUuid(devPath):
-    # see C struct definition in _Util.bcacheMakeDevice()
+    # see C struct definition in util.bcacheMakeDevice()
     bcacheSbSetUuidPreFmt = "QQQ16B16B"
     bcacheSbSetUuidFmt = "16B"
 
-    assert _Util.bcacheIsCacheDevice(devPath)
+    assert util.bcacheIsCacheDevice(devPath)
 
     with open(devPath, "rb") as f:
         f.seek(8 * 512 + struct.calcsize(bcacheSbSetUuidPreFmt))
@@ -401,15 +401,15 @@ def isBlkDevSsdOrHdd(devPath):
 
 @staticmethod
 def getBlkDevSize(devPath):
-    out = _Util.cmdCall("/sbin/blockdev", "--getsz", devPath)
+    out = util.cmdCall("/sbin/blockdev", "--getsz", devPath)
     return int(out) * 512        # unit is byte
 
 @staticmethod
 def getBlkDevPartitionTableType(devPath):
-    if not _Util.devPathIsDiskOrPartition(devPath):
-        devPath = _Util.devPathPartitionToDisk(devPath)
+    if not util.devPathIsDiskOrPartition(devPath):
+        devPath = util.devPathPartitionToDisk(devPath)
 
-    ret = _Util.cmdCall("/sbin/blkid", "-o", "export", devPath)
+    ret = util.cmdCall("/sbin/blkid", "-o", "export", devPath)
     m = re.search("^PTTYPE=(\\S+)$", ret, re.M)
     if m is not None:
         return m.group(1)
@@ -418,7 +418,7 @@ def getBlkDevPartitionTableType(devPath):
 
 @staticmethod
 def getBlkDevFsType(devPath):
-    ret = _Util.cmdCall("/sbin/blkid", "-o", "export", devPath)
+    ret = util.cmdCall("/sbin/blkid", "-o", "export", devPath)
     m = re.search("^TYPE=(\\S+)$", ret, re.M)
     if m is not None:
         return m.group(1).lower()
@@ -430,7 +430,7 @@ def getBlkDevLvmInfo(devPath):
     """Returns (vg-name, lv-name)
         Returns None if the device is not lvm"""
 
-    rc, ret = _Util.cmdCallWithRetCode("/sbin/dmsetup", "info", devPath)
+    rc, ret = util.cmdCallWithRetCode("/sbin/dmsetup", "info", devPath)
     if rc == 0:
         m = re.search("^Name: *(\\S+)$", ret, re.M)
         assert m is not None
@@ -529,7 +529,7 @@ def gptIsEspPartition(devPath):
     assert struct.calcsize(gptHeaderFmt) == 512
 
     # do checking
-    diskDevPath, partId = _Util.devPathPartitionToDiskAndPartitionId(devPath)
+    diskDevPath, partId = util.devPathPartitionToDiskAndPartitionId(devPath)
     with open(diskDevPath, "rb") as f:
         # get protective MBR
         mbrHeader = struct.unpack(mbrHeaderFmt, f.read(struct.calcsize(mbrHeaderFmt)))
@@ -553,7 +553,7 @@ def gptIsEspPartition(devPath):
         partEntry = struct.unpack(gptEntryFmt, f.read(struct.calcsize(gptEntryFmt)))
 
         # check partition GUID
-        if partEntry[0] != _Util.gptNewGuid("C12A7328-F81F-11D2-BA4B-00A0C93EC93B"):
+        if partEntry[0] != util.gptNewGuid("C12A7328-F81F-11D2-BA4B-00A0C93EC93B"):
             return False
 
     return True
@@ -686,7 +686,7 @@ def isBufferAllZero(buf):
 @staticmethod
 def getDevPathListForFixedHdd():
     ret = []
-    for line in _Util.cmdCall("/bin/lsblk", "-o", "NAME,TYPE", "-n").split("\n"):
+    for line in util.cmdCall("/bin/lsblk", "-o", "NAME,TYPE", "-n").split("\n"):
         m = re.fullmatch("(\\S+)\\s+(\\S+)", line)
         if m is None:
             continue
