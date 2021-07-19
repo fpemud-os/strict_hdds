@@ -65,14 +65,14 @@ def parse_storage_layout():
 class ParseStorageLayoutError(Exception):
 
     def __init__(self, layout_class, message):
-        self.layout_name = layout_class.name
-        self.message = message
+        self._layout_name = layout_class.name
+        self._message = message
 
 
 class _StorageLayoutCreator:
 
     @staticmethod
-    def createLayoutBiosSimple(self, hdd=None):
+    def createLayoutBiosSimple(hdd=None):
         if hdd is None:
             hddList = util.getDevPathListForFixedHdd()
             if len(hddList) == 0:
@@ -87,7 +87,7 @@ class _StorageLayoutCreator:
         ])
 
     @staticmethod
-    def createLayoutBiosLvm(self, hddList=None):
+    def createLayoutBiosLvm(hddList=None):
         if hddList is None:
             hddList = util.getDevPathListForFixedHdd()
             if len(hddList) == 0:
@@ -118,7 +118,7 @@ class _StorageLayoutCreator:
         util.cmdCall("/sbin/lvm", "lvcreate", "-l", "%d" % (freePe // 2), "-n", "root", "hdd")
 
     @staticmethod
-    def createLayoutEfiSimple(self, hdd=None):
+    def createLayoutEfiSimple(hdd=None):
         if hdd is None:
             hddList = util.getDevPathListForFixedHdd()
             if len(hddList) == 0:
@@ -129,12 +129,12 @@ class _StorageLayoutCreator:
 
         # create partitions
         util.initializeDisk(hdd, "gpt", [
-            (self.espPartiSizeStr, "vfat"),
+            (_espPartiSizeStr, "vfat"),
             ("*", "ext4"),
         ])
 
     @staticmethod
-    def createLayoutEfiLvm(self, hddList=None):
+    def createLayoutEfiLvm(hddList=None):
         if hddList is None:
             hddList = util.getDevPathListForFixedHdd()
             if len(hddList) == 0:
@@ -147,7 +147,7 @@ class _StorageLayoutCreator:
         for devpath in hddList:
             # create partitions
             util.initializeDisk(devpath, "gpt", [
-                (self.espPartiSizeStr, "vfat"),
+                (_espPartiSizeStr, "vfat"),
                 ("*", "lvm"),
             ])
 
@@ -170,7 +170,7 @@ class _StorageLayoutCreator:
         util.cmdCall("/sbin/lvm", "lvcreate", "-l", "%d" % (freePe // 2), "-n", "root", "hdd")
 
     @staticmethod
-    def createLayoutEfiBcacheLvm(self, ssd=None, hddList=None):
+    def createLayoutEfiBcacheLvm(ssd=None, hddList=None):
         if ssd is None and hddList is None:
             ssdList = []
             for devpath in util.getDevPathListForFixedHdd():
@@ -195,8 +195,8 @@ class _StorageLayoutCreator:
         if ssd is not None:
             # create partitions
             util.initializeDisk(ssd, "gpt", [
-                (self.espPartiSizeStr, "esp"),
-                (self.swapPartiSizeStr, "swap"),
+                (_espPartiSizeStr, "esp"),
+                (_swapPartiSizeStr, "swap"),
                 ("*", "bcache"),
             ])
 
@@ -218,7 +218,7 @@ class _StorageLayoutCreator:
         for devpath in hddList:
             # create partitions
             util.initializeDisk(devpath, "gpt", [
-                (self.espPartiSizeStr, "vfat"),
+                (_espPartiSizeStr, "vfat"),
                 ("*", "bcache"),
             ])
 
@@ -253,7 +253,7 @@ class _StorageLayoutCreator:
 class _StorageLayoutParser:
 
     @staticmethod
-    def getStorageLayout(self):
+    def getStorageLayout():
         rootDev = util.getMountDeviceForPath("/")
         bootDev = util.getMountDeviceForPath("/boot")
 
@@ -263,22 +263,22 @@ class _StorageLayoutParser:
             if lvmInfo is not None:
                 tlist = util.lvmGetSlaveDevPathList(lvmInfo[0])
                 if any(re.fullmatch("/dev/bcache[0-9]+", x) is not None for x in tlist):
-                    ret = self._getEfiBcacheLvmLayout(bootDev)
+                    ret = _StorageLayoutParser._getEfiBcacheLvmLayout(bootDev)
                 else:
-                    ret = self._getEfiLvmLayout(bootDev)
+                    ret = _StorageLayoutParser._getEfiLvmLayout(bootDev)
             else:
-                ret = self._getEfiSimpleLayout(bootDev, rootDev)
+                ret = _StorageLayoutParser._getEfiSimpleLayout(bootDev, rootDev)
         else:
             if util.getBlkDevLvmInfo(rootDev) is not None:
-                ret = self._getBiosLvmLayout()
+                ret = _StorageLayoutParser._getBiosLvmLayout()
             else:
-                ret = self._getBiosSimpleLayout(rootDev)
+                ret = _StorageLayoutParser._getBiosSimpleLayout(rootDev)
 
         assert ret.is_ready()
         return ret
 
     @staticmethod
-    def _getEfiSimpleLayout(self, bootDev, rootDev):
+    def _getEfiSimpleLayout(bootDev, rootDev):
         if not util.gptIsEspPartition(bootDev):
             raise ParseStorageLayoutError(StorageLayoutEfiSimple, "boot device is not ESP partitiion")
 
@@ -302,7 +302,7 @@ class _StorageLayoutParser:
         return ret
 
     @staticmethod
-    def _getEfiLvmLayout(self, bootDev):
+    def _getEfiLvmLayout(bootDev):
         if not util.gptIsEspPartition(bootDev):
             raise ParseStorageLayoutError(StorageLayoutEfiLvm, "boot device is not ESP partitiion")
 
@@ -324,7 +324,7 @@ class _StorageLayoutParser:
                 raise ParseStorageLayoutError(StorageLayoutEfiLvm, "partition type of %s is not \"gpt\"" % (hdd))
             if partId != 2:
                 raise ParseStorageLayoutError(StorageLayoutEfiLvm, "physical volume partition of %s is not %s" % (hdd, util.devPathDiskToPartition(hdd, 2)))
-            if util.getBlkDevSize(util.devPathDiskToPartition(hdd, 1)) != self.espPartiSize:
+            if util.getBlkDevSize(util.devPathDiskToPartition(hdd, 1)) != _espPartiSize:
                 raise ParseStorageLayoutError(StorageLayoutEfiLvm, "%s has an invalid size" % (util.devPathDiskToPartition(hdd, 1)))
             if os.path.exists(util.devPathDiskToPartition(hdd, 3)):
                 raise ParseStorageLayoutError(StorageLayoutEfiLvm, "redundant partition exists on %s" % (hdd))
@@ -360,7 +360,7 @@ class _StorageLayoutParser:
         return ret
 
     @staticmethod
-    def _getEfiBcacheLvmLayout(self, bootDev):
+    def _getEfiBcacheLvmLayout(bootDev):
         if not util.gptIsEspPartition(bootDev):
             raise ParseStorageLayoutError(StorageLayoutEfiBcacheLvm, "boot device is not ESP partitiion")
 
@@ -407,7 +407,7 @@ class _StorageLayoutParser:
             ret.ssdEspParti = util.devPathDiskToPartition(ret.ssd, 1)
             if ret.ssdEspParti != bootDev:
                 raise ParseStorageLayoutError(StorageLayoutEfiBcacheLvm, "SSD is not boot device")
-            if util.getBlkDevSize(ret.ssdEspParti) != self.espPartiSize:
+            if util.getBlkDevSize(ret.ssdEspParti) != _espPartiSize:
                 raise ParseStorageLayoutError(StorageLayoutEfiBcacheLvm, "%s has an invalid size" % (ret.ssdEspParti))
 
             # ret.ssdSwapParti
@@ -445,7 +445,7 @@ class _StorageLayoutParser:
         return ret
 
     @staticmethod
-    def _getBiosSimpleLayout(self, rootDev):
+    def _getBiosSimpleLayout(rootDev):
         ret = StorageLayoutBiosSimple()
 
         # ret.hdd
@@ -462,7 +462,7 @@ class _StorageLayoutParser:
         return ret
 
     @staticmethod
-    def _getBiosLvmLayout(self):
+    def _getBiosLvmLayout():
         ret = StorageLayoutBiosLvm()
 
         # ret.lvmVg
@@ -519,3 +519,12 @@ class _StorageLayoutParser:
             raise ParseStorageLayoutError(StorageLayoutBiosLvm, "no harddisk has boot-code")
 
         return ret
+
+
+_espPartiSize = 512 * 1024 * 1024
+_espPartiSizeStr = "512MiB"
+
+
+_swapSizeInGb = util.getPhysicalMemorySize() * 2
+_swapSize = _swapSizeInGb * 1024 * 1024 * 1024
+_swapPartiSizeStr = "%dGiB" % (_swapSizeInGb)

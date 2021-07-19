@@ -35,6 +35,16 @@ import struct
 import subprocess
 
 
+def getPhysicalMemorySize():
+    with open("/proc/meminfo", "r") as f:
+        # We return memory size in GB.
+        # Since the memory size shown in /proc/meminfo is always a
+        # little less than the real size because various sort of
+        # reservation, so we do a "+1"
+        m = re.search("^MemTotal:\\s+(\\d+)", f.read())
+        return int(m.group(1)) // 1024 // 1024 + 1
+
+
 def cmdCall(cmd, *kargs):
     # call command to execute backstage job
     #
