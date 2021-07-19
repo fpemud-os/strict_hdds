@@ -29,16 +29,18 @@ classif = [
 
 # Do setup
 setup(
-    name='strict_fsh',
+    name='strict_hdds',
     version='0.0.1',
-    description='Operating file system hierarchy in a strict manner',
+    description='Ensures only some optimized harddisk layouts are used.',
     author='Fpemud',
     author_email='fpemud@sina.com',
     license='GPLv3 License',
     platforms='Linux',
     classifiers=classif,
-    url='http://github.com/fpemud/strict_fsh',
+    url='http://github.com/fpemud/strict_hdds',
     download_url='',
-    py_modules=['strict_fsh'],
-    package_dir={'': 'python3'},
+    packages=['strict_hdds'],
+    package_dir={
+        'strict_hdds': 'python3/strict_hdds',
+    },
 )
