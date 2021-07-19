@@ -115,7 +115,7 @@ class StorageLayoutBiosLvm(StorageLayout):
         assert False
 
     def optimize_rootdev(self):
-        _temp1(self)
+        _helperAdjust(self)
 
     def add_disk(self, devpath):
         assert devpath not in self.lvmPvHddList
@@ -245,7 +245,7 @@ class StorageLayoutEfiLvm(StorageLayout):
         assert False
 
     def optimize_rootdev(self):
-        _temp1(self)
+        _helperAdjust(self)
 
     def add_disk(self, devpath):
         assert devpath not in self.lvmPvHddList
@@ -260,7 +260,7 @@ class StorageLayoutEfiLvm(StorageLayout):
         # fill partition1, mount boot device if needed
         parti = util.devPathDiskToPartition(devpath, 1)
         util.cmdCall("/usr/sbin/mkfs.vfat", parti)
-        util.syncBlkDev(util.devPathDiskToPartition(self.bootHdd, 1), parti, mountPoint1=FmConst.bootDir)
+        util.syncBlkDev(util.devPathDiskToPartition(self.bootHdd, 1), parti, mountPoint1=_bootDir)
 
         # create lvm physical volume on partition2 and add it to volume group
         parti = util.devPathDiskToPartition(devpath, 2)
@@ -285,11 +285,11 @@ class StorageLayoutEfiLvm(StorageLayout):
         # change boot device if needed
         ret = False
         if self.bootHdd == devpath:
-            util.cmdCall("/bin/umount", FmConst.bootDir)
+            util.cmdCall("/bin/umount", _bootDir)
             self.lvmPvHddList.remove(devpath)
             self.bootHdd = self.lvmPvHddList[0]
             util.gptToggleEspPartition(util.devPathDiskToPartition(self.bootHdd, 1), True)
-            util.cmdCall("/bin/mount", util.devPathDiskToPartition(self.bootHdd, 1), FmConst.bootDir, "-o", "ro")
+            util.cmdCall("/bin/mount", util.devPathDiskToPartition(self.bootHdd, 1), _bootDir, "-o", "ro")
             ret = True
 
         # remove harddisk
@@ -388,7 +388,7 @@ class StorageLayoutEfiBcacheLvm(StorageLayout):
         assert False
 
     def optimize_rootdev(self):
-        _temp1(self)
+        _helperAdjust(self)
 
     def add_disk(self, devpath):
         # FIXME: only one ssd is allowed, and sdd must be main-disk
@@ -422,7 +422,7 @@ class StorageLayoutEfiBcacheLvm(StorageLayout):
             src = self.ssdEspParti
         else:
             src = util.devPathDiskToPartition(self.bootHdd, 1)
-        
+
         dstList = []
         for hdd in self.lvmPvHddDict:
             if self.bootHdd is None or hdd != self.bootHdd:
@@ -449,7 +449,7 @@ class StorageLayoutEfiBcacheLvm(StorageLayout):
         # sync partition1 as boot partition
         parti = util.devPathDiskToPartition(devpath, 1)
         util.cmdCall("/usr/sbin/mkfs.vfat", parti)
-        util.syncBlkDev(util.devPathDiskToPartition(self.bootHdd, 1), parti, mountPoint1=FmConst.bootDir)
+        util.syncBlkDev(util.devPathDiskToPartition(self.bootHdd, 1), parti, mountPoint1=_bootDir)
         self.ssdEspParti = parti
 
         # make partition2 as swap partition
@@ -471,9 +471,9 @@ class StorageLayoutEfiBcacheLvm(StorageLayout):
                 f.write(str(setUuid))
 
         # change boot device
-        util.cmdCall("/bin/umount", FmConst.bootDir)
+        util.cmdCall("/bin/umount", _bootDir)
         util.gptToggleEspPartition(util.devPathDiskToPartition(self.bootHdd, 1), False)
-        util.cmdCall("/bin/mount", self.ssdEspParti, FmConst.bootDir, "-o", "ro")
+        util.cmdCall("/bin/mount", self.ssdEspParti, _bootDir, "-o", "ro")
         self.bootHdd = None
 
         return True
@@ -497,9 +497,9 @@ class StorageLayoutEfiBcacheLvm(StorageLayout):
         parti = util.devPathDiskToPartition(devpath, 1)
         util.cmdCall("/usr/sbin/mkfs.vfat", parti)
         if self.ssd is not None:
-            util.syncBlkDev(self.ssdEspParti, parti, mountPoint1=FmConst.bootDir)
+            util.syncBlkDev(self.ssdEspParti, parti, mountPoint1=_bootDir)
         else:
-            util.syncBlkDev(util.devPathDiskToPartition(self.bootHdd, 1), parti, mountPoint1=FmConst.bootDir)
+            util.syncBlkDev(util.devPathDiskToPartition(self.bootHdd, 1), parti, mountPoint1=_bootDir)
 
         # add partition2 to bcache
         parti = util.devPathDiskToPartition(devpath, 2)
@@ -537,10 +537,10 @@ class StorageLayoutEfiBcacheLvm(StorageLayout):
         self.ssdSwapParti = None
 
         # change boot device
-        util.cmdCall("/bin/umount", FmConst.bootDir)
+        util.cmdCall("/bin/umount", _bootDir)
         self.bootHdd = list(self.lvmPvHddDict.keys())[0]
         util.gptToggleEspPartition(util.devPathDiskToPartition(self.bootHdd, 1), True)
-        util.cmdCall("/bin/mount", util.devPathDiskToPartition(self.bootHdd, 1), FmConst.bootDir, "-o", "ro")
+        util.cmdCall("/bin/mount", util.devPathDiskToPartition(self.bootHdd, 1), _bootDir, "-o", "ro")
         self.ssdEspParti = None
 
         # wipe disk
@@ -558,11 +558,11 @@ class StorageLayoutEfiBcacheLvm(StorageLayout):
         # change boot device if needed
         ret = False
         if self.bootHdd is not None and self.bootHdd == devpath:
-            util.cmdCall("/bin/umount", FmConst.bootDir)
+            util.cmdCall("/bin/umount", _bootDir)
             del self.lvmPvHddDict[devpath]
             self.bootHdd = list(self.lvmPvHddDict.keys())[0]
             util.gptToggleEspPartition(util.devPathDiskToPartition(self.bootHdd, 1), True)
-            util.cmdCall("/bin/mount", util.devPathDiskToPartition(self.bootHdd, 1), FmConst.bootDir, "-o", "ro")
+            util.cmdCall("/bin/mount", util.devPathDiskToPartition(self.bootHdd, 1), _bootDir, "-o", "ro")
             ret = True
 
         # remove harddisk
@@ -575,14 +575,14 @@ class StorageLayoutEfiBcacheLvm(StorageLayout):
         return ret
 
 
-
-
-# FIXME
-def _temp1(layout):
+def _helperAdjust(layout):
     total, used = util.getBlkDevCapacity(layout.get_rootdev())
     if used / total < 0.9:
-        raise Exception("root device space usage is less than 90%, adjustment is not needed")
+        return
     added = int(used / 0.7) - total
     added = (added // 1024 + 1) * 1024      # change unit from MB to GB
     util.cmdCall("/sbin/lvm", "lvextend", "-L+%dG" % (added), layout.get_rootdev())
     util.cmdExec("/sbin/resize2fs", layout.get_rootdev())
+
+
+_bootDir = "/boot"

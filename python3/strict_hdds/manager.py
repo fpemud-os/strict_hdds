@@ -23,8 +23,9 @@
 # THE SOFTWARE.
 
 
+import os
+import re
 from . import util
-from . import ParseStorageLayoutError
 from .layouts import StorageLayoutBiosSimple
 from .layouts import StorageLayoutBiosLvm
 from .layouts import StorageLayoutEfiSimple
@@ -258,52 +259,22 @@ class _StorageLayoutParser:
 
         assert rootDev is not None
         if bootDev is not None:
-            try:
-                lvmInfo = util.getBlkDevLvmInfo(rootDev)
-                if lvmInfo is not None:
-                    tlist = util.lvmGetSlaveDevPathList(lvmInfo[0])
-                    if any(re.fullmatch("/dev/bcache[0-9]+", x) is not None for x in tlist):
-                        ret = self._getEfiBcacheLvmLayout(bootDev)
-                    else:
-                        ret = self._getEfiLvmLayout(bootDev)
+            lvmInfo = util.getBlkDevLvmInfo(rootDev)
+            if lvmInfo is not None:
+                tlist = util.lvmGetSlaveDevPathList(lvmInfo[0])
+                if any(re.fullmatch("/dev/bcache[0-9]+", x) is not None for x in tlist):
+                    ret = self._getEfiBcacheLvmLayout(bootDev)
                 else:
-                    ret = self._getEfiSimpleLayout(bootDev, rootDev)
-            except ParseStorageLayoutError as e:
-                return StorageLayoutNonStandard(True, None, bootDev, rootDev, e.layoutName, e.message)
+                    ret = self._getEfiLvmLayout(bootDev)
+            else:
+                ret = self._getEfiSimpleLayout(bootDev, rootDev)
         else:
-            try:
-                if util.getBlkDevLvmInfo(rootDev) is not None:
-                    ret = self._getBiosLvmLayout()
-                else:
-                    ret = self._getBiosSimpleLayout(rootDev)
-            except ParseStorageLayoutError as e:
-                if e.layoutName == StorageLayoutBiosLvm.name:
-                    # get harddisk for lvm volume group
-                    diskSet = set()
-                    lvmInfo = util.getBlkDevLvmInfo(rootDev)
-                    for slaveDev in util.lvmGetSlaveDevPathList(lvmInfo[0]):
-                        if util.devPathIsDiskOrPartition(slaveDev):
-                            diskSet.add(slaveDev)
-                        else:
-                            diskSet.add(util.devPathPartitionToDisk(slaveDev))
+            if util.getBlkDevLvmInfo(rootDev) is not None:
+                ret = self._getBiosLvmLayout()
+            else:
+                ret = self._getBiosSimpleLayout(rootDev)
 
-                    # check which disk has Boot Code
-                    # return the first disk if no disk has Boot Code
-                    bootHdd = None
-                    for d in sorted(list(diskSet)):
-                        with open(d, "rb") as f:
-                            if not util.isBufferAllZero(f.read(440)):
-                                bootHdd = d
-                                break
-                    if bootHdd is None:
-                        bootHdd = sorted(list(diskSet))[0]
-                elif e.layoutName == StorageLayoutBiosSimple.name:
-                    bootHdd = util.devPathPartitionToDisk(rootDev)
-                else:
-                    assert False
-                return StorageLayoutNonStandard(False, bootHdd, None, rootDev, e.layoutName, e.message)
-
-        assert ret.isReady()
+        assert ret.is_ready()
         return ret
 
     @staticmethod
@@ -327,10 +298,6 @@ class _StorageLayoutParser:
             fs = util.getBlkDevFsType(ret.hddRootParti)
             if fs != "ext4":
                 raise ParseStorageLayoutError(StorageLayoutEfiSimple, "root partition file system is \"%s\", not \"ext4\"" % (fs))
-
-        # ret.swapFile
-        if os.path.exists(_swapFilename) and util.cmdCallTestSuccess("/sbin/swaplabel", _swapFilename):
-            ret.swapFile = _swapFilename
 
         return ret
 
@@ -491,10 +458,6 @@ class _StorageLayoutParser:
         fs = util.getBlkDevFsType(ret.hddRootParti)
         if fs != "ext4":
             raise ParseStorageLayoutError(StorageLayoutBiosSimple, "root partition file system is \"%s\", not \"ext4\"" % (fs))
-
-        # ret.swapFile
-        if os.path.exists(_swapFilename) and util.cmdCallTestSuccess("/sbin/swaplabel", _swapFilename):
-            ret.swapFile = _swapFilename
 
         return ret
 

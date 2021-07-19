@@ -30,11 +30,6 @@ strict_hdds
 @contact: fpemud@sina.com
 """
 
-import os
-import pwd
-import grp
-import stat
-
 
 __author__ = "fpemud@sina.com (Fpemud)"
 __version__ = "0.0.1"

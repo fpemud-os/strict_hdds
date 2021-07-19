@@ -23,6 +23,18 @@
 # THE SOFTWARE.
 
 
+import os
+import re
+import glob
+import uuid
+import time
+import stat
+import crcmod
+import parted
+import struct
+import subprocess
+
+
 def cmdCall(cmd, *kargs):
     # call command to execute backstage job
     #
@@ -36,8 +48,8 @@ def cmdCall(cmd, *kargs):
     #   * caller detects child-process failure and do appopriate treatment
 
     ret = subprocess.run([cmd] + list(kargs),
-                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                            universal_newlines=True)
+                         stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                         universal_newlines=True)
     if ret.returncode > 128:
         # for scenario 1, caller's signal handler has the oppotunity to get executed during sleep
         time.sleep(1.0)
@@ -49,21 +61,11 @@ def cmdCall(cmd, *kargs):
 
 def cmdCallWithRetCode(cmd, *kargs):
     ret = subprocess.run([cmd] + list(kargs),
-                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                            universal_newlines=True)
+                         stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                         universal_newlines=True)
     if ret.returncode > 128:
         time.sleep(1.0)
     return (ret.returncode, ret.stdout.rstrip())
-
-
-def getPhysicalMemorySize():
-    with open("/proc/meminfo", "r") as f:
-        # We return memory size in GB.
-        # Since the memory size shown in /proc/meminfo is always a
-        # little less than the real size because various sort of
-        # reservation, so we do a "+1"
-        m = re.search("^MemTotal:\\s+(\\d+)", f.read())
-        return int(m.group(1)) / 1024 / 1024 + 1
 
 
 def wipeHarddisk(devpath):
@@ -90,7 +92,7 @@ def devPathIsDiskOrPartition(devPath):
         return False
     assert False
 
-@staticmethod
+
 def devPathPartitionToDiskAndPartitionId(partitionDevPath):
     m = re.fullmatch("(/dev/sd[a-z])([0-9]+)", partitionDevPath)
     if m is not None:
@@ -106,11 +108,11 @@ def devPathPartitionToDiskAndPartitionId(partitionDevPath):
         return (m.group(1), int(m.group(2)))
     assert False
 
-@staticmethod
-def devPathPartitionToDisk(partitionDevPath):
-    return util.devPathPartitionToDiskAndPartitionId(partitionDevPath)[0]
 
-@staticmethod
+def devPathPartitionToDisk(partitionDevPath):
+    return devPathPartitionToDiskAndPartitionId(partitionDevPath)[0]
+
+
 def devPathDiskToPartition(diskDevPath, partitionId):
     m = re.fullmatch("/dev/sd[a-z]", diskDevPath)
     if m is not None:
@@ -126,7 +128,7 @@ def devPathDiskToPartition(diskDevPath, partitionId):
         return diskDevPath + "p" + str(partitionId)
     assert False
 
-@staticmethod
+
 def bcacheMakeDevice(devPath, backingDeviceOrCacheDevice, blockSize=None, bucketSize=None, dataOffset=None):
     assert isinstance(backingDeviceOrCacheDevice, bool)
     assert blockSize is None or (isinstance(blockSize, int) and blockSize > 0)
@@ -180,12 +182,12 @@ def bcacheMakeDevice(devPath, backingDeviceOrCacheDevice, blockSize=None, bucket
     bcacheSbFmt = "QQQ16B16B16B32BQQ8QQHHHHIHH"     # without cache_sb.d
 
     bcacheSbMagic = [0xc6, 0x85, 0x73, 0xf6, 0x4e, 0x1a, 0x45, 0xca,
-                        0x82, 0x65, 0xf5, 0x7f, 0x48, 0xba, 0x6d, 0x81]
+                     0x82, 0x65, 0xf5, 0x7f, 0x48, 0xba, 0x6d, 0x81]
 
     if blockSize is None:
         st = os.stat(devPath)
         if stat.S_ISBLK(st.st_mode):
-            out = util.cmdCall("/sbin/blockdev", "--getss", devPath)
+            out = cmdCall("/sbin/blockdev", "--getss", devPath)
             blockSize = int(out) // 512
         else:
             blockSize = st.st_blksize // 512
@@ -263,7 +265,7 @@ def bcacheMakeDevice(devPath, backingDeviceOrCacheDevice, blockSize=None, bucket
             p += struct.calcsize("Q")
     else:
         # cache_sb.nbuckets
-        value = util.getBlkDevSize(devPath) // 512 // bucketSize
+        value = getBlkDevSize(devPath) // 512 // bucketSize
         if value < 0x80:
             raise Exception("not enough buckets: %d, need %d", value, 0x80)
         struct.pack_into("Q", bcacheSb, p, value)
@@ -306,24 +308,24 @@ def bcacheMakeDevice(devPath, backingDeviceOrCacheDevice, blockSize=None, bucket
 
     return (devUuid, setUuid)
 
-@staticmethod
+
 def bcacheIsBackingDevice(devPath):
-    return util._bcacheIsBackingDeviceOrCachDevice(devPath, True)
+    return _bcacheIsBackingDeviceOrCachDevice(devPath, True)
 
-@staticmethod
+
 def bcacheIsCacheDevice(devPath):
-    return util._bcacheIsBackingDeviceOrCachDevice(devPath, False)
+    return _bcacheIsBackingDeviceOrCachDevice(devPath, False)
 
-@staticmethod
+
 def _bcacheIsBackingDeviceOrCachDevice(devPath, backingDeviceOrCacheDevice):
-    # see C struct definition in util.bcacheMakeDevice()
+    # see C struct definition in bcacheMakeDevice()
     bcacheSbMagicPreFmt = "QQQ"
     bcacheSbMagicFmt = "16B"
     bcacheSbVersionPreFmt = "QQ"
     bcacheSbVersionFmt = "Q"
 
     bcacheSbMagic = [0xc6, 0x85, 0x73, 0xf6, 0x4e, 0x1a, 0x45, 0xca,
-                        0x82, 0x65, 0xf5, 0x7f, 0x48, 0xba, 0x6d, 0x81]
+                     0x82, 0x65, 0xf5, 0x7f, 0x48, 0xba, 0x6d, 0x81]
     if backingDeviceOrCacheDevice:
         versionValueList = [
             1,           # BCACHE_SB_VERSION_BDEV
@@ -349,20 +351,20 @@ def _bcacheIsBackingDeviceOrCachDevice(devPath, backingDeviceOrCacheDevice):
 
         return True
 
-@staticmethod
+
 def bcacheGetSetUuid(devPath):
-    # see C struct definition in util.bcacheMakeDevice()
+    # see C struct definition in bcacheMakeDevice()
     bcacheSbSetUuidPreFmt = "QQQ16B16B"
     bcacheSbSetUuidFmt = "16B"
 
-    assert util.bcacheIsCacheDevice(devPath)
+    assert bcacheIsCacheDevice(devPath)
 
     with open(devPath, "rb") as f:
         f.seek(8 * 512 + struct.calcsize(bcacheSbSetUuidPreFmt))
         buf = f.read(struct.calcsize(bcacheSbSetUuidFmt))
         return uuid.UUID(bytes=buf)
 
-@staticmethod
+
 def bcacheGetSlaveDevPathList(bcacheDevPath):
     """Last element in the returned list is the backing device, others are cache device"""
 
@@ -380,7 +382,7 @@ def bcacheGetSlaveDevPathList(bcacheDevPath):
     retList.append(backingDevPath)
     return retList
 
-@staticmethod
+
 def bcacheFindByBackingDevice(devPath):
     for fn in glob.glob("/dev/bcache*"):
         if re.fullmatch("/dev/bcache[0-9]+", fn):
@@ -390,7 +392,7 @@ def bcacheFindByBackingDevice(devPath):
                 return fn
     return None
 
-@staticmethod
+
 def isBlkDevSsdOrHdd(devPath):
     bn = os.path.basename(devPath)
     with open("/sys/block/%s/queue/rotational" % (bn), "r") as f:
@@ -399,38 +401,38 @@ def isBlkDevSsdOrHdd(devPath):
             return False
     return True
 
-@staticmethod
+
 def getBlkDevSize(devPath):
-    out = util.cmdCall("/sbin/blockdev", "--getsz", devPath)
+    out = cmdCall("/sbin/blockdev", "--getsz", devPath)
     return int(out) * 512        # unit is byte
 
-@staticmethod
-def getBlkDevPartitionTableType(devPath):
-    if not util.devPathIsDiskOrPartition(devPath):
-        devPath = util.devPathPartitionToDisk(devPath)
 
-    ret = util.cmdCall("/sbin/blkid", "-o", "export", devPath)
+def getBlkDevPartitionTableType(devPath):
+    if not devPathIsDiskOrPartition(devPath):
+        devPath = devPathPartitionToDisk(devPath)
+
+    ret = cmdCall("/sbin/blkid", "-o", "export", devPath)
     m = re.search("^PTTYPE=(\\S+)$", ret, re.M)
     if m is not None:
         return m.group(1)
     else:
         return ""
 
-@staticmethod
+
 def getBlkDevFsType(devPath):
-    ret = util.cmdCall("/sbin/blkid", "-o", "export", devPath)
+    ret = cmdCall("/sbin/blkid", "-o", "export", devPath)
     m = re.search("^TYPE=(\\S+)$", ret, re.M)
     if m is not None:
         return m.group(1).lower()
     else:
         return ""
 
-@staticmethod
+
 def getBlkDevLvmInfo(devPath):
     """Returns (vg-name, lv-name)
         Returns None if the device is not lvm"""
 
-    rc, ret = util.cmdCallWithRetCode("/sbin/dmsetup", "info", devPath)
+    rc, ret = cmdCallWithRetCode("/sbin/dmsetup", "info", devPath)
     if rc == 0:
         m = re.search("^Name: *(\\S+)$", ret, re.M)
         assert m is not None
@@ -438,7 +440,7 @@ def getBlkDevLvmInfo(devPath):
     else:
         return None
 
-@staticmethod
+
 def gptNewGuid(guidStr):
     assert len(guidStr) == 36
     assert guidStr[8] == "-" and guidStr[13] == "-" and guidStr[18] == "-" and guidStr[23] == "-"
@@ -470,7 +472,7 @@ def gptNewGuid(guidStr):
 
     return struct.pack(gptGuidFmt, ldict["n1"], ldict["n2"], ldict["n3"], ldict["n4"], ldict["n5"], ldict["n6"])
 
-@staticmethod
+
 def gptIsEspPartition(devPath):
     # struct mbr_partition_record {
     #     uint8_t  boot_indicator;
@@ -529,7 +531,7 @@ def gptIsEspPartition(devPath):
     assert struct.calcsize(gptHeaderFmt) == 512
 
     # do checking
-    diskDevPath, partId = util.devPathPartitionToDiskAndPartitionId(devPath)
+    diskDevPath, partId = devPathPartitionToDiskAndPartitionId(devPath)
     with open(diskDevPath, "rb") as f:
         # get protective MBR
         mbrHeader = struct.unpack(mbrHeaderFmt, f.read(struct.calcsize(mbrHeaderFmt)))
@@ -553,12 +555,12 @@ def gptIsEspPartition(devPath):
         partEntry = struct.unpack(gptEntryFmt, f.read(struct.calcsize(gptEntryFmt)))
 
         # check partition GUID
-        if partEntry[0] != util.gptNewGuid("C12A7328-F81F-11D2-BA4B-00A0C93EC93B"):
+        if partEntry[0] != gptNewGuid("C12A7328-F81F-11D2-BA4B-00A0C93EC93B"):
             return False
 
     return True
 
-@staticmethod
+
 def initializeDisk(devPath, partitionTableType, partitionInfoList):
     assert partitionTableType in ["mbr", "gpt"]
     assert len(partitionInfoList) >= 1
@@ -585,9 +587,9 @@ def initializeDisk(devPath, partitionTableType, partitionInfoList):
         elif pType == "esp":
             assert partitionTableType == "gpt"
             partition = parted.Partition(disk=disk,
-                                            type=parted.PARTITION_NORMAL,
-                                            fs=parted.FileSystem(type="fat32", geometry=region),
-                                            geometry=region)
+                                         type=parted.PARTITION_NORMAL,
+                                         fs=parted.FileSystem(type="fat32", geometry=region),
+                                         geometry=region)
             partition.setFlag(parted.PARTITION_ESP)     # which also sets flag parted.PARTITION_BOOT
         elif pType == "bcache":
             assert partitionTableType == "gpt"
@@ -605,18 +607,18 @@ def initializeDisk(devPath, partitionTableType, partitionInfoList):
             partition.setFlag(parted.PARTITION_LVM)
         elif pType == "vfat":
             partition = parted.Partition(disk=disk,
-                                            type=parted.PARTITION_NORMAL,
-                                            fs=parted.FileSystem(type="fat32", geometry=region),
-                                            geometry=region)
+                                         type=parted.PARTITION_NORMAL,
+                                         fs=parted.FileSystem(type="fat32", geometry=region),
+                                         geometry=region)
         elif pType in ["ext2", "ext4", "xfs"]:
             partition = parted.Partition(disk=disk,
-                                            type=parted.PARTITION_NORMAL,
-                                            fs=parted.FileSystem(type=pType, geometry=region),
-                                            geometry=region)
+                                         type=parted.PARTITION_NORMAL,
+                                         fs=parted.FileSystem(type=pType, geometry=region),
+                                         geometry=region)
         else:
             assert False
         disk.addPartition(partition=partition,
-                            constraint=disk.device.optimalAlignedConstraint)
+                          constraint=disk.device.optimalAlignedConstraint)
 
     def _erasePartitionSignature(devPath, pStart, pEnd):
         # fixme: this implementation is very limited
@@ -676,17 +678,17 @@ def initializeDisk(devPath, partitionTableType, partitionInfoList):
     disk.commit()
     time.sleep(3)           # FIXME, wait kernel picks the change
 
-@staticmethod
+
 def isBufferAllZero(buf):
     for b in buf:
         if b != 0:
             return False
     return True
 
-@staticmethod
+
 def getDevPathListForFixedHdd():
     ret = []
-    for line in util.cmdCall("/bin/lsblk", "-o", "NAME,TYPE", "-n").split("\n"):
+    for line in cmdCall("/bin/lsblk", "-o", "NAME,TYPE", "-n").split("\n"):
         m = re.fullmatch("(\\S+)\\s+(\\S+)", line)
         if m is None:
             continue
