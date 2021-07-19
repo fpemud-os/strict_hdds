@@ -34,7 +34,7 @@ class StorageLayoutBiosSimple(StorageLayout):
                /dev/sda1     root device, EXT4
        Description:
            1. partition number of /dev/sda1 and /dev/sda2 is irrelevant
-           2. no swap partition
+           2. use optional swap file /var/swap.dat
            3. extra partition is allowed to exist
     """
 
@@ -43,6 +43,7 @@ class StorageLayoutBiosSimple(StorageLayout):
     def __init__(self):
         self._hdd = None
         self._hddRootParti = None
+        self.swapFile = None
 
     @property
     def boot_mode(self):
@@ -51,6 +52,7 @@ class StorageLayoutBiosSimple(StorageLayout):
     def is_ready(self):
         assert self._hdd is not None
         assert self._hddRootParti is not None
+        assert self.swapFile is None or self.swapFile == _swapFilename
         return True
 
     def get_boot_disk(self):
@@ -156,7 +158,7 @@ class StorageLayoutEfiSimple(StorageLayout):
                /dev/sda2     root device, EXT4
        Description:
            1. the 3 partition in /dev/sda is order-insensitive
-           2. no swap partition
+           2. use optional swap file /var/swap.dat
            3. extra partition is allowed to exist
     """
 
@@ -166,6 +168,7 @@ class StorageLayoutEfiSimple(StorageLayout):
         self.hdd = None
         self.hddEspParti = None
         self.hddRootParti = None
+        self.swapFile = None
 
     @property
     def boot_mode(self):
@@ -175,6 +178,7 @@ class StorageLayoutEfiSimple(StorageLayout):
         assert self.hdd is not None
         assert self.hddEspParti == util.devPathDiskToPartition(self.hdd, 1)
         assert self.hddRootParti == util.devPathDiskToPartition(self.hdd, 2)
+        assert self.swapFile is None or self.swapFile == _swapFilename
         return True
 
     def get_esp(self):
@@ -586,3 +590,4 @@ def _helperAdjust(layout):
 
 
 _bootDir = "/boot"
+_swapFilename = "/var/swap.dat"

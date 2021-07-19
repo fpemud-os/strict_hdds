@@ -78,6 +78,15 @@ def cmdCallWithRetCode(cmd, *kargs):
     return (ret.returncode, ret.stdout.rstrip())
 
 
+def cmdCallTestSuccess(cmd, *kargs):
+    ret = subprocess.run([cmd] + list(kargs),
+                         stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                         universal_newlines=True)
+    if ret.returncode > 128:
+        time.sleep(1.0)
+    return (ret.returncode == 0)
+
+
 def wipeHarddisk(devpath):
     with open(devpath, 'wb') as f:
         f.write(bytearray(1024))

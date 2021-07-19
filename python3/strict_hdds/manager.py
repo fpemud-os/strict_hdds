@@ -299,6 +299,10 @@ class _StorageLayoutParser:
             if fs != "ext4":
                 raise ParseStorageLayoutError(StorageLayoutEfiSimple, "root partition file system is \"%s\", not \"ext4\"" % (fs))
 
+        # ret.swapFile
+        if os.path.exists(_swapFilename) and util.cmdCallTestSuccess("/sbin/swaplabel", _swapFilename):
+            ret.swapFile = _swapFilename
+
         return ret
 
     @staticmethod
@@ -357,6 +361,11 @@ class _StorageLayoutParser:
                         raise ParseStorageLayoutError(StorageLayoutEfiLvm, "/dev/mapper/hdd.swap has an invalid file system")
                 else:
                     assert False
+
+        # ret.swapFile
+        if os.path.exists(_swapFilename) and util.cmdCallTestSuccess("/sbin/swaplabel", _swapFilename):
+            ret.swapFile = _swapFilename
+
         return ret
 
     @staticmethod
@@ -524,7 +533,8 @@ class _StorageLayoutParser:
 _espPartiSize = 512 * 1024 * 1024
 _espPartiSizeStr = "512MiB"
 
-
 _swapSizeInGb = util.getPhysicalMemorySize() * 2
 _swapSize = _swapSizeInGb * 1024 * 1024 * 1024
 _swapPartiSizeStr = "%dGiB" % (_swapSizeInGb)
+
+_swapFilename = "/var/swap.dat"
