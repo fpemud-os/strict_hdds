@@ -47,8 +47,7 @@ class StorageLayoutBiosLvm(StorageLayout):
     name = "bios-lvm"
 
     def __init__(self):
-        self.diskList = []
-
+        self._diskList = []         # harddisk list
         self._bSwapLv = None        # whether swap lv exists
         self._bootHdd = None        # boot disk name
 
@@ -56,36 +55,28 @@ class StorageLayoutBiosLvm(StorageLayout):
     def boot_mode(self):
         return StorageLayout.BOOT_MODE_BIOS
 
-    def is_ready(self):
-        assert len(self.diskList) > 0
-        assert self._bSwapLv is not None
-        assert self._bootHdd in self.diskList
-        return True
-
     def get_rootdev(self):
-        assert self.is_ready()
         return _rootLvDevPath
 
     def get_swap(self):
-        assert self.is_ready()
         return _swapLvDevPath if self._bSwapLv else None
 
     def check_swap_size(self):
-        assert self.is_ready() and self._bSwapLv
+        assert self._bSwapLv
         return util.getBlkDevSize(_swapLvDevPath) >= util.getSwapSizeInGb() * 1024 * 1024 * 1024
 
     def get_boot_disk(self):
-        assert self.is_ready()
         return self._bootHdd
 
     def optimize_rootdev(self):
-        assert self.is_ready()
         util.autoExtendLv(self.get_rootdev())
+
+    def get_disk_list(self):
+        return self._diskList
 
     def add_disk(self, devpath):
         assert devpath is not None
-        assert self.is_ready()
-        assert devpath not in self.diskList
+        assert devpath not in self._diskList
 
         if devpath not in util.getDevPathListForFixedHdd():
             raise StorageLayoutAddDiskError(devpath, "not a harddisk")
@@ -95,8 +86,8 @@ class StorageLayoutBiosLvm(StorageLayout):
 
     def release_disk(self, devpath):
         assert devpath is not None
-        assert self.is_ready()
-        assert devpath in self.diskList and len(self.diskList) > 1 
+        assert devpath in self._diskList
+        assert len(self._diskList) > 1
 
         parti = util.devPathDiskToPartition(devpath, 1)
         rc, out = util.cmdCallWithRetCode("/sbin/lvm", "pvmove", parti)
@@ -105,14 +96,14 @@ class StorageLayoutBiosLvm(StorageLayout):
 
     def remove_disk(self, devpath):
         assert devpath is not None
-        assert self.is_ready()
-        assert devpath in self.diskList and len(self.diskList) > 1
+        assert devpath in self._diskList
+        assert len(self._diskList) > 1
 
         # change boot device if needed
         ret = False
         if self._bootHdd == devpath:
-            self.diskList.remove(devpath)
-            self._bootHdd = self.diskList[0]
+            self._diskList.remove(devpath)
+            self._bootHdd = self._diskList[0]
             # FIXME: add Boot Code for self._bootHdd?
             ret = True
 
@@ -124,12 +115,12 @@ class StorageLayoutBiosLvm(StorageLayout):
         return ret
 
     def create_swap_lv(self):
-        assert self.is_ready() and not self._bSwapLv
+        assert not self._bSwapLv
         util.cmdCall("/sbin/lvm", "lvcreate", "-L", "%dGiB" % (util.getSwapSizeInGb()), "-n", _swapLvName, _vgName)
         self._bSwapLv = True
 
     def remove_swap_lv(self):
-        assert self.is_ready() and self._bSwapLv
+        assert self._bSwapLv
         util.cmdCall("/sbin/lvm", "lvremove", _swapLvDevPath)
         self._bSwapLv = False
 
@@ -177,7 +168,7 @@ def parse_layout():
             raise StorageLayoutParseError(StorageLayoutBiosLvm.name, "partition type of %s is not \"dos\"" % (hdd))
         if os.path.exists(util.devPathDiskToPartition(hdd, 2)):
             raise StorageLayoutParseError(StorageLayoutBiosLvm.name, "redundant partition exists on %s" % (hdd))
-        ret.diskList.append(hdd)
+        ret._diskList.append(hdd)
 
     out = util.cmdCall("/sbin/lvm", "lvdisplay", "-c")
 
@@ -197,7 +188,7 @@ def parse_layout():
             raise StorageLayoutParseError(StorageLayoutBiosLvm.name, "\"%s\" has an invalid file system" % (_swapLvDevPath))
 
     # boot disk
-    for hdd in ret.diskList:
+    for hdd in ret._diskList:
         with open(hdd, "rb") as f:
             if not util.isBufferAllZero(f.read(440)):
                 if ret._bootHdd is not None:
