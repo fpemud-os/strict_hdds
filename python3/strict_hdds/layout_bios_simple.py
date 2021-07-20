@@ -24,8 +24,8 @@
 import os
 from . import util
 from . import StorageLayout
-from . import StorageLayoutAddDiskError
-from . import StorageLayoutReleaseDiskError
+from . import StorageLayoutCreateError
+from . import StorageLayoutParseError
 
 
 class StorageLayoutBiosSimple(StorageLayout):
@@ -41,43 +41,34 @@ class StorageLayoutBiosSimple(StorageLayout):
     name = "bios-simple"
 
     def __init__(self):
-        self._hdd = None
-        self._bRootParti = False
-        self._bSwapFile = None
+        self._hdd = None              # boot harddisk name
+        self._bRootParti = False      # root partition name
+        self._bSwapFile = None        # whether swap file exists
 
     @property
     def boot_mode(self):
         return StorageLayout.BOOT_MODE_BIOS
 
-    def is_ready(self):
-        assert self._hdd is not None
-        assert self._bRootParti
-        assert self._bSwapFile is not None
-        return True
-
     def get_rootdev(self):
-        assert self.is_ready()
         return self._bRootParti
 
     def get_swap(self):
-        assert self.is_ready()
         return util.swapFilename if self._bSwapFile else None
 
     def check_swap_size(self):
-        assert self.is_ready() and self._bSwapFile
+        assert self._bSwapFile
         return os.path.getsize(util.swapFilename) >= util.getSwapSizeInGb() * 1024 * 1024 * 1024
 
     def get_boot_disk(self):
-        assert self.is_ready()
         return self._hdd
 
     def create_swap_file(self):
-        assert self.is_ready() and not self._bSwapFile
+        assert not self._bSwapFile
         util.createSwapFile(util.swapFilename)
         self._bSwapFile = True
 
     def remove_swap_file(self):
-        assert self.is_ready() and self._bSwapFile
+        assert self._bSwapFile
         os.remove(util.swapFilename)
         self._bSwapFile = False
 
@@ -86,9 +77,9 @@ def create_layout(hdd=None):
     if hdd is None:
         hddList = util.getDevPathListForFixedHdd()
         if len(hddList) == 0:
-            raise Exception("no harddisks")
+            raise StorageLayoutCreateError("no harddisk")
         if len(hddList) > 1:
-            raise Exception("multiple harddisks")
+            raise StorageLayoutCreateError("multiple harddisks")
         hdd = hddList[0]
 
     # create partitions
@@ -100,14 +91,12 @@ def create_layout(hdd=None):
 def parse_layout(rootDev):
     ret = StorageLayoutBiosSimple()
 
-    # ret.hdd
-    ret.hdd = util.devPathPartitionToDisk(rootDev)
-    if util.getBlkDevPartitionTableType(ret.hdd) != "dos":
-        raise StorageLayoutParseError(StorageLayoutBiosSimple, "partition type of %s is not \"dos\"" % (ret.hdd))
+    ret._hdd = util.devPathPartitionToDisk(rootDev)
+    if util.getBlkDevPartitionTableType(ret._hdd) != "dos":
+        raise StorageLayoutParseError(StorageLayoutBiosSimple, "partition type of %s is not \"dos\"" % (ret._hdd))
 
-    # ret.hddRootParti
-    ret.hddRootParti = rootDev
-    fs = util.getBlkDevFsType(ret.hddRootParti)
+    ret._hddRootParti = rootDev
+    fs = util.getBlkDevFsType(ret._hddRootParti)
     if fs != "ext4":
         raise StorageLayoutParseError(StorageLayoutBiosSimple, "root partition file system is \"%s\", not \"ext4\"" % (fs))
 

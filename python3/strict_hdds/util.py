@@ -35,6 +35,15 @@ import subprocess
 
 
 bootDir = "/boot"
+
+
+vgName = "hdd"
+rootLvName = "root"
+rootLvDevPath = "/dev/mapper/hdd.root"
+swapLvName = "swap"
+swapLvDevPath = "/dev/mapper/hdd.swap"
+
+
 swapFilename = "/var/swap.dat"
 
 

@@ -49,21 +49,21 @@ class StorageLayoutBiosLvm(StorageLayout):
     def __init__(self):
         self._diskList = []         # harddisk list
         self._bSwapLv = None        # whether swap lv exists
-        self._bootHdd = None        # boot disk name
+        self._bootHdd = None        # boot harddisk name
 
     @property
     def boot_mode(self):
         return StorageLayout.BOOT_MODE_BIOS
 
     def get_rootdev(self):
-        return _rootLvDevPath
+        return util.rootLvDevPath
 
     def get_swap(self):
-        return _swapLvDevPath if self._bSwapLv else None
+        return util.swapLvDevPath if self._bSwapLv else None
 
     def check_swap_size(self):
         assert self._bSwapLv
-        return util.getBlkDevSize(_swapLvDevPath) >= util.getSwapSizeInGb() * 1024 * 1024 * 1024
+        return util.getBlkDevSize(util.swapLvDevPath) >= util.getSwapSizeInGb() * 1024 * 1024 * 1024
 
     def get_boot_disk(self):
         return self._bootHdd
@@ -109,19 +109,19 @@ class StorageLayoutBiosLvm(StorageLayout):
 
         # remove harddisk
         parti = util.devPathDiskToPartition(devpath, 1)
-        util.cmdCall("/sbin/lvm", "vgreduce", _vgName, parti)
+        util.cmdCall("/sbin/lvm", "vgreduce", util.vgName, parti)
         util.wipeHarddisk(devpath)
 
         return ret
 
     def create_swap_lv(self):
         assert not self._bSwapLv
-        util.cmdCall("/sbin/lvm", "lvcreate", "-L", "%dGiB" % (util.getSwapSizeInGb()), "-n", _swapLvName, _vgName)
+        util.cmdCall("/sbin/lvm", "lvcreate", "-L", "%dGiB" % (util.getSwapSizeInGb()), "-n", util.swapLvName, util.vgName)
         self._bSwapLv = True
 
     def remove_swap_lv(self):
         assert self._bSwapLv
-        util.cmdCall("/sbin/lvm", "lvremove", _swapLvDevPath)
+        util.cmdCall("/sbin/lvm", "lvremove", util.swapLvDevPath)
         self._bSwapLv = False
 
 
@@ -129,7 +129,7 @@ def create_layout(disk_list=None):
     if disk_list is None:
         disk_list = util.getDevPathListForFixedHdd()
         if len(disk_list) == 0:
-            raise StorageLayoutCreateError("no harddisks")
+            raise StorageLayoutCreateError("no harddisk")
     else:
         assert len(disk_list) > 0
 
@@ -142,27 +142,27 @@ def create_layout(disk_list=None):
         # create lvm physical volume on partition1 and add it to volume group
         parti = util.devPathDiskToPartition(devpath, 1)
         util.cmdCall("/sbin/lvm", "pvcreate", parti)
-        if not util.cmdCallTestSuccess("/sbin/lvm", "vgdisplay", _vgName):
-            util.cmdCall("/sbin/lvm", "vgcreate", _vgName, parti)
+        if not util.cmdCallTestSuccess("/sbin/lvm", "vgdisplay", util.vgName):
+            util.cmdCall("/sbin/lvm", "vgcreate", util.vgName, parti)
         else:
-            util.cmdCall("/sbin/lvm", "vgextend", _vgName, parti)
+            util.cmdCall("/sbin/lvm", "vgextend", util.vgName, parti)
 
     # create root lv
-    out = util.cmdCall("/sbin/lvm", "vgdisplay", "-c", _vgName)
+    out = util.cmdCall("/sbin/lvm", "vgdisplay", "-c", util.vgName)
     freePe = int(out.split(":")[15])
-    util.cmdCall("/sbin/lvm", "lvcreate", "-l", "%d" % (freePe // 2), "-n", _rootLvName, _vgName)
+    util.cmdCall("/sbin/lvm", "lvcreate", "-l", "%d" % (freePe // 2), "-n", util.rootLvName, util.vgName)
 
 
 def parse_layout():
     ret = StorageLayoutBiosLvm()
 
     # vg
-    if not util.cmdCallTestSuccess("/sbin/lvm", "vgdisplay", _vgName):
-        raise StorageLayoutParseError(StorageLayoutBiosLvm.name, "volume group \"%s\" does not exist" % (_vgName))
+    if not util.cmdCallTestSuccess("/sbin/lvm", "vgdisplay", util.vgName):
+        raise StorageLayoutParseError(StorageLayoutBiosLvm.name, "volume group \"%s\" does not exist" % (util.vgName))
 
     # pv
     out = util.cmdCall("/sbin/lvm", "pvdisplay", "-c")
-    for m in re.finditer("(/dev/\\S+):%s:.*" % (_vgName), out, re.M):
+    for m in re.finditer("(/dev/\\S+):%s:.*" % (util.vgName), out, re.M):
         hdd = util.devPathPartitionToDisk(m.group(1))
         if util.getBlkDevPartitionTableType(hdd) != "dos":
             raise StorageLayoutParseError(StorageLayoutBiosLvm.name, "partition type of %s is not \"dos\"" % (hdd))
@@ -173,19 +173,19 @@ def parse_layout():
     out = util.cmdCall("/sbin/lvm", "lvdisplay", "-c")
 
     # root lv
-    if re.search("/dev/hdd/root:%s:.*" % (_vgName), out, re.M) is not None:
-        assert os.path.exists(_rootLvDevPath)
-        fs = util.getBlkDevFsType(_rootLvDevPath)
+    if re.search("/dev/hdd/root:%s:.*" % (util.vgName), out, re.M) is not None:
+        assert os.path.exists(util.rootLvDevPath)
+        fs = util.getBlkDevFsType(util.rootLvDevPath)
         if fs != "ext4":
             raise StorageLayoutParseError(StorageLayoutBiosLvm.name, "root partition file system is \"%s\", not \"ext4\"" % (fs))
     else:
-        raise StorageLayoutParseError(StorageLayoutBiosLvm.name, "logical volume \"%s\" does not exist" % (_rootLvDevPath))
+        raise StorageLayoutParseError(StorageLayoutBiosLvm.name, "logical volume \"%s\" does not exist" % (util.rootLvDevPath))
 
     # swap lv
-    if re.search("/dev/hdd/swap:%s:.*" % (_vgName), out, re.M) is not None:
-        assert os.path.exists(_swapLvDevPath)
-        if util.getBlkDevFsType(_swapLvDevPath) != _swapLvName:
-            raise StorageLayoutParseError(StorageLayoutBiosLvm.name, "\"%s\" has an invalid file system" % (_swapLvDevPath))
+    if re.search("/dev/hdd/swap:%s:.*" % (util.vgName), out, re.M) is not None:
+        assert os.path.exists(util.swapLvDevPath)
+        if util.getBlkDevFsType(util.swapLvDevPath) != util.swapLvName:
+            raise StorageLayoutParseError(StorageLayoutBiosLvm.name, "\"%s\" has an invalid file system" % (util.swapLvDevPath))
 
     # boot disk
     for hdd in ret._diskList:
@@ -198,10 +198,3 @@ def parse_layout():
         raise StorageLayoutParseError(StorageLayoutBiosLvm.name, "no harddisk has boot-code")
 
     return ret
-
-
-_vgName = "hdd"
-_rootLvName = "root"
-_rootLvDevPath = "/dev/mapper/hdd.root"
-_swapLvName = "swap"
-_swapLvDevPath = "/dev/mapper/hdd.swap"
