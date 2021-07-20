@@ -55,13 +55,17 @@ class StorageLayoutBiosSimple(StorageLayout):
         assert self.swapFile is None or self.swapFile == _swapFilename
         return True
 
-    def get_boot_disk(self):
-        assert self.is_ready()
-        return self._hdd
-
     def get_rootdev(self):
         assert self.is_ready()
         return self._hddRootParti
+
+    def optimize_rootdev(self):
+        assert self.is_ready()
+        return      # no-op
+
+    def get_boot_disk(self):
+        assert self.is_ready()
+        return self._hdd
 
 
 class StorageLayoutBiosLvm(StorageLayout):
@@ -98,11 +102,6 @@ class StorageLayoutBiosLvm(StorageLayout):
         assert self.bootHdd is not None and self.bootHdd in self.lvmPvHddList
         return True
 
-    def get_boot_disk(self):
-        assert self.is_ready()
-
-        return self.bootHdd
-
     def get_rootdev(self):
         assert self.is_ready()
 
@@ -117,7 +116,12 @@ class StorageLayoutBiosLvm(StorageLayout):
         assert False
 
     def optimize_rootdev(self):
+        assert self.is_ready()
         _helperAdjust(self)
+
+    def get_boot_disk(self):
+        assert self.is_ready()
+        return self.bootHdd
 
     def add_disk(self, devpath):
         assert devpath not in self.lvmPvHddList
@@ -181,13 +185,17 @@ class StorageLayoutEfiSimple(StorageLayout):
         assert self.swapFile is None or self.swapFile == _swapFilename
         return True
 
-    def get_esp(self):
-        assert self.is_ready()
-        return self.hddEspParti
-
     def get_rootdev(self):
         assert self.is_ready()
         return self.hddRootParti
+
+    def optimize_rootdev(self):
+        assert self.is_ready()
+        return      # no-op
+
+    def get_esp(self):
+        assert self.is_ready()
+        return self.hddEspParti
 
 
 class StorageLayoutEfiLvm(StorageLayout):
@@ -230,11 +238,6 @@ class StorageLayoutEfiLvm(StorageLayout):
         assert self.bootHdd is not None and self.bootHdd in self.lvmPvHddList
         return True
 
-    def get_esp(self):
-        assert self.is_ready()
-
-        return util.devPathDiskToPartition(self.bootHdd, 1)
-
     def get_rootdev(self):
         assert self.is_ready()
 
@@ -249,7 +252,28 @@ class StorageLayoutEfiLvm(StorageLayout):
         assert False
 
     def optimize_rootdev(self):
+        assert self.is_ready()
         _helperAdjust(self)
+
+    def get_esp(self):
+        assert self.is_ready()
+        return util.devPathDiskToPartition(self.bootHdd, 1)
+
+    def get_esp_sync_info(self):
+        assert self.is_ready()
+
+        src = util.devPathDiskToPartition(self.bootHdd, 1)
+
+        dstList = []
+        for hdd in self.lvmPvHddList:
+            if hdd != self.bootHdd:
+                dstList.append(util.devPathDiskToPartition(hdd, 1))
+
+        return (src, dstList)
+
+    def sync_esp(self, src, dst):
+        assert self.is_ready()
+        _helperSyncEsp(src, dst)
 
     def add_disk(self, devpath):
         assert devpath not in self.lvmPvHddList
@@ -302,18 +326,6 @@ class StorageLayoutEfiLvm(StorageLayout):
         util.wipeHarddisk(devpath)
 
         return ret
-
-    def get_esp_sync_info(self):
-        assert self.is_ready()
-
-        src = util.devPathDiskToPartition(self.bootHdd, 1)
-
-        dstList = []
-        for hdd in self.lvmPvHddList:
-            if hdd != self.bootHdd:
-                dstList.append(util.devPathDiskToPartition(hdd, 1))
-
-        return (src, dstList)
 
 
 class StorageLayoutEfiBcacheLvm(StorageLayout):
@@ -370,14 +382,6 @@ class StorageLayoutEfiBcacheLvm(StorageLayout):
             assert self.bootHdd is not None and self.bootHdd in self.lvmPvHddDict
         return True
 
-    def get_esp(self):
-        assert self.is_ready()
-
-        if self.ssd is not None:
-            return self.ssdEspParti
-        else:
-            return util.devPathDiskToPartition(self.bootHdd, 1)
-
     def get_rootdev(self):
         assert self.is_ready()
 
@@ -393,6 +397,33 @@ class StorageLayoutEfiBcacheLvm(StorageLayout):
 
     def optimize_rootdev(self):
         _helperAdjust(self)
+
+    def get_esp(self):
+        assert self.is_ready()
+
+        if self.ssd is not None:
+            return self.ssdEspParti
+        else:
+            return util.devPathDiskToPartition(self.bootHdd, 1)
+
+    def get_esp_sync_info(self):
+        assert self.is_ready()
+
+        if self.ssd is not None:
+            src = self.ssdEspParti
+        else:
+            src = util.devPathDiskToPartition(self.bootHdd, 1)
+
+        dstList = []
+        for hdd in self.lvmPvHddDict:
+            if self.bootHdd is None or hdd != self.bootHdd:
+                dstList.append(util.devPathDiskToPartition(hdd, 1))
+
+        return (src, dstList)
+
+    def sync_esp(self, src, dst):
+        assert self.is_ready()
+        _helperSyncEsp(src, dst)
 
     def add_disk(self, devpath):
         # FIXME: only one ssd is allowed, and sdd must be main-disk
@@ -418,21 +449,6 @@ class StorageLayoutEfiBcacheLvm(StorageLayout):
             return self._removeSsdEfiBcacheLvm()
         else:
             return self._removeHddEfiBcacheLvm(devpath)
-
-    def get_esp_sync_info(self):
-        assert self.is_ready()
-
-        if self.ssd is not None:
-            src = self.ssdEspParti
-        else:
-            src = util.devPathDiskToPartition(self.bootHdd, 1)
-
-        dstList = []
-        for hdd in self.lvmPvHddDict:
-            if self.bootHdd is None or hdd != self.bootHdd:
-                dstList.append(util.devPathDiskToPartition(hdd, 1))
-
-        return (src, dstList)
 
     def _addSsdEfiBcacheLvm(self, devpath):
         if self.ssd is not None:
@@ -587,6 +603,11 @@ def _helperAdjust(layout):
     added = (added // 1024 + 1) * 1024      # change unit from MB to GB
     util.cmdCall("/sbin/lvm", "lvextend", "-L+%dG" % (added), layout.get_rootdev())
     util.cmdExec("/sbin/resize2fs", layout.get_rootdev())
+
+
+def _helperSyncEsp(src, dst, syncInfo):
+    assert src == syncInfo[0] and dst in syncInfo[1]
+    util.syncBlkDev(src, dst, mountPoint1=_bootDir)
 
 
 _bootDir = "/boot"

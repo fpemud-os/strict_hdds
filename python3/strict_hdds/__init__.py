@@ -51,6 +51,12 @@ class StorageLayout:
     def is_ready(self):
         raise NotImplementedError()
 
+    def get_rootdev(self):
+        raise NotImplementedError()
+
+    def optimize_rootdev(self):
+        raise NotImplementedError()
+
 
 from .layouts import StorageLayoutBiosSimple
 from .layouts import StorageLayoutBiosLvm
