@@ -59,10 +59,6 @@ class StorageLayoutBiosSimple(StorageLayout):
         assert self.is_ready()
         return self._hddRootParti
 
-    def optimize_rootdev(self):
-        assert self.is_ready()
-        return      # no-op
-
     def get_boot_disk(self):
         assert self.is_ready()
         return self._hdd
@@ -189,10 +185,6 @@ class StorageLayoutEfiSimple(StorageLayout):
         assert self.is_ready()
         return self.hddRootParti
 
-    def optimize_rootdev(self):
-        assert self.is_ready()
-        return      # no-op
-
     def get_esp(self):
         assert self.is_ready()
         return self.hddEspParti
@@ -273,7 +265,7 @@ class StorageLayoutEfiLvm(StorageLayout):
 
     def sync_esp(self, src, dst):
         assert self.is_ready()
-        _helperSyncEsp(src, dst)
+        _helperSyncEsp(self, src, dst)
 
     def add_disk(self, devpath):
         assert devpath not in self.lvmPvHddList
@@ -396,6 +388,7 @@ class StorageLayoutEfiBcacheLvm(StorageLayout):
         assert False
 
     def optimize_rootdev(self):
+        assert self.is_ready()
         _helperAdjust(self)
 
     def get_esp(self):
@@ -423,7 +416,7 @@ class StorageLayoutEfiBcacheLvm(StorageLayout):
 
     def sync_esp(self, src, dst):
         assert self.is_ready()
-        _helperSyncEsp(src, dst)
+        _helperSyncEsp(self, src, dst)
 
     def add_disk(self, devpath):
         # FIXME: only one ssd is allowed, and sdd must be main-disk
@@ -605,7 +598,8 @@ def _helperAdjust(layout):
     util.cmdExec("/sbin/resize2fs", layout.get_rootdev())
 
 
-def _helperSyncEsp(src, dst, syncInfo):
+def _helperSyncEsp(layout, src, dst):
+    syncInfo = layout.get_esp_sync_info()
     assert src == syncInfo[0] and dst in syncInfo[1]
     util.syncBlkDev(src, dst, mountPoint1=_bootDir)
 

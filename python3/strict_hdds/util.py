@@ -32,6 +32,7 @@ import stat
 import crcmod
 import parted
 import struct
+import tempfile
 import subprocess
 
 
@@ -85,6 +86,13 @@ def cmdCallTestSuccess(cmd, *kargs):
     if ret.returncode > 128:
         time.sleep(1.0)
     return (ret.returncode == 0)
+
+
+def shellExec(cmd):
+    ret = subprocess.run(cmd, shell=True, universal_newlines=True)
+    if ret.returncode > 128:
+        time.sleep(1.0)
+    ret.check_returncode()
 
 
 def wipeHarddisk(devpath):
@@ -460,6 +468,27 @@ def getBlkDevLvmInfo(devPath):
         return None
 
 
+def syncBlkDev(devPath1, devPath2, mountPoint1=None, mountPoint2=None):
+    if getBlkDevSize(devPath1) != getBlkDevSize(devPath2):
+        raise Exception("%s and %s have different size" % (devPath1, devPath2))
+    if getBlkDevFsType(devPath1) != getBlkDevFsType(devPath2):
+        raise Exception("%s and %s have different filesystem" % (devPath1, devPath2))
+
+    cmd = "/usr/bin/rsync -q -a --delete \"%s/\" \"%s\""        # SRC parameter has "/" postfix so that whole directory is synchronized
+    if mountPoint1 is not None and mountPoint2 is not None:
+        shellExec(cmd % (mountPoint1, mountPoint2))
+    elif mountPoint1 is not None and mountPoint2 is None:
+        with TmpMount(devPath2) as mp2:
+            shellExec(cmd % (mountPoint1, mp2.mountpoint))
+    elif mountPoint1 is None and mountPoint2 is not None:
+        with TmpMount(devPath1, "ro") as mp1:
+            shellExec(cmd % (mp1.mountpoint, mountPoint2))
+    else:
+        with TmpMount(devPath1, "ro") as mp1:
+            with TmpMount(devPath2) as mp2:
+                shellExec(cmd % (mp1.mountpoint, mp2.mountpoint))
+
+
 def gptNewGuid(guidStr):
     assert len(guidStr) == 36
     assert guidStr[8] == "-" and guidStr[13] == "-" and guidStr[18] == "-" and guidStr[23] == "-"
@@ -717,3 +746,36 @@ def getDevPathListForFixedHdd():
             continue
         ret.append("/dev/" + m.group(1))
     return ret
+
+
+class TmpMount:
+
+    def __init__(self, path, options=None):
+        self._path = path
+        self._tmppath = tempfile.mkdtemp()
+
+        try:
+            cmd = ["/bin/mount"]
+            if options is not None:
+                cmd.append("-o")
+                cmd.append(options)
+            cmd.append(self._path)
+            cmd.append(self._tmppath)
+            subprocess.run(cmd, check=True, universal_newlines=True)
+        except BaseException:
+            os.rmdir(self._tmppath)
+            raise
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.close()
+
+    @property
+    def mountpoint(self):
+        return self._tmppath
+
+    def close(self):
+        subprocess.run(["/bin/umount", self._tmppath], check=True, universal_newlines=True)
+        os.rmdir(self._tmppath)

@@ -54,9 +54,6 @@ class StorageLayout:
     def get_rootdev(self):
         raise NotImplementedError()
 
-    def optimize_rootdev(self):
-        raise NotImplementedError()
-
 
 class StorageLayoutError(Exception):
     pass
