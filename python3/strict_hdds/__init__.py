@@ -61,7 +61,7 @@ class StorageLayoutError(Exception):
 
 class StorageLayoutParseError(StorageLayoutError):
 
-    def __init__(self, layout_class, message):
+    def __init__(self, layout_class, message):      # FIXME: layout_class should be changed  to layout_name
         self.layout_name = layout_class.name
         self.message = message
 
