@@ -102,6 +102,9 @@ class StorageLayoutEfiBcacheLvm(StorageLayout):
         assert src == self._getCurEsp() and dst in self._getOtherEspList()
         util.syncBlkDev(src, dst, mountPoint1=util.bootDir)
 
+    def get_swap_partition(self):
+        return self._ssdSwapParti
+
     def get_cache_partition(self):
         return self._ssdCacheParti
 
