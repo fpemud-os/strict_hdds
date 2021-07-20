@@ -818,6 +818,15 @@ def getDevPathListForFixedHdd():
     return ret
 
 
+def getMountDeviceForPath(pathname):
+    buf = cmdCall("/bin/mount")
+    for line in buf.split("\n"):
+        m = re.search("^(.*) on (.*) type ", line)
+        if m is not None and m.group(2) == pathname:
+            return m.group(1)
+    return None
+
+
 class TmpMount:
 
     def __init__(self, path, options=None):
