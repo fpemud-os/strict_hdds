@@ -87,8 +87,8 @@ class StorageLayoutReleaseDiskError(StorageLayoutError):
 
 class StorageLayoutParseError(StorageLayoutError):
 
-    def __init__(self, layout_class, message):      # FIXME: layout_class should be changed  to layout_name
-        self.layout_name = layout_class.name
+    def __init__(self, layout_name, message):
+        self.layout_name = layout_name
         self.message = message
 
 
