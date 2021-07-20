@@ -69,7 +69,7 @@ class StorageLayoutBiosLvm(StorageLayout):
         return self._bootHdd
 
     def optimize_rootdev(self):
-        util.autoExtendLv(self.get_rootdev())
+        util.autoExtendLv(util.rootLvDevPath)
 
     def get_disk_list(self):
         return self._diskList

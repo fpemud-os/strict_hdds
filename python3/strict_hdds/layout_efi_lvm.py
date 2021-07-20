@@ -72,7 +72,7 @@ class StorageLayoutEfiLvm(StorageLayout):
         return util.getBlkDevSize(util.swapLvDevPath) >= util.getSwapSizeInGb() * 1024 * 1024 * 1024
 
     def optimize_rootdev(self):
-        util.autoExtendLv(self.get_rootdev())
+        util.autoExtendLv(util.rootLvDevPath)
 
     def get_esp(self):
         return self._getCurEsp()

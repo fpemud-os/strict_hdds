@@ -48,9 +48,6 @@ class StorageLayout:
     def boot_mode(self):
         raise NotImplementedError()
 
-    def is_ready(self):
-        raise NotImplementedError()
-
     def get_rootdev(self):
         raise NotImplementedError()
 
