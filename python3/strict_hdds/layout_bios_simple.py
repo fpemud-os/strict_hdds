@@ -75,7 +75,7 @@ class StorageLayoutBiosSimple(StorageLayout):
         self._bSwapFile = False
 
 
-def create_layout(hdd=None):
+def create_layout(hdd=None, dry_run=False):
     if hdd is None:
         hddList = util.getDevPathListForFixedHdd()
         if len(hddList) == 0:
@@ -84,10 +84,11 @@ def create_layout(hdd=None):
             raise StorageLayoutCreateError("multiple harddisks")
         hdd = hddList[0]
 
-    # create partitions
-    util.initializeDisk(hdd, "mbr", [
-        ("*", "ext4"),
-    ])
+    if not dry_run:
+        # create partitions
+        util.initializeDisk(hdd, "mbr", [
+            ("*", util.fsExt4),
+        ])
 
     ret = StorageLayoutBiosSimple()
     ret._hdd = hdd
@@ -105,7 +106,7 @@ def parse_layout(bootDev, rootDev):
 
     ret._hddRootParti = rootDev
     fs = util.getBlkDevFsType(ret._hddRootParti)
-    if fs != "ext4":
+    if fs != util.fsExt4:
         raise StorageLayoutParseError(StorageLayoutBiosSimple.name, "root partition file system is \"%s\", not \"ext4\"" % (fs))
 
     return ret

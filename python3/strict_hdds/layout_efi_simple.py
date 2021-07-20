@@ -77,7 +77,7 @@ class StorageLayoutEfiSimple(StorageLayout):
         self._bSwapFile = False
 
 
-def create_layout(hdd=None):
+def create_layout(hdd=None, dry_run=False):
     if hdd is None:
         hddList = util.getDevPathListForFixedHdd()
         if len(hddList) == 0:
@@ -88,8 +88,8 @@ def create_layout(hdd=None):
 
     # create partitions
     util.initializeDisk(hdd, "gpt", [
-        ("%dMiB" % (util.getEspSizeInMb()), "vfat"),
-        ("*", "ext4"),
+        ("%dMiB" % (util.getEspSizeInMb()), util.fsFAT),
+        ("*", util.fsExt4),
     ])
 
     ret = StorageLayoutEfiSimple()
@@ -114,7 +114,7 @@ def parse_layout(bootDev, rootDev):
     ret._hddRootParti = rootDev
     if True:
         fs = util.getBlkDevFsType(ret._hddRootParti)
-        if fs != "ext4":
+        if fs != util.fsExt4:
             raise StorageLayoutParseError(StorageLayoutEfiSimple.name, "root partition file system is \"%s\", not \"ext4\"" % (fs))
 
     if os.path.exists(util.swapFilename) and util.cmdCallTestSuccess("/sbin/swaplabel", util.swapFilename):

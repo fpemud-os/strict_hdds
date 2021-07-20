@@ -127,7 +127,7 @@ class StorageLayoutBiosLvm(StorageLayout):
         self._bSwapLv = False
 
 
-def create_layout(disk_list=None):
+def create_layout(disk_list=None, dry_run=False):
     if disk_list is None:
         disk_list = util.getDevPathListForFixedHdd()
         if len(disk_list) == 0:
@@ -135,24 +135,25 @@ def create_layout(disk_list=None):
     else:
         assert len(disk_list) > 0
 
-    for devpath in disk_list:
-        # create partitions
-        util.initializeDisk(devpath, "mbr", [
-            ("*", "lvm"),
-        ])
+    if not dry_run:
+        for devpath in disk_list:
+            # create partitions
+            util.initializeDisk(devpath, "mbr", [
+                ("*", "lvm"),
+            ])
 
-        # create lvm physical volume on partition1 and add it to volume group
-        parti = util.devPathDiskToPartition(devpath, 1)
-        util.cmdCall("/sbin/lvm", "pvcreate", parti)
-        if not util.cmdCallTestSuccess("/sbin/lvm", "vgdisplay", util.vgName):
-            util.cmdCall("/sbin/lvm", "vgcreate", util.vgName, parti)
-        else:
-            util.cmdCall("/sbin/lvm", "vgextend", util.vgName, parti)
+            # create lvm physical volume on partition1 and add it to volume group
+            parti = util.devPathDiskToPartition(devpath, 1)
+            util.cmdCall("/sbin/lvm", "pvcreate", parti)
+            if not util.cmdCallTestSuccess("/sbin/lvm", "vgdisplay", util.vgName):
+                util.cmdCall("/sbin/lvm", "vgcreate", util.vgName, parti)
+            else:
+                util.cmdCall("/sbin/lvm", "vgextend", util.vgName, parti)
 
-    # create root lv
-    out = util.cmdCall("/sbin/lvm", "vgdisplay", "-c", util.vgName)
-    freePe = int(out.split(":")[15])
-    util.cmdCall("/sbin/lvm", "lvcreate", "-l", "%d" % (freePe // 2), "-n", util.rootLvName, util.vgName)
+        # create root lv
+        out = util.cmdCall("/sbin/lvm", "vgdisplay", "-c", util.vgName)
+        freePe = int(out.split(":")[15])
+        util.cmdCall("/sbin/lvm", "lvcreate", "-l", "%d" % (freePe // 2), "-n", util.rootLvName, util.vgName)
 
     # return value
     ret = StorageLayoutBiosLvm()
@@ -184,14 +185,14 @@ def parse_layout(booDev, rootDev):
     # root lv
     if re.search("/dev/hdd/root:%s:.*" % (util.vgName), out, re.M) is not None:
         fs = util.getBlkDevFsType(util.rootLvDevPath)
-        if fs != "ext4":
+        if fs != util.fsExt4:
             raise StorageLayoutParseError(StorageLayoutBiosLvm.name, "root partition file system is \"%s\", not \"ext4\"" % (fs))
     else:
         raise StorageLayoutParseError(StorageLayoutBiosLvm.name, "logical volume \"%s\" does not exist" % (util.rootLvDevPath))
 
     # swap lv
     if re.search("/dev/hdd/swap:%s:.*" % (util.vgName), out, re.M) is not None:
-        if util.getBlkDevFsType(util.swapLvDevPath) != "swap":
+        if util.getBlkDevFsType(util.swapLvDevPath) != util.fsSwap:
             raise StorageLayoutParseError(StorageLayoutBiosLvm.name, "\"%s\" has an invalid file system" % (util.swapLvDevPath))
         ret._bSwapLv = True
 

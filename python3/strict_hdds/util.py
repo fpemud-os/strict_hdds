@@ -47,6 +47,11 @@ swapLvDevPath = "/dev/mapper/hdd.swap"
 swapFilename = "/var/swap.dat"
 
 
+fsTypeExt4 = "ext4"
+fsTypeFat = "vfat"
+fsTypeSwap = "swap"
+
+
 def getPhysicalMemorySize():
     with open("/proc/meminfo", "r") as f:
         # We return memory size in GB.

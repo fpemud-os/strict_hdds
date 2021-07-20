@@ -99,7 +99,7 @@ class StorageLayoutEfiLvm(StorageLayout):
 
         # create partitions
         util.initializeDisk(devpath, "gpt", [
-            ("%dMiB" % (util.getEspSizeInMb()), "vfat"),
+            ("%dMiB" % (util.getEspSizeInMb()), util.fsFAT),
             ("*", "lvm"),
         ])
 
@@ -170,7 +170,7 @@ class StorageLayoutEfiLvm(StorageLayout):
         return ret
 
 
-def create_layout(hddList=None):
+def create_layout(hddList=None, dry_run=False):
     if hddList is None:
         hddList = util.getDevPathListForFixedHdd()
         if len(hddList) == 0:
@@ -181,7 +181,7 @@ def create_layout(hddList=None):
     for devpath in hddList:
         # create partitions
         util.initializeDisk(devpath, "gpt", [
-            ("%dMiB" % (util.getEspSizeInMb()), "vfat"),
+            ("%dMiB" % (util.getEspSizeInMb()), util.fsFAT),
             ("*", "lvm"),
         ])
 
@@ -242,14 +242,14 @@ def parse_layout(bootDev, rootDev):
     # root lv
     if re.search("/dev/hdd/root:%s:.*" % (util.vgName), out, re.M) is not None:
         fs = util.getBlkDevFsType(util.rootLvDevPath)
-        if fs != "ext4":
+        if fs != util.fsExt4:
             raise StorageLayoutParseError(StorageLayoutEfiLvm.name, "root partition file system is \"%s\", not \"ext4\"" % (fs))
     else:
         raise StorageLayoutParseError(StorageLayoutEfiLvm.name, "logical volume \"%s\" does not exist" % (util.rootLvDevPath))
 
     # swap lv
     if re.search("/dev/hdd/swap:%s:.*" % (util.vgName), out, re.M) is not None:
-        if util.getBlkDevFsType(util.swapLvDevPath) != "swap":
+        if util.getBlkDevFsType(util.swapLvDevPath) != util.fsSwap:
             raise StorageLayoutParseError(StorageLayoutEfiLvm.name, "\"%s\" has an invalid file system" % (util.swapLvDevPath))
         ret._bSwapLv = True
 
