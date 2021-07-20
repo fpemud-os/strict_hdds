@@ -57,12 +57,12 @@ class StorageLayoutBiosSimple(StorageLayout):
     def dev_swap(self):
         return util.swapFilename if self._bSwapFile else None
 
+    def get_boot_disk(self):
+        return self._hdd
+
     def check_swap_size(self):
         assert self._bSwapFile
         return os.path.getsize(util.swapFilename) >= util.getSwapSizeInGb() * 1024 * 1024 * 1024
-
-    def get_boot_disk(self):
-        return self._hdd
 
     def create_swap_file(self):
         assert not self._bSwapFile

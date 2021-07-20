@@ -78,6 +78,9 @@ class StorageLayoutEfiBcacheLvm(StorageLayout):
     def dev_swap(self):
         return self._ssdSwapParti
 
+    def get_boot_disk(self):
+        return self._ssd if self._ssd is not None else self._bootHdd
+
     def check_swap_size(self):
         assert self._ssdSwapParti is not None
         return util.getBlkDevSize(self._ssdSwapParti) >= util.getSwapSizeInGb() * 1024 * 1024 * 1024

@@ -56,6 +56,9 @@ class StorageLayout:
     def dev_swap(self):
         raise NotImplementedError()
 
+    def get_boot_disk(self):
+        raise NotImplementedError()
+
     def check_swap_size(self):
         raise NotImplementedError()
 

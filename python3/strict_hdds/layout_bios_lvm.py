@@ -63,12 +63,12 @@ class StorageLayoutBiosLvm(StorageLayout):
     def dev_swap(self):
         return util.swapLvDevPath if self._bSwapLv else None
 
+    def get_boot_disk(self):
+        return self._bootHdd
+
     def check_swap_size(self):
         assert self._bSwapLv
         return util.getBlkDevSize(util.swapLvDevPath) >= util.getSwapSizeInGb() * 1024 * 1024 * 1024
-
-    def get_boot_disk(self):
-        return self._bootHdd
 
     def optimize_rootdev(self):
         util.autoExtendLv(util.rootLvDevPath)
