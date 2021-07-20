@@ -49,10 +49,12 @@ class StorageLayoutBiosSimple(StorageLayout):
     def boot_mode(self):
         return StorageLayout.BOOT_MODE_BIOS
 
-    def get_rootdev(self):
+    @property
+    def device_rootfs(self):
         return self._hddRootParti
 
-    def get_swap(self):
+    @property
+    def device_swap(self):
         return util.swapFilename if self._bSwapFile else None
 
     def check_swap_size(self):

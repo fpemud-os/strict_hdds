@@ -22,8 +22,11 @@
 
 
 import os
+import re
 from . import util
 from . import StorageLayout
+from . import StorageLayoutCreateError
+from . import StorageLayoutAddDiskError
 from . import StorageLayoutReleaseDiskError
 from . import StorageLayoutParseError
 
@@ -56,27 +59,34 @@ class StorageLayoutEfiBcacheLvm(StorageLayout):
     name = "efi-bcache-lvm"
 
     def __init__(self):
-        self.hddDict = dict()           # dict<hddDev,bcacheDev>
-        self.ssd = None
-        self.ssdEspParti = None
-        self.ssdSwapParti = None
-        self.ssdCacheParti = None
-
-        self._bRootLv = None
+        self._ssd = None
+        self._ssdEspParti = None
+        self._ssdSwapParti = None
+        self._ssdCacheParti = None
+        self._hddDict = dict()           # dict<hddDev,bcacheDev>
         self._bootHdd = None
 
     @property
     def boot_mode(self):
         return StorageLayout.BOOT_MODE_EFI
 
-    def get_rootdev(self):
+    @property
+    def device_rootfs(self):
         return util.rootLvDevPath
 
-    def get_swap(self):
-        return self.ssdSwapParti
+    @property
+    def device_swap(self):
+        return self._ssdSwapParti
+
+    def check_swap_size(self):
+        assert self._ssdSwapParti is not None
+        return util.getBlkDevSize(self._ssdSwapParti) >= util.getSwapSizeInGb() * 1024 * 1024 * 1024
 
     def optimize_rootdev(self):
         util.autoExtendLv(util.rootLvDevPath)
+
+    def get_ssd(self):
+        return self._ssd
 
     def get_esp(self):
         return self._getCurEsp()
@@ -89,22 +99,33 @@ class StorageLayoutEfiBcacheLvm(StorageLayout):
         assert src == self._getCurEsp() and dst in self._getOtherEspList()
         util.syncBlkDev(src, dst, mountPoint1=util.bootDir)
 
+    def get_cache_partition(self):
+        return self._ssdCacheParti
+
+    def get_disk_list(self):
+        if self._ssd is not None:
+            return [self._ssd] + list(self._hddDict.keys())
+        else:
+            return list(self._hddDict.keys())
+
     def add_disk(self, devpath):
         assert devpath is not None
-        assert devpath != self.ssd
-        assert devpath not in self.hddDict
+        assert devpath not in self.get_disk_list()
 
-        # FIXME: only one ssd is allowed, and sdd must be main-disk
-        if False:
+        if devpath not in util.getDevPathListForFixedHdd():
+            raise StorageLayoutAddDiskError(devpath, "not a harddisk")
+
+        if util.isBlkDevSsdOrHdd(devpath):
+            assert self._ssd is None
             return self._addSsdEfiBcacheLvm(devpath)
         else:
             return self._addHddEfiBcacheLvm(devpath)
 
     def release_disk(self, devpath):
         assert devpath is not None
-        assert devpath in [self.ssd] + self.hddDict
+        assert devpath in self.get_disk_list()
 
-        if devpath == self.ssd:
+        if devpath == self._ssd:
             return
 
         parti = util.devPathDiskToPartition(devpath, 2)
@@ -115,63 +136,56 @@ class StorageLayoutEfiBcacheLvm(StorageLayout):
 
     def remove_disk(self, devpath):
         assert devpath is not None
-        assert self.is_ready()
+        assert devpath in self.get_disk_list()
 
-        if devpath == self.ssd:
+        if devpath == self._ssd:
             return self._removeSsdEfiBcacheLvm()
         else:
             return self._removeHddEfiBcacheLvm(devpath)
 
     def _addSsdEfiBcacheLvm(self, devpath):
-        if self.ssd is not None:
-            raise Exception("mainboot device already exists")
-        if devpath in self.hddDict:
-            raise Exception("the specified device is already managed")
-        if devpath not in util.getDevPathListForFixedHdd() or not util.isBlkDevSsdOrHdd(devpath):
-            raise Exception("the specified device is not a fixed SSD harddisk")
-
         # create partitions
         util.initializeDisk(devpath, "gpt", [
             ("%dMiB" % (util.getEspSizeInMb()), "esp"),
             (self.swapPartiSizeStr, "swap"),
             ("*", "bcache"),
         ])
-        self.ssd = devpath
+        self._ssd = devpath
 
         # sync partition1 as boot partition
         parti = util.devPathDiskToPartition(devpath, 1)
         util.cmdCall("/usr/sbin/mkfs.vfat", parti)
         util.syncBlkDev(util.devPathDiskToPartition(self._bootHdd, 1), parti, mountPoint1=util.bootDir)
-        self.ssdEspParti = parti
+        self._ssdEspParti = parti
 
         # make partition2 as swap partition
         parti = util.devPathDiskToPartition(devpath, 2)
         util.cmdCall("/sbin/mkswap", parti)
-        self.ssdSwapParti = parti
+        self._ssdSwapParti = parti
 
         # make partition3 as cache partition
         parti = util.devPathDiskToPartition(devpath, 3)
         util.bcacheMakeDevice(parti, False)
-        self.ssdCacheParti = parti
+        self._ssdCacheParti = parti
 
         # enable cache partition
         with open("/sys/fs/bcache/register", "w") as f:
             f.write(parti)
-        setUuid = util.bcacheGetSetUuid(self.ssdCacheParti)
-        for bcacheDev in self.hddDict.values():
+        setUuid = util.bcacheGetSetUuid(self._ssdCacheParti)
+        for bcacheDev in self._hddDict.values():
             with open("/sys/block/%s/bcache/attach" % (os.path.basename(bcacheDev)), "w") as f:
                 f.write(str(setUuid))
 
         # change boot device
         util.cmdCall("/bin/umount", util.bootDir)
         util.gptToggleEspPartition(util.devPathDiskToPartition(self._bootHdd, 1), False)
-        util.cmdCall("/bin/mount", self.ssdEspParti, util.bootDir, "-o", "ro")
+        util.cmdCall("/bin/mount", self._ssdEspParti, util.bootDir, "-o", "ro")
         self._bootHdd = None
 
         return True
 
     def _addHddEfiBcacheLvm(self, devpath):
-        if devpath == self.ssd or devpath in self.hddDict:
+        if devpath == self._ssd or devpath in self._hddDict:
             raise Exception("the specified device is already managed")
         if devpath not in util.getDevPathListForFixedHdd():
             raise Exception("the specified device is not a fixed harddisk")
@@ -188,8 +202,8 @@ class StorageLayoutEfiBcacheLvm(StorageLayout):
         # fill partition1
         parti = util.devPathDiskToPartition(devpath, 1)
         util.cmdCall("/usr/sbin/mkfs.vfat", parti)
-        if self.ssd is not None:
-            util.syncBlkDev(self.ssdEspParti, parti, mountPoint1=util.bootDir)
+        if self._ssd is not None:
+            util.syncBlkDev(self._ssdEspParti, parti, mountPoint1=util.bootDir)
         else:
             util.syncBlkDev(util.devPathDiskToPartition(self._bootHdd, 1), parti, mountPoint1=util.bootDir)
 
@@ -199,60 +213,60 @@ class StorageLayoutEfiBcacheLvm(StorageLayout):
         with open("/sys/fs/bcache/register", "w") as f:
             f.write(parti)
         bcacheDev = util.bcacheFindByBackingDevice(parti)
-        if self.ssd is not None:
-            setUuid = util.bcacheGetSetUuid(self.ssdCacheParti)
+        if self._ssd is not None:
+            setUuid = util.bcacheGetSetUuid(self._ssdCacheParti)
             with open("/sys/block/%s/bcache/attach" % os.path.basename(bcacheDev), "w") as f:
                 f.write(str(setUuid))
 
         # create lvm physical volume on bcache device and add it to volume group
         util.cmdCall("/sbin/lvm", "pvcreate", bcacheDev)
         util.cmdCall("/sbin/lvm", "vgextend", util.vgName, bcacheDev)
-        self.hddDict[devpath] = bcacheDev
+        self._hddDict[devpath] = bcacheDev
 
         return False
 
     def _removeSsdEfiBcacheLvm(self):
-        assert self.ssd is not None
-        assert len(self.hddDict) > 0
+        assert self._ssd is not None
+        assert len(self._hddDict) > 0
 
         # check
-        if util.systemdFindSwapService(self.ssdSwapParti) is not None:
+        if util.systemdFindSwapService(self._ssdSwapParti) is not None:
             raise Exception("swap partition is in use, please use \"sysman disable-swap\" first")
 
         # remove cache partition
-        setUuid = util.bcacheGetSetUuid(self.ssdCacheParti)
+        setUuid = util.bcacheGetSetUuid(self._ssdCacheParti)
         with open("/sys/fs/bcache/%s/unregister" % (setUuid), "w") as f:
-            f.write(self.ssdCacheParti)
-        self.ssdCacheParti = None
+            f.write(self._ssdCacheParti)
+        self._ssdCacheParti = None
 
         # remove swap partition
-        self.ssdSwapParti = None
+        self._ssdSwapParti = None
 
         # change boot device
         util.cmdCall("/bin/umount", util.bootDir)
-        self._bootHdd = list(self.hddDict.keys())[0]
+        self._bootHdd = list(self._hddDict.keys())[0]
         util.gptToggleEspPartition(util.devPathDiskToPartition(self._bootHdd, 1), True)
         util.cmdCall("/bin/mount", util.devPathDiskToPartition(self._bootHdd, 1), util.bootDir, "-o", "ro")
-        self.ssdEspParti = None
+        self._ssdEspParti = None
 
         # wipe disk
-        util.wipeHarddisk(self.ssd)
-        self.ssd = None
+        util.wipeHarddisk(self._ssd)
+        self._ssd = None
 
         return True
 
     def _removeHddEfiBcacheLvm(self, devpath):
-        assert devpath in self.hddDict
+        assert devpath in self._hddDict
 
-        if len(self.hddDict) <= 1:
+        if len(self._hddDict) <= 1:
             raise Exception("can not remove the last physical volume")
 
         # change boot device if needed
         ret = False
         if self._bootHdd is not None and self._bootHdd == devpath:
             util.cmdCall("/bin/umount", util.bootDir)
-            del self.hddDict[devpath]
-            self._bootHdd = list(self.hddDict.keys())[0]
+            del self._hddDict[devpath]
+            self._bootHdd = list(self._hddDict.keys())[0]
             util.gptToggleEspPartition(util.devPathDiskToPartition(self._bootHdd, 1), True)
             util.cmdCall("/bin/mount", util.devPathDiskToPartition(self._bootHdd, 1), util.bootDir, "-o", "ro")
             ret = True
@@ -267,42 +281,46 @@ class StorageLayoutEfiBcacheLvm(StorageLayout):
         return ret
 
     def _getCurEsp(self):
-        if self.ssd is not None:
-            return self.ssdEspParti
+        if self._ssd is not None:
+            return self._ssdEspParti
         else:
             return util.devPathDiskToPartition(self._bootHdd, 1)
 
     def _getOtherEspList(self):
         ret = []
-        for hdd in self.hddDict:
+        for hdd in self._hddDict:
             if self._bootHdd is None or hdd != self._bootHdd:
                 ret.append(util.devPathDiskToPartition(hdd, 1))
         return ret
 
 
-def create_layout(ssd=None, hddList=None):
-    if ssd is None and hddList is None:
+def create_layout(ssd=None, hdd_list=None):
+    ret = StorageLayoutEfiBcacheLvm()
+
+    if ssd is None and hdd_list is None:
         ssdList = []
         for devpath in util.getDevPathListForFixedHdd():
             if util.isBlkDevSsdOrHdd(devpath):
                 ssdList.append(devpath)
             else:
-                hddList.append(devpath)
+                hdd_list.append(devpath)
         if len(ssdList) == 0:
             pass
         elif len(ssdList) == 1:
             ssd = ssdList[0]
         else:
-            raise Exception("multiple SSD harddisks")
-        if len(hddList) == 0:
-            raise Exception("no HDD harddisks")
+            raise StorageLayoutCreateError("multiple SSD harddisks")
+        if len(hdd_list) == 0:
+            raise StorageLayoutCreateError("no HDD harddisk")
     else:
-        assert hddList is not None and len(hddList) > 0
+        assert hdd_list is not None and len(hdd_list) > 0
 
     setUuid = None
     vgCreated = False
 
     if ssd is not None:
+        ret._ssd = ssd
+
         # create partitions
         util.initializeDisk(ssd, "gpt", [
             ("%dMiB" % (util.getEspSizeInMb()), "esp"),
@@ -311,21 +329,21 @@ def create_layout(ssd=None, hddList=None):
         ])
 
         # sync partition1 as boot partition
-        parti = util.devPathDiskToPartition(ssd, 1)
-        util.cmdCall("/usr/sbin/mkfs.vfat", parti)
+        ret._ssdEspParti = util.devPathDiskToPartition(ssd, 1)
+        util.cmdCall("/usr/sbin/mkfs.vfat", ret._ssdEspParti)
 
         # make partition2 as swap partition
-        parti = util.devPathDiskToPartition(ssd, 2)
-        util.cmdCall("/sbin/mkswap", parti)
+        ret._ssdSwapParti = util.devPathDiskToPartition(ssd, 2)
+        util.cmdCall("/sbin/mkswap", ret._ssdSwapParti)
 
         # make partition3 as cache partition
-        parti = util.devPathDiskToPartition(ssd, 3)
-        util.bcacheMakeDevice(parti, False)
+        ret._ssdCacheParti = util.devPathDiskToPartition(ssd, 3)
+        util.bcacheMakeDevice(ret._ssdCacheParti, False)
         with open("/sys/fs/bcache/register", "w") as f:
-            f.write(parti)
-        setUuid = util.bcacheGetSetUuid(parti)
+            f.write(ret._ssdCacheParti)
+        setUuid = util.bcacheGetSetUuid(ret._ssdCacheParti)
 
-    for devpath in hddList:
+    for devpath in hdd_list:
         # create partitions
         util.initializeDisk(devpath, "gpt", [
             ("%dMiB" % (util.getEspSizeInMb()), "vfat"),
@@ -349,33 +367,40 @@ def create_layout(ssd=None, hddList=None):
         # create lvm physical volume on bcache device and add it to volume group
         util.cmdCall("/sbin/lvm", "pvcreate", bcacheDev)
         if not vgCreated:
-            util.cmdCall("/sbin/lvm", "vgcreate", "hdd", bcacheDev)
+            util.cmdCall("/sbin/lvm", "vgcreate", util.vgName, bcacheDev)
             vgCreated = True
         else:
-            util.cmdCall("/sbin/lvm", "vgextend", "hdd", bcacheDev)
+            util.cmdCall("/sbin/lvm", "vgextend", util.vgName, bcacheDev)
+
+        # record to return value
+        ret._hddDict[devpath] = bcacheDev
 
     # create root lv
-    out = util.cmdCall("/sbin/lvm", "vgdisplay", "-c", "hdd")
+    out = util.cmdCall("/sbin/lvm", "vgdisplay", "-c", util.vgName)
     freePe = int(out.split(":")[15])
-    util.cmdCall("/sbin/lvm", "lvcreate", "-l", "%d" % (freePe // 2), "-n", "root", "hdd")
+    util.cmdCall("/sbin/lvm", "lvcreate", "-l", "%d" % (freePe // 2), "-n", util.rootLvName, util.vgName)
+
+    # return value
+    if ret._ssd is None:
+        ret._bootHdd = hdd_list[0]
+    return ret
 
 
 def parse_layout(bootDev):
     ret = StorageLayoutEfiBcacheLvm()
 
     if not util.gptIsEspPartition(bootDev):
-        raise StorageLayoutParseError(StorageLayoutEfiBcacheLvm.name, "boot device is not ESP partitiion")
+        raise StorageLayoutParseError(StorageLayoutEfiBcacheLvm.name, "boot device is not an ESP partitiion")
 
-    # ret.lvmVg
-    if not util.cmdCallTestSuccess("/sbin/lvm", "vgdisplay", "hdd"):
-        raise StorageLayoutParseError(StorageLayoutEfiBcacheLvm.name, "volume group \"hdd\" does not exist")
-    ret.lvmVg = "hdd"
+    # vg
+    if not util.cmdCallTestSuccess("/sbin/lvm", "vgdisplay", util.vgName):
+        raise StorageLayoutParseError(StorageLayoutEfiBcacheLvm.name, "volume group \"%s\" does not exist" % (util.vgName))
 
-    # ret.lvmPvHddDict
+    # pv list
     out = util.cmdCall("/sbin/lvm", "pvdisplay", "-c")
-    for m in re.finditer("(/dev/\\S+):hdd:.*", out, re.M):
+    for m in re.finditer("(/dev/\\S+):%s:.*" % (util.vgName), out, re.M):
         if re.fullmatch("/dev/bcache[0-9]+", m.group(1)) is None:
-            raise StorageLayoutParseError(StorageLayoutEfiBcacheLvm.name, "volume group \"hdd\" has non-bcache physical volume")
+            raise StorageLayoutParseError(StorageLayoutEfiBcacheLvm.name, "volume group \"%s\" has non-bcache physical volume" % (util.vgName))
         bcacheDev = m.group(1)
         tlist = util.bcacheGetSlaveDevPathList(bcacheDev)
         hddDev, partId = util.devPathPartitionToDiskAndPartitionId(tlist[-1])
@@ -383,63 +408,57 @@ def parse_layout(bootDev):
             raise StorageLayoutParseError(StorageLayoutEfiBcacheLvm.name, "physical volume partition of %s is not %s" % (hddDev, util.devPathDiskToPartition(hddDev, 2)))
         if os.path.exists(util.devPathDiskToPartition(hddDev, 3)):
             raise StorageLayoutParseError(StorageLayoutEfiBcacheLvm.name, "redundant partition exists on %s" % (hddDev))
-        ret.lvmPvHddDict[hddDev] = bcacheDev
+        ret._hddDict[hddDev] = bcacheDev
 
-    # ret.lvmRootLv
+    # root lv
     out = util.cmdCall("/sbin/lvm", "lvdisplay", "-c")
-    if re.search("/dev/hdd/root:hdd:.*", out, re.M) is not None:
-        ret.lvmRootLv = "root"
-        if os.path.exists(util.rootLvDevPath):
-            fs = util.getBlkDevFsType(util.rootLvDevPath)
-        elif os.path.exists("/dev/mapper/hdd-root"):                    # compatible with old lvm version
-            fs = util.getBlkDevFsType("/dev/mapper/hdd-root")
-        else:
-            assert False
+    if re.search("/dev/hdd/root:%s:.*" % (util.vgName), out, re.M) is not None:
+        fs = util.getBlkDevFsType(util.rootLvDevPath)
         if fs != "ext4":
             raise StorageLayoutParseError(StorageLayoutEfiBcacheLvm.name, "root partition file system is \"%s\", not \"ext4\"" % (fs))
     else:
-        raise StorageLayoutParseError(StorageLayoutEfiBcacheLvm.name, "logical volume \"/dev/mapper/hdd.root\" does not exist")
+        raise StorageLayoutParseError(StorageLayoutEfiBcacheLvm.name, "logical volume \"%s\" does not exist" % (util.rootLvDevPath))
 
-    # ret.ssd
-    ret.ssd = util.devPathPartitionToDisk(bootDev)
-    if ret.ssd not in ret.lvmPvHddDict:
-        # ret.ssdEspParti
-        ret.ssdEspParti = util.devPathDiskToPartition(ret.ssd, 1)
-        if ret.ssdEspParti != bootDev:
+    # ssd
+    ret._ssd = util.devPathPartitionToDisk(bootDev)
+    if ret._ssd not in ret._hddDict:
+        # ret._ssdEspParti
+        ret._ssdEspParti = util.devPathDiskToPartition(ret._ssd, 1)
+        if ret._ssdEspParti != bootDev:
             raise StorageLayoutParseError(StorageLayoutEfiBcacheLvm.name, "SSD is not boot device")
-        if util.getBlkDevSize(ret.ssdEspParti) != util.getEspSizeInMb() * 1024 * 1024:
-            raise StorageLayoutParseError(StorageLayoutEfiBcacheLvm.name, "%s has an invalid size" % (ret.ssdEspParti))
+        if util.getBlkDevSize(ret._ssdEspParti) != util.getEspSizeInMb() * 1024 * 1024:
+            raise StorageLayoutParseError(StorageLayoutEfiBcacheLvm.name, "%s has an invalid size" % (ret._ssdEspParti))
 
-        # ret.ssdSwapParti
-        ret._bSsdSwapParti = util.devPathDiskToPartition(ret.ssd, 2)
-        if not os.path.exists(ret._bSsdSwapParti):
+        # ret._ssdSwapParti
+        ret._ssdSwapParti = util.devPathDiskToPartition(ret._ssd, 2)
+        if not os.path.exists(ret._ssdSwapParti):
             raise StorageLayoutParseError(StorageLayoutEfiBcacheLvm.name, "SSD has no swap partition")
-        if util.getBlkDevFsType(ret._bSsdSwapParti) != "swap":
-            raise StorageLayoutParseError(StorageLayoutEfiBcacheLvm.name, "swap device %s has an invalid file system" % (ret._bSsdSwapParti))
+        if util.getBlkDevFsType(ret._ssdSwapParti) != "swap":
+            raise StorageLayoutParseError(StorageLayoutEfiBcacheLvm.name, "swap device %s has an invalid file system" % (ret._ssdSwapParti))
 
-        # ret.ssdCacheParti
-        ret._bSsdCacheParti = util.devPathDiskToPartition(ret.ssd, 3)
-        if not os.path.exists(ret._bSsdCacheParti):
+        # ret._ssdCacheParti
+        ret._ssdCacheParti = util.devPathDiskToPartition(ret._ssd, 3)
+        if not os.path.exists(ret._ssdCacheParti):
             raise StorageLayoutParseError(StorageLayoutEfiBcacheLvm.name, "SSD has no cache partition")
 
-        for pvHdd, bcacheDev in ret.lvmPvHddDict.items():
+        for pvHdd, bcacheDev in ret._hddDict.items():
             tlist = util.bcacheGetSlaveDevPathList(bcacheDev)
             if len(tlist) < 2:
                 raise StorageLayoutParseError(StorageLayoutEfiBcacheLvm.name, "%s(%s) has no cache device" % (pvHdd, bcacheDev))
             if len(tlist) > 2:
                 raise StorageLayoutParseError(StorageLayoutEfiBcacheLvm.name, "%s(%s) has multiple cache devices" % (pvHdd, bcacheDev))
-            if tlist[0] != ret._bSsdCacheParti:
+            if tlist[0] != ret._ssdCacheParti:
                 raise StorageLayoutParseError(StorageLayoutEfiBcacheLvm.name, "%s(%s) has invalid cache device" % (pvHdd, bcacheDev))
         if True:
-            partName, partId = util.devPathPartitionToDiskAndPartitionId(ret._bSsdCacheParti)
+            partName, partId = util.devPathPartitionToDiskAndPartitionId(ret._ssdCacheParti)
             nextPartName = util.devPathDiskToPartition(partName, partId + 1)
             if os.path.exists(nextPartName):
-                raise StorageLayoutParseError(StorageLayoutEfiBcacheLvm.name, "redundant partition exists on %s" % (ret.ssd))
+                raise StorageLayoutParseError(StorageLayoutEfiBcacheLvm.name, "redundant partition exists on %s" % (ret._ssd))
     else:
-        ret.ssd = None
+        ret._ssd = None
 
     # ret.bootHdd
-    if ret.ssd is None:
-        ret.bootHdd = util.devPathPartitionToDisk(bootDev)
+    if ret._ssd is None:
+        ret._bootHdd = util.devPathPartitionToDisk(bootDev)
 
     return ret

@@ -55,10 +55,12 @@ class StorageLayoutBiosLvm(StorageLayout):
     def boot_mode(self):
         return StorageLayout.BOOT_MODE_BIOS
 
-    def get_rootdev(self):
+    @property
+    def device_rootfs(self):
         return util.rootLvDevPath
 
-    def get_swap(self):
+    @property
+    def device_swap(self):
         return util.swapLvDevPath if self._bSwapLv else None
 
     def check_swap_size(self):
@@ -203,4 +205,4 @@ def parse_layout():
     if ret._bootHdd is None:
         raise StorageLayoutParseError(StorageLayoutBiosLvm.name, "no harddisk has boot-code")
 
-    return ret  
+    return ret

@@ -51,10 +51,12 @@ class StorageLayoutEfiSimple(StorageLayout):
     def boot_mode(self):
         return StorageLayout.BOOT_MODE_EFI
 
-    def get_rootdev(self):
+    @property
+    def device_rootfs(self):
         return self._hddRootParti
 
-    def get_swap(self):
+    @property
+    def device_swap(self):
         return util.swapFilename if self._bSwapFile else None
 
     def check_swap_size(self):
@@ -101,7 +103,7 @@ def parse_layout(bootDev, rootDev):
     ret = StorageLayoutEfiSimple()
 
     if not util.gptIsEspPartition(bootDev):
-        raise StorageLayoutParseError(StorageLayoutEfiSimple.name, "boot device is not ESP partitiion")
+        raise StorageLayoutParseError(StorageLayoutEfiSimple.name, "boot device is not an ESP partitiion")
 
     ret._hdd = util.devPathPartitionToDisk(bootDev)
     if ret._hdd != util.devPathPartitionToDisk(rootDev):

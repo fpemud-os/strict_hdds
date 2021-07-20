@@ -61,10 +61,12 @@ class StorageLayoutEfiLvm(StorageLayout):
     def boot_mode(self):
         return StorageLayout.BOOT_MODE_EFI
 
-    def get_rootdev(self):
+    @property
+    def device_rootfs(self):
         return util.rootLvDevPath
 
-    def get_swap(self):
+    @property
+    def device_swap(self):
         return util.swapLvDevPath if self._bSwapLv else None
 
     def check_swap_size(self):
@@ -172,7 +174,7 @@ def create_layout(hddList=None):
     if hddList is None:
         hddList = util.getDevPathListForFixedHdd()
         if len(hddList) == 0:
-            raise StorageLayoutCreateError("no harddisks")
+            raise StorageLayoutCreateError("no harddisk")
     else:
         assert len(hddList) > 0
 
@@ -212,7 +214,7 @@ def parse_layout(bootDev):
     ret = StorageLayoutEfiLvm()
 
     if not util.gptIsEspPartition(bootDev):
-        raise StorageLayoutParseError(StorageLayoutEfiLvm.name, "boot device is not ESP partitiion")
+        raise StorageLayoutParseError(StorageLayoutEfiLvm.name, "boot device is not an ESP partitiion")
 
     # boot harddisk
     ret._bootHdd = util.devPathPartitionToDisk(bootDev)

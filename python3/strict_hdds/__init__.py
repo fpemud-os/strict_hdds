@@ -48,10 +48,12 @@ class StorageLayout:
     def boot_mode(self):
         raise NotImplementedError()
 
-    def get_rootdev(self):
+    @property
+    def device_rootfs(self):
         raise NotImplementedError()
 
-    def get_swap(self):
+    @property
+    def device_swap(self):
         raise NotImplementedError()
 
     def check_swap_size(self):
