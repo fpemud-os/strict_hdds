@@ -61,8 +61,8 @@ class StorageLayoutError(Exception):
 
 class StorageLayoutParseError(StorageLayoutError):
 
-    def __init__(self, layout_name, message):
-        self.layout_name = layout_name
+    def __init__(self, layout_class, message):
+        self.layout_name = layout_class.name
         self.message = message
 
 
@@ -75,4 +75,4 @@ from .layouts import StorageLayoutEfiBcacheLvm
 from .manager import get_supported_storage_layouts
 from .manager import create_storage_layout
 from .manager import parse_storage_layout
-from .manager import ParseStorageLayoutError
+from .manager import StorageLayoutParseError
