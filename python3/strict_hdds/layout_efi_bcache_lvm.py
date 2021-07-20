@@ -88,9 +88,6 @@ class StorageLayoutEfiBcacheLvm(StorageLayout):
     def optimize_rootdev(self):
         util.autoExtendLv(util.rootLvDevPath)
 
-    def get_ssd(self):
-        return self._ssd
-
     def get_esp(self):
         return self._getCurEsp()
 
@@ -102,10 +99,19 @@ class StorageLayoutEfiBcacheLvm(StorageLayout):
         assert src == self._getCurEsp() and dst in self._getOtherEspList()
         util.syncBlkDev(src, dst, mountPoint1=util.bootDir)
 
-    def get_swap_partition(self):
+    def get_ssd(self):
+        return self._ssd
+
+    def get_ssd_esp_partition(self):
+        assert self._ssd is not None
+        return self._ssdEspParti
+
+    def get_ssd_swap_partition(self):
+        assert self._ssd is not None
         return self._ssdSwapParti
 
-    def get_cache_partition(self):
+    def get_ssd_cache_partition(self):
+        assert self._ssd is not None
         return self._ssdCacheParti
 
     def get_disk_list(self):
