@@ -59,6 +59,13 @@ class StorageLayoutError(Exception):
     pass
 
 
+class StorageLayoutParseError(StorageLayoutError):
+
+    def __init__(self, layout_name, message):
+        self.layout_name = layout_name
+        self.message = message
+
+
 from .layouts import StorageLayoutBiosSimple
 from .layouts import StorageLayoutBiosLvm
 from .layouts import StorageLayoutEfiSimple

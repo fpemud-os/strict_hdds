@@ -62,6 +62,7 @@ def parse_storage_layout():
     return _StorageLayoutParser.getStorageLayout()
 
 
+# FIXME
 class ParseStorageLayoutError(Exception):
 
     def __init__(self, layout_class, message):
