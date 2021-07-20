@@ -65,6 +65,10 @@ class StorageLayoutError(Exception):
     pass
 
 
+class StorageLayoutCreateError(StorageLayoutError):
+    pass
+
+
 class StorageLayoutAddDiskError(StorageLayoutError):
 
     def __init__(self, disk_devpath, message):
@@ -86,12 +90,12 @@ class StorageLayoutParseError(StorageLayoutError):
         self.message = message
 
 
-from .layouts import StorageLayoutBiosSimple
-from .layouts import StorageLayoutBiosLvm
-from .layouts import StorageLayoutEfiSimple
-from .layouts import StorageLayoutEfiLvm
-from .layouts import StorageLayoutEfiBcacheLvm
-
 from .core import get_supported_storage_layouts
 from .core import create_storage_layout
 from .core import parse_storage_layout
+
+from .layout_bios_simple import StorageLayoutBiosSimple
+from .layout_bios_lvm import StorageLayoutBiosLvm
+from .layout_efi_simple import StorageLayoutEfiSimple
+from .layout_efi_lvm import StorageLayoutEfiLvm
+from .layout_efi_bcache_lvm import StorageLayoutEfiBcacheLvm
