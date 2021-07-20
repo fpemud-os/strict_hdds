@@ -162,7 +162,7 @@ def create_layout(disk_list=None):
     return ret
 
 
-def parse_layout():
+def parse_layout(booDev, rootDev):
     ret = StorageLayoutBiosLvm()
 
     # vg

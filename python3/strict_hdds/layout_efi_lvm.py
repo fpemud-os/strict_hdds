@@ -210,7 +210,7 @@ def create_layout(hddList=None):
     return ret
 
 
-def parse_layout(bootDev):
+def parse_layout(bootDev, rootDev):
     ret = StorageLayoutEfiLvm()
 
     if not util.gptIsEspPartition(bootDev):

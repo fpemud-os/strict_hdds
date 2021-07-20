@@ -386,7 +386,7 @@ def create_layout(ssd=None, hdd_list=None):
     return ret
 
 
-def parse_layout(bootDev):
+def parse_layout(bootDev, rootDev):
     ret = StorageLayoutEfiBcacheLvm()
 
     if not util.gptIsEspPartition(bootDev):

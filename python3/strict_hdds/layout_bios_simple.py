@@ -96,7 +96,7 @@ def create_layout(hdd=None):
     return ret
 
 
-def parse_layout(rootDev):
+def parse_layout(bootDev, rootDev):
     ret = StorageLayoutBiosSimple()
 
     ret._hdd = util.devPathPartitionToDisk(rootDev)

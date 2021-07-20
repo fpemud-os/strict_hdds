@@ -70,16 +70,13 @@ def parse_storage_layout():
         if lvmInfo is not None:
             tlist = util.lvmGetSlaveDevPathList(lvmInfo[0])
             if any(re.fullmatch("/dev/bcache[0-9]+", x) is not None for x in tlist):
-                ret = layout_efi_bcache_lvm.parse_layout(bootDev)
+                return layout_efi_bcache_lvm.parse_layout(bootDev, rootDev)
             else:
-                ret = layout_efi_lvm.parse_layout(bootDev)
+                return layout_efi_lvm.parse_layout(bootDev, rootDev)
         else:
-            ret = layout_efi_simple.parse_layout(bootDev, rootDev)
+            return layout_efi_simple.parse_layout(bootDev, rootDev)
     else:
         if util.getBlkDevLvmInfo(rootDev) is not None:
-            ret = layout_bios_lvm.parse_layout()
+            return layout_bios_lvm.parse_layout(bootDev, rootDev)
         else:
-            ret = layout_bios_simple.parse_layout(rootDev)
-
-    assert ret.is_ready()
-    return ret
+            return layout_bios_simple.parse_layout(bootDev, rootDev)
