@@ -185,14 +185,14 @@ def parse_layout(booDev, rootDev):
     # root lv
     if re.search("/dev/hdd/root:%s:.*" % (util.vgName), out, re.M) is not None:
         fs = util.getBlkDevFsType(util.rootLvDevPath)
-        if fs != util.fsExt4:
+        if fs != util.fsTypeExt4:
             raise StorageLayoutParseError(StorageLayoutBiosLvm.name, "root partition file system is \"%s\", not \"ext4\"" % (fs))
     else:
         raise StorageLayoutParseError(StorageLayoutBiosLvm.name, "logical volume \"%s\" does not exist" % (util.rootLvDevPath))
 
     # swap lv
     if re.search("/dev/hdd/swap:%s:.*" % (util.vgName), out, re.M) is not None:
-        if util.getBlkDevFsType(util.swapLvDevPath) != util.fsSwap:
+        if util.getBlkDevFsType(util.swapLvDevPath) != util.fsTypeSwap:
             raise StorageLayoutParseError(StorageLayoutBiosLvm.name, "\"%s\" has an invalid file system" % (util.swapLvDevPath))
         ret._bSwapLv = True
 

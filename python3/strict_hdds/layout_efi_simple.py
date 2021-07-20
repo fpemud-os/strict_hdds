@@ -88,8 +88,8 @@ def create_layout(hdd=None, dry_run=False):
 
     # create partitions
     util.initializeDisk(hdd, "gpt", [
-        ("%dMiB" % (util.getEspSizeInMb()), util.fsFAT),
-        ("*", util.fsExt4),
+        ("%dMiB" % (util.getEspSizeInMb()), util.fsTypeFat),
+        ("*", util.fsTypeExt4),
     ])
 
     ret = StorageLayoutEfiSimple()
@@ -114,7 +114,7 @@ def parse_layout(bootDev, rootDev):
     ret._hddRootParti = rootDev
     if True:
         fs = util.getBlkDevFsType(ret._hddRootParti)
-        if fs != util.fsExt4:
+        if fs != util.fsTypeExt4:
             raise StorageLayoutParseError(StorageLayoutEfiSimple.name, "root partition file system is \"%s\", not \"ext4\"" % (fs))
 
     if os.path.exists(util.swapFilename) and util.cmdCallTestSuccess("/sbin/swaplabel", util.swapFilename):

@@ -87,7 +87,7 @@ def create_layout(hdd=None, dry_run=False):
     if not dry_run:
         # create partitions
         util.initializeDisk(hdd, "mbr", [
-            ("*", util.fsExt4),
+            ("*", util.fsTypeExt4),
         ])
 
     ret = StorageLayoutBiosSimple()
@@ -106,7 +106,7 @@ def parse_layout(bootDev, rootDev):
 
     ret._hddRootParti = rootDev
     fs = util.getBlkDevFsType(ret._hddRootParti)
-    if fs != util.fsExt4:
+    if fs != util.fsTypeExt4:
         raise StorageLayoutParseError(StorageLayoutBiosSimple.name, "root partition file system is \"%s\", not \"ext4\"" % (fs))
 
     return ret

@@ -147,7 +147,7 @@ class StorageLayoutEfiBcacheLvm(StorageLayout):
         # create partitions
         util.initializeDisk(devpath, "gpt", [
             ("%dMiB" % (util.getEspSizeInMb()), "esp"),
-            (self.swapPartiSizeStr, util.fsSwap),
+            (self.swapPartiSizeStr, util.fsTypeSwap),
             ("*", "bcache"),
         ])
         self._ssd = devpath
@@ -195,7 +195,7 @@ class StorageLayoutEfiBcacheLvm(StorageLayout):
 
         # create partitions
         util.initializeDisk(devpath, "gpt", [
-            ("%dMiB" % (util.getEspSizeInMb()), util.fsFAT),
+            ("%dMiB" % (util.getEspSizeInMb()), util.fsTypeFat),
             ("*", "bcache"),
         ])
 
@@ -334,7 +334,7 @@ def create_layout(ssd=None, hdd_list=None, create_swap=True, dry_run=False):
             # create partitions
             util.initializeDisk(ssd, "gpt", [
                 ("%dMiB" % (util.getEspSizeInMb()), "esp"),
-                ("%dGiB" % (util.getSwapSizeInGb()), util.fsSwap),
+                ("%dGiB" % (util.getSwapSizeInGb()), util.fsTypeSwap),
                 ("*", "bcache"),
             ])
 
@@ -354,7 +354,7 @@ def create_layout(ssd=None, hdd_list=None, create_swap=True, dry_run=False):
         for devpath in ret._hddDict:
             # create partitions
             util.initializeDisk(devpath, "gpt", [
-                ("%dMiB" % (util.getEspSizeInMb()), util.fsFAT),
+                ("%dMiB" % (util.getEspSizeInMb()), util.fsTypeFat),
                 ("*", "bcache"),
             ])
 
@@ -418,7 +418,7 @@ def parse_layout(bootDev, rootDev):
     out = util.cmdCall("/sbin/lvm", "lvdisplay", "-c")
     if re.search("/dev/hdd/root:%s:.*" % (util.vgName), out, re.M) is not None:
         fs = util.getBlkDevFsType(util.rootLvDevPath)
-        if fs != util.fsExt4:
+        if fs != util.fsTypeExt4:
             raise StorageLayoutParseError(StorageLayoutEfiBcacheLvm.name, "root partition file system is \"%s\", not \"ext4\"" % (fs))
     else:
         raise StorageLayoutParseError(StorageLayoutEfiBcacheLvm.name, "logical volume \"%s\" does not exist" % (util.rootLvDevPath))
@@ -445,7 +445,7 @@ def parse_layout(bootDev, rootDev):
         if ret._ssdSwapParti is not None:
             if not os.path.exists(ret._ssdSwapParti):
                 raise StorageLayoutParseError(StorageLayoutEfiBcacheLvm.name, "SSD has no swap partition")
-            if util.getBlkDevFsType(ret._ssdSwapParti) != util.fsSwap:
+            if util.getBlkDevFsType(ret._ssdSwapParti) != util.fsTypeSwap:
                 raise StorageLayoutParseError(StorageLayoutEfiBcacheLvm.name, "swap device %s has an invalid file system" % (ret._ssdSwapParti))
 
         # ret._ssdCacheParti
