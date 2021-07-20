@@ -142,7 +142,6 @@ def create_layout(disk_list=None):
     else:
         assert len(disk_list) > 0
 
-    vgCreated = False
     for devpath in disk_list:
         # create partitions
         util.initializeDisk(devpath, "mbr", [
@@ -152,9 +151,8 @@ def create_layout(disk_list=None):
         # create lvm physical volume on partition1 and add it to volume group
         parti = util.devPathDiskToPartition(devpath, 1)
         util.cmdCall("/sbin/lvm", "pvcreate", parti)
-        if not vgCreated:
+        if not util.cmdCallTestSuccess("/sbin/lvm", "vgdisplay", _vgName):
             util.cmdCall("/sbin/lvm", "vgcreate", _vgName, parti)
-            vgCreated = True
         else:
             util.cmdCall("/sbin/lvm", "vgextend", _vgName, parti)
 
