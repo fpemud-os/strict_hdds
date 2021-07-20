@@ -58,6 +58,10 @@ class StorageLayout:
         raise NotImplementedError()
 
 
+class StorageLayoutError(Exception):
+    pass
+
+
 from .layouts import StorageLayoutBiosSimple
 from .layouts import StorageLayoutBiosLvm
 from .layouts import StorageLayoutEfiSimple
