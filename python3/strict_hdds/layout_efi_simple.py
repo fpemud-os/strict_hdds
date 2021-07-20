@@ -52,11 +52,11 @@ class StorageLayoutEfiSimple(StorageLayout):
         return StorageLayout.BOOT_MODE_EFI
 
     @property
-    def device_rootfs(self):
+    def dev_rootfs(self):
         return self._hddRootParti
 
     @property
-    def device_swap(self):
+    def dev_swap(self):
         return util.swapFilename if self._bSwapFile else None
 
     def check_swap_size(self):

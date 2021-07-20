@@ -62,11 +62,11 @@ class StorageLayoutEfiLvm(StorageLayout):
         return StorageLayout.BOOT_MODE_EFI
 
     @property
-    def device_rootfs(self):
+    def dev_rootfs(self):
         return util.rootLvDevPath
 
     @property
-    def device_swap(self):
+    def dev_swap(self):
         return util.swapLvDevPath if self._bSwapLv else None
 
     def check_swap_size(self):
