@@ -52,6 +52,16 @@ fsTypeFat = "vfat"
 fsTypeSwap = "swap"
 
 
+def lvmGetSlaveDevPathList(vgName):
+    ret = []
+    out = cmdCall("/sbin/lvm", "pvdisplay", "-c")
+    for m in re.finditer("^\\s*(\\S+):%s:.*" % (vgName), out, re.M):
+        if m.group(1) == "[unknown]":
+            raise Exception("volume group %s not fully loaded" % (vgName))
+        ret.append(m.group(1))
+    return ret
+
+
 def getPhysicalMemorySize():
     with open("/proc/meminfo", "r") as f:
         # We return memory size in GB.
