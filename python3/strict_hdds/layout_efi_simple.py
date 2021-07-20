@@ -89,11 +89,12 @@ def create_layout(hdd=None, dry_run=False):
             raise StorageLayoutCreateError("multiple harddisks")
         hdd = hddList[0]
 
-    # create partitions
-    util.initializeDisk(hdd, "gpt", [
-        ("%dMiB" % (util.getEspSizeInMb()), util.fsTypeFat),
-        ("*", util.fsTypeExt4),
-    ])
+    if not dry_run:
+        # create partitions
+        util.initializeDisk(hdd, "gpt", [
+            ("%dMiB" % (util.getEspSizeInMb()), util.fsTypeFat),
+            ("*", util.fsTypeExt4),
+        ])
 
     ret = StorageLayoutEfiSimple()
     ret._hdd = hdd

@@ -181,29 +181,30 @@ def create_layout(hddList=None, dry_run=False):
     else:
         assert len(hddList) > 0
 
-    for devpath in hddList:
-        # create partitions
-        util.initializeDisk(devpath, "gpt", [
-            ("%dMiB" % (util.getEspSizeInMb()), util.fsTypeFat),
-            ("*", "lvm"),
-        ])
+    if not dry_run:
+        for devpath in hddList:
+            # create partitions
+            util.initializeDisk(devpath, "gpt", [
+                ("%dMiB" % (util.getEspSizeInMb()), util.fsTypeFat),
+                ("*", "lvm"),
+            ])
 
-        # fill partition1
-        parti = util.devPathDiskToPartition(devpath, 1)
-        util.cmdCall("/usr/sbin/mkfs.vfat", parti)
+            # fill partition1
+            parti = util.devPathDiskToPartition(devpath, 1)
+            util.cmdCall("/usr/sbin/mkfs.vfat", parti)
 
-        # create lvm physical volume on partition2 and add it to volume group
-        parti = util.devPathDiskToPartition(devpath, 2)
-        util.cmdCall("/sbin/lvm", "pvcreate", parti)
-        if not util.cmdCallTestSuccess("/sbin/lvm", "vgdisplay", util.vgName):
-            util.cmdCall("/sbin/lvm", "vgcreate", util.vgName, parti)
-        else:
-            util.cmdCall("/sbin/lvm", "vgextend", util.vgName, parti)
+            # create lvm physical volume on partition2 and add it to volume group
+            parti = util.devPathDiskToPartition(devpath, 2)
+            util.cmdCall("/sbin/lvm", "pvcreate", parti)
+            if not util.cmdCallTestSuccess("/sbin/lvm", "vgdisplay", util.vgName):
+                util.cmdCall("/sbin/lvm", "vgcreate", util.vgName, parti)
+            else:
+                util.cmdCall("/sbin/lvm", "vgextend", util.vgName, parti)
 
-    # create root lv
-    out = util.cmdCall("/sbin/lvm", "vgdisplay", "-c", util.vgName)
-    freePe = int(out.split(":")[15])
-    util.cmdCall("/sbin/lvm", "lvcreate", "-l", "%d" % (freePe // 2), "-n", util.rootLvName, util.vgName)
+        # create root lv
+        out = util.cmdCall("/sbin/lvm", "vgdisplay", "-c", util.vgName)
+        freePe = int(out.split(":")[15])
+        util.cmdCall("/sbin/lvm", "lvcreate", "-l", "%d" % (freePe // 2), "-n", util.rootLvName, util.vgName)
 
     # return value
     ret = StorageLayoutEfiLvm()

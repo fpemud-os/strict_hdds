@@ -109,4 +109,9 @@ def parse_layout(bootDev, rootDev):
     if fs != util.fsTypeExt4:
         raise StorageLayoutParseError(StorageLayoutBiosSimple.name, "root partition file system is \"%s\", not \"ext4\"" % (fs))
 
+    if os.path.exists(util.swapFilename) and util.cmdCallTestSuccess("/sbin/swaplabel", util.swapFilename):
+        ret._bSwapFile = True
+    else:
+        ret._bSwapFile = False
+
     return ret
