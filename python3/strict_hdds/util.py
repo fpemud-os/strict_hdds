@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-# strict_hdds.py - strict harddisks
-#
 # Copyright (c) 2020-2021 Fpemud <fpemud@sina.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
