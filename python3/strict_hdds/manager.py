@@ -26,6 +26,7 @@
 import os
 import re
 from . import util
+from . import StorageLayoutParseError
 from .layouts import StorageLayoutBiosSimple
 from .layouts import StorageLayoutBiosLvm
 from .layouts import StorageLayoutEfiSimple

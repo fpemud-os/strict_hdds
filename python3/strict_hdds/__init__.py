@@ -75,4 +75,3 @@ from .layouts import StorageLayoutEfiBcacheLvm
 from .manager import get_supported_storage_layouts
 from .manager import create_storage_layout
 from .manager import parse_storage_layout
-from .manager import StorageLayoutParseError
