@@ -160,7 +160,7 @@ def parse_layout():
     if not util.cmdCallTestSuccess("/sbin/lvm", "vgdisplay", util.vgName):
         raise StorageLayoutParseError(StorageLayoutBiosLvm.name, "volume group \"%s\" does not exist" % (util.vgName))
 
-    # pv
+    # pv list
     out = util.cmdCall("/sbin/lvm", "pvdisplay", "-c")
     for m in re.finditer("(/dev/\\S+):%s:.*" % (util.vgName), out, re.M):
         hdd = util.devPathPartitionToDisk(m.group(1))
@@ -174,7 +174,6 @@ def parse_layout():
 
     # root lv
     if re.search("/dev/hdd/root:%s:.*" % (util.vgName), out, re.M) is not None:
-        assert os.path.exists(util.rootLvDevPath)
         fs = util.getBlkDevFsType(util.rootLvDevPath)
         if fs != "ext4":
             raise StorageLayoutParseError(StorageLayoutBiosLvm.name, "root partition file system is \"%s\", not \"ext4\"" % (fs))
@@ -183,11 +182,11 @@ def parse_layout():
 
     # swap lv
     if re.search("/dev/hdd/swap:%s:.*" % (util.vgName), out, re.M) is not None:
-        assert os.path.exists(util.swapLvDevPath)
-        if util.getBlkDevFsType(util.swapLvDevPath) != util.swapLvName:
+        if util.getBlkDevFsType(util.swapLvDevPath) != "swap":
             raise StorageLayoutParseError(StorageLayoutBiosLvm.name, "\"%s\" has an invalid file system" % (util.swapLvDevPath))
+        ret._bSwapLv = True
 
-    # boot disk
+    # boot harddisk
     for hdd in ret._diskList:
         with open(hdd, "rb") as f:
             if not util.isBufferAllZero(f.read(440)):

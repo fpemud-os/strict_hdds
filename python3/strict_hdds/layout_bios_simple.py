@@ -93,11 +93,11 @@ def parse_layout(rootDev):
 
     ret._hdd = util.devPathPartitionToDisk(rootDev)
     if util.getBlkDevPartitionTableType(ret._hdd) != "dos":
-        raise StorageLayoutParseError(StorageLayoutBiosSimple, "partition type of %s is not \"dos\"" % (ret._hdd))
+        raise StorageLayoutParseError(StorageLayoutBiosSimple.name, "partition type of %s is not \"dos\"" % (ret._hdd))
 
     ret._hddRootParti = rootDev
     fs = util.getBlkDevFsType(ret._hddRootParti)
     if fs != "ext4":
-        raise StorageLayoutParseError(StorageLayoutBiosSimple, "root partition file system is \"%s\", not \"ext4\"" % (fs))
+        raise StorageLayoutParseError(StorageLayoutBiosSimple.name, "root partition file system is \"%s\", not \"ext4\"" % (fs))
 
     return ret
