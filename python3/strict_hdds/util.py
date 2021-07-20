@@ -34,6 +34,10 @@ import tempfile
 import subprocess
 
 
+bootDir = "/boot"
+swapFilename = "/var/swap.dat"
+
+
 def getPhysicalMemorySize():
     with open("/proc/meminfo", "r") as f:
         # We return memory size in GB.
@@ -84,6 +88,28 @@ def cmdCallTestSuccess(cmd, *kargs):
     if ret.returncode > 128:
         time.sleep(1.0)
     return (ret.returncode == 0)
+
+
+def cmdExec(cmd, *kargs):
+    # call command to execute frontend job
+    #
+    # scenario 1, process group receives SIGTERM, SIGINT and SIGHUP:
+    #   * callee must auto-terminate, and cause no side-effect
+    #   * caller must be terminate AFTER child-process, and do neccessary finalization
+    #   * termination information should be printed by callee, not caller
+    # scenario 2, caller receives SIGTERM, SIGINT, SIGHUP:
+    #   * caller should terminate callee, wait callee to stop, do neccessary finalization, print termination information, and be terminated by signal
+    #   * callee does not need to treat this scenario specially
+    # scenario 3, callee receives SIGTERM, SIGINT, SIGHUP:
+    #   * caller detects child-process failure and do appopriate treatment
+    #   * callee should print termination information
+
+    # FIXME, the above condition is not met, FmUtil.shellExec has the same problem
+
+    ret = subprocess.run([cmd] + list(kargs), universal_newlines=True)
+    if ret.returncode > 128:
+        time.sleep(1.0)
+    ret.check_returncode()
 
 
 def shellExec(cmd):
@@ -466,6 +492,14 @@ def getBlkDevLvmInfo(devPath):
         return None
 
 
+def getBlkDevCapacity(devPath):
+    ret = cmdCall("/bin/df", "-BM", devPath)
+    m = re.search("%s +(\\d+)M +(\\d+)M +\\d+M", ret, re.M)
+    total = int(m.group(1))
+    used = int(m.group(2))
+    return (total, used)        # unit: MB
+
+
 def syncBlkDev(devPath1, devPath2, mountPoint1=None, mountPoint2=None):
     if getBlkDevSize(devPath1) != getBlkDevSize(devPath2):
         raise Exception("%s and %s have different size" % (devPath1, devPath2))
@@ -485,6 +519,30 @@ def syncBlkDev(devPath1, devPath2, mountPoint1=None, mountPoint2=None):
         with TmpMount(devPath1, "ro") as mp1:
             with TmpMount(devPath2) as mp2:
                 shellExec(cmd % (mp1.mountpoint, mp2.mountpoint))
+
+
+def autoExtendLv(lvDevPath):
+    total, used = getBlkDevCapacity(lvDevPath)
+    if used / total < 0.9:
+        return
+    added = int(used / 0.7) - total
+    added = (added // 1024 + 1) * 1024      # change unit from MB to GB
+    cmdCall("/sbin/lvm", "lvextend", "-L+%dG" % (added), lvDevPath)
+    cmdExec("/sbin/resize2fs", lvDevPath)                                   # FIXME: detect and support more fs-types
+
+
+def createSwapFile(path):
+    cmdCall("/bin/dd", "if=/dev/zero", "of=%s" % (path), "bs=%d" % (1024 * 1024), "count=%d" % (getSwapSizeInGb() * 1024))
+    cmdCall("/bin/chmod", "600", path)
+    cmdCall("/sbin/mkswap", "-f", path)
+
+
+def getSwapSizeInGb():
+    return getPhysicalMemorySize() * 2
+
+
+def getEspSizeInMb():
+    return 512
 
 
 def gptNewGuid(guidStr):

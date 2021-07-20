@@ -54,9 +54,29 @@ class StorageLayout:
     def get_rootdev(self):
         raise NotImplementedError()
 
+    def get_swap(self):
+        raise NotImplementedError()
+
+    def check_swap_size(self):
+        raise NotImplementedError()
+
 
 class StorageLayoutError(Exception):
     pass
+
+
+class StorageLayoutAddDiskError(StorageLayoutError):
+
+    def __init__(self, disk_devpath, message):
+        self.disk_devpath = disk_devpath
+        self.message = message
+
+
+class StorageLayoutReleaseDiskError(StorageLayoutError):
+
+    def __init__(self, disk_devpath, message):
+        self.disk_devpath = disk_devpath
+        self.message = message
 
 
 class StorageLayoutParseError(StorageLayoutError):
@@ -72,6 +92,6 @@ from .layouts import StorageLayoutEfiSimple
 from .layouts import StorageLayoutEfiLvm
 from .layouts import StorageLayoutEfiBcacheLvm
 
-from .manager import get_supported_storage_layouts
-from .manager import create_storage_layout
-from .manager import parse_storage_layout
+from .core import get_supported_storage_layouts
+from .core import create_storage_layout
+from .core import parse_storage_layout
