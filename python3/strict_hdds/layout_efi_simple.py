@@ -24,6 +24,8 @@
 import os
 from . import util
 from . import StorageLayout
+from . import StorageLayoutCreateError
+from . import StorageLayoutParseError
 
 
 class StorageLayoutEfiSimple(StorageLayout):
@@ -40,45 +42,35 @@ class StorageLayoutEfiSimple(StorageLayout):
     name = "efi-simple"
 
     def __init__(self):
-        self._hdd = None
-        self._bEspParti = None
-        self._bRootParti = None
-        self._bSwapFile = None
+        self._hdd = None              # boot harddisk name
+        self._hddEspParti = None      # ESP partition name
+        self._hddRootParti = False    # root partition name
+        self._bSwapFile = None        # whether swap file exists
 
     @property
     def boot_mode(self):
         return StorageLayout.BOOT_MODE_EFI
 
-    def is_ready(self):
-        assert self._hdd is not None
-        assert self._bEspParti
-        assert self._bRootParti
-        assert self._bSwapFile is not None
-        return True
-
     def get_rootdev(self):
-        assert self.is_ready()
-        return util.devPathDiskToPartition(self._hdd, 2)
+        return self._hddRootParti
 
     def get_swap(self):
-        assert self.is_ready()
         return util.swapFilename if self._bSwapFile else None
 
     def check_swap_size(self):
-        assert self.is_ready() and self._bSwapFile
+        assert self._bSwapFile
         return os.path.getsize(util.swapFilename) >= util.getSwapSizeInGb() * 1024 * 1024 * 1024
 
     def get_esp(self):
-        assert self.is_ready()
-        return util.devPathDiskToPartition(self._hdd, 1)
+        return self._hddEspParti
 
     def create_swap_file(self):
-        assert self.is_ready() and not self._bSwapFile
+        assert not self._bSwapFile
         util.createSwapFile(util.swapFilename)
         self._bSwapFile = True
 
     def remove_swap_file(self):
-        assert self.is_ready() and self._bSwapFile
+        assert self._bSwapFile
         os.remove(self._bSwapFile)
         self._bSwapFile = False
 
@@ -87,9 +79,9 @@ def create_layout(hdd=None):
     if hdd is None:
         hddList = util.getDevPathListForFixedHdd()
         if len(hddList) == 0:
-            raise Exception("no harddisks")
+            raise StorageLayoutCreateError("no harddisk")
         if len(hddList) > 1:
-            raise Exception("multiple harddisks")
+            raise StorageLayoutCreateError("multiple harddisks")
         hdd = hddList[0]
 
     # create partitions
@@ -98,29 +90,31 @@ def create_layout(hdd=None):
         ("*", "ext4"),
     ])
 
+    ret = StorageLayoutEfiSimple()
+    ret._hdd = hdd
+    ret._hddEspParti = util.devPathDiskToPartition(hdd, 1)
+    ret._hddRootParti = util.devPathDiskToPartition(hdd, 2)
+    return ret
 
-def try_parse_layout(bootDev, rootDev):
-    if not util.gptIsEspPartition(bootDev):
-        raise StorageLayoutParseError(StorageLayoutEfiSimple, "boot device is not ESP partitiion")
 
+def parse_layout(bootDev, rootDev):
     ret = StorageLayoutEfiSimple()
 
-    # ret.hdd
-    ret.hdd = util.devPathPartitionToDisk(bootDev)
-    if ret.hdd != util.devPathPartitionToDisk(rootDev):
-        raise StorageLayoutParseError(StorageLayoutEfiSimple, "boot device and root device is not the same")
+    if not util.gptIsEspPartition(bootDev):
+        raise StorageLayoutParseError(StorageLayoutEfiSimple.name, "boot device is not ESP partitiion")
 
-    # ret.hddEspParti
-    ret.hddEspParti = bootDev
+    ret._hdd = util.devPathPartitionToDisk(bootDev)
+    if ret._hdd != util.devPathPartitionToDisk(rootDev):
+        raise StorageLayoutParseError(StorageLayoutEfiSimple.name, "boot device and root device is not the same")
 
-    # ret.hddRootParti
-    ret.hddRootParti = rootDev
+    ret._hddEspParti = bootDev
+
+    ret._hddRootParti = rootDev
     if True:
-        fs = util.getBlkDevFsType(ret.hddRootParti)
+        fs = util.getBlkDevFsType(ret._hddRootParti)
         if fs != "ext4":
-            raise StorageLayoutParseError(StorageLayoutEfiSimple, "root partition file system is \"%s\", not \"ext4\"" % (fs))
+            raise StorageLayoutParseError(StorageLayoutEfiSimple.name, "root partition file system is \"%s\", not \"ext4\"" % (fs))
 
-    # ret._bSwapFile
     if os.path.exists(util.swapFilename) and util.cmdCallTestSuccess("/sbin/swaplabel", util.swapFilename):
         ret._bSwapFile = True
     else:

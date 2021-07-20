@@ -25,6 +25,7 @@ import os
 import re
 from . import util
 from . import StorageLayout
+from . import StorageLayoutCreateError
 from . import StorageLayoutAddDiskError
 from . import StorageLayoutReleaseDiskError
 from . import StorageLayoutParseError
@@ -198,6 +199,13 @@ def create_layout(hddList=None):
     out = util.cmdCall("/sbin/lvm", "vgdisplay", "-c", util.vgName)
     freePe = int(out.split(":")[15])
     util.cmdCall("/sbin/lvm", "lvcreate", "-l", "%d" % (freePe // 2), "-n", util.rootLvName, util.vgName)
+
+    # return value
+    ret = StorageLayoutEfiLvm()
+    ret._diskList = hddList
+    ret._bSwapLv = False
+    ret._bootHdd = ret._diskList[0]     # FIXME
+    return ret
 
 
 def parse_layout(bootDev):

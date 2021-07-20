@@ -47,21 +47,17 @@ def get_supported_storage_layouts():
 
 def create_storage_layout(layout_name):
     if layout_name == StorageLayoutBiosSimple.name:
-        layout_bios_simple.create_layout()
+        return layout_bios_simple.create_layout()
     elif layout_name == StorageLayoutBiosLvm.name:
-        layout_bios_lvm.create_layout()
+        return layout_bios_lvm.create_layout()
     elif layout_name == StorageLayoutEfiSimple.name:
-        layout_efi_simple.create_layout()
+        return layout_efi_simple.create_layout()
     elif layout_name == StorageLayoutEfiLvm.name:
-        layout_efi_lvm.create_layout()
+        return layout_efi_lvm.create_layout()
     elif layout_name == StorageLayoutEfiBcacheLvm.name:
-        layout_efi_bcache_lvm.create_layout()
+        return layout_efi_bcache_lvm.create_layout()
     else:
         assert False
-
-    ret = parse_storage_layout()
-    assert ret.name == layout_name
-    return ret
 
 
 def parse_storage_layout():

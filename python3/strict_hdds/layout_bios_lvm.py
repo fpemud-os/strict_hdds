@@ -152,6 +152,13 @@ def create_layout(disk_list=None):
     freePe = int(out.split(":")[15])
     util.cmdCall("/sbin/lvm", "lvcreate", "-l", "%d" % (freePe // 2), "-n", util.rootLvName, util.vgName)
 
+    # return value
+    ret = StorageLayoutBiosLvm()
+    ret._diskList = disk_list
+    ret._bSwapLv = False
+    ret._bootHdd = ret._diskList[0]     # FIXME
+    return ret
+
 
 def parse_layout():
     ret = StorageLayoutBiosLvm()
@@ -196,4 +203,4 @@ def parse_layout():
     if ret._bootHdd is None:
         raise StorageLayoutParseError(StorageLayoutBiosLvm.name, "no harddisk has boot-code")
 
-    return ret
+    return ret  

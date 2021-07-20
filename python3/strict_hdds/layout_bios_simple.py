@@ -42,7 +42,7 @@ class StorageLayoutBiosSimple(StorageLayout):
 
     def __init__(self):
         self._hdd = None              # boot harddisk name
-        self._bRootParti = False      # root partition name
+        self._hddRootParti = False    # root partition name
         self._bSwapFile = None        # whether swap file exists
 
     @property
@@ -50,7 +50,7 @@ class StorageLayoutBiosSimple(StorageLayout):
         return StorageLayout.BOOT_MODE_BIOS
 
     def get_rootdev(self):
-        return self._bRootParti
+        return self._hddRootParti
 
     def get_swap(self):
         return util.swapFilename if self._bSwapFile else None
@@ -86,6 +86,12 @@ def create_layout(hdd=None):
     util.initializeDisk(hdd, "mbr", [
         ("*", "ext4"),
     ])
+
+    ret = StorageLayoutBiosSimple()
+    ret._hdd = hdd
+    ret._hddRootParti = util.devPathDiskToPartition(hdd, 1)
+    ret._bSwapFile = False
+    return ret
 
 
 def parse_layout(rootDev):
