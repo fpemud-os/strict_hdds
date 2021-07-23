@@ -44,7 +44,7 @@ swapLvName = "swap"
 swapLvDevPath = "/dev/mapper/hdd.swap"
 
 
-swapFilename = "/var/swap.dat"
+swapFilename = "/var/cache/swap.dat"
 
 
 fsTypeExt4 = "ext4"

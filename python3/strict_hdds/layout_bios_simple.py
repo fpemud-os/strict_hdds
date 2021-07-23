@@ -34,7 +34,7 @@ class StorageLayoutBiosSimple(StorageLayout):
                /dev/sda1     root device, EXT4
        Description:
            1. partition number of /dev/sda1 and /dev/sda2 is irrelevant
-           2. use optional swap file /var/swap.dat
+           2. use optional swap file /var/cache/swap.dat
            3. extra partition is allowed to exist
     """
 
