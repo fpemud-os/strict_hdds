@@ -62,7 +62,7 @@ class StorageLayout:
     def check_swap_size(self):
         raise NotImplementedError()
 
-    def get_construction_tree(self):
+    def get_disk_stack(self):
         raise NotImplementedError()
 
 
