@@ -29,10 +29,6 @@ from . import StorageLayoutCreateError
 from . import StorageLayoutAddDiskError
 from . import StorageLayoutReleaseDiskError
 from . import StorageLayoutParseError
-from .disk_stack import DiskStackNodeHarddisk
-from .disk_stack import DiskStackNodeLvmLv
-from .disk_stack import DiskStackNodePartition
-from .disk_stack import DiskStackUtil
 
 
 class StorageLayoutBiosLvm(StorageLayout):
@@ -73,19 +69,6 @@ class StorageLayoutBiosLvm(StorageLayout):
     def check_swap_size(self):
         assert self._bSwapLv
         return util.getBlkDevSize(util.swapLvDevPath) >= util.getSwapSizeInGb() * 1024 * 1024 * 1024
-
-    def get_disk_stack(self):
-        ret = []
-        ret.append(DiskStackNodeLvmLv(util.rootLvDevPath, util.vgName, util.rootLvName))
-        if self._bSwapLv:
-            ret.append(DiskStackNodeLvmLv(util.swapLvDevPath, util.vgName, util.swapLvName))
-
-        for node in ret:
-            for d in self._diskList:
-                partNode = DiskStackNodePartition(util.devPathDiskToPartition(d, 1), DiskStackNodePartition.PART_TYPE_MBR, parent=node)
-                DiskStackNodeHarddisk(d, DiskStackUtil.getBlkDevType(d), parent=partNode)
-
-        return ret
 
     def optimize_rootdev(self):
         util.autoExtendLv(util.rootLvDevPath)

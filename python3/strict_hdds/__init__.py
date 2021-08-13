@@ -62,9 +62,6 @@ class StorageLayout:
     def check_swap_size(self):
         raise NotImplementedError()
 
-    def get_disk_stack(self):
-        raise NotImplementedError()
-
 
 class StorageLayoutError(Exception):
     pass
@@ -104,9 +101,3 @@ from .layout_bios_lvm import StorageLayoutBiosLvm
 from .layout_efi_simple import StorageLayoutEfiSimple
 from .layout_efi_lvm import StorageLayoutEfiLvm
 from .layout_efi_bcache_lvm import StorageLayoutEfiBcacheLvm
-
-from .disk_stack import DiskStackNode
-from .disk_stack import DiskStackNodeLvmLv
-from .disk_stack import DiskStackNodeBcache
-from .disk_stack import DiskStackNodeHarddisk
-from .disk_stack import DiskStackNodePartition

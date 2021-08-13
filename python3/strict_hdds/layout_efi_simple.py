@@ -26,9 +26,6 @@ from . import util
 from . import StorageLayout
 from . import StorageLayoutCreateError
 from . import StorageLayoutParseError
-from .disk_stack import DiskStackNodeHarddisk
-from .disk_stack import DiskStackNodePartition
-from .disk_stack import DiskStackUtil
 
 
 class StorageLayoutEfiSimple(StorageLayout):
@@ -68,15 +65,6 @@ class StorageLayoutEfiSimple(StorageLayout):
     def check_swap_size(self):
         assert self._bSwapFile
         return os.path.getsize(util.swapFilename) >= util.getSwapSizeInGb() * 1024 * 1024 * 1024
-
-    def get_disk_stack(self):
-        partNode = DiskStackNodePartition(self._hddRootParti, DiskStackNodePartition.PART_TYPE_MBR)
-        DiskStackNodeHarddisk(self._hdd, DiskStackUtil.getBlkDevType(self._hdd), parent=partNode)
-
-        espNode = DiskStackNodePartition(self._hddEspParti, DiskStackNodePartition.PART_TYPE_GPT)
-        DiskStackNodeHarddisk(self._hdd, DiskStackUtil.getBlkDevType(self._hdd), parent=espNode)
-
-        return [partNode, espNode]
 
     def get_esp(self):
         return self._hddEspParti

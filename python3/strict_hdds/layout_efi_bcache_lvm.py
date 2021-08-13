@@ -29,10 +29,6 @@ from . import StorageLayoutCreateError
 from . import StorageLayoutAddDiskError
 from . import StorageLayoutReleaseDiskError
 from . import StorageLayoutParseError
-from .disk_stack import DiskStackNodeBcache, DiskStackNodeHarddisk
-from .disk_stack import DiskStackNodeLvmLv
-from .disk_stack import DiskStackNodePartition
-from .disk_stack import DiskStackUtil
 
 
 class StorageLayoutEfiBcacheLvm(StorageLayout):
@@ -88,36 +84,6 @@ class StorageLayoutEfiBcacheLvm(StorageLayout):
     def check_swap_size(self):
         assert self._ssdSwapParti is not None
         return util.getBlkDevSize(self._ssdSwapParti) >= util.getSwapSizeInGb() * 1024 * 1024 * 1024
-
-    def get_disk_stack(self):
-        ret = []
-
-        if True:
-            rootNode = DiskStackNodeLvmLv(util.rootLvDevPath, util.vgName, util.rootLvName)
-            for hddDev, bcacheDev in self._hddDict.items():
-                ssdPartList = [self._ssd] if self._ssdCacheParti is not None else []
-                bcacheNode = DiskStackNodeBcache(bcacheDev, ssdPartList, util.devPathDiskToPartition(hddDev, 1), parent=rootNode)
-                for s in ssdPartList:
-                    partNode = DiskStackNodePartition(s, DiskStackNodePartition.PART_TYPE_GPT, parent=bcacheNode)
-                    DiskStackNodeHarddisk(self._ssd, DiskStackUtil.getBlkDevType(self._ssd), parent=partNode)
-            ret.append(rootNode)
-
-        for hddDev, bcacheDev in self._hddDict.items():
-            espNode = DiskStackNodePartition(util.devPathDiskToPartition(hddDev, 1), DiskStackNodePartition.PART_TYPE_GPT)
-            DiskStackNodeHarddisk(hddDev, DiskStackUtil.getBlkDevType(hddDev), parent=espNode)
-            ret.append(espNode)
-
-        if self._ssdEspParti is not None:
-            ssdEspNode = DiskStackNodePartition(self._ssdEspParti, DiskStackNodePartition.PART_TYPE_GPT)
-            DiskStackNodeHarddisk(self._ssd, DiskStackUtil.getBlkDevType(self._ssd), parent=ssdEspNode)
-            ret.append(ssdEspNode)
-
-        if self._ssdSwapParti is not None:
-            swapNode = DiskStackNodePartition(self._ssdSwapParti, DiskStackNodePartition.PART_TYPE_GPT, parent=bcacheNode)
-            DiskStackNodeHarddisk(self._ssd, DiskStackUtil.getBlkDevType(self._ssd), parent=swapNode)
-            ret.append(swapNode)
-
-        return ret
 
     def optimize_rootdev(self):
         util.autoExtendLv(util.rootLvDevPath)
