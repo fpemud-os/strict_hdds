@@ -886,13 +886,6 @@ class TmpMount:
         os.rmdir(self._tmppath)
 
 
-# def findSwapDevices():
-#     ret = []
-#     context = pyudev.Context()
-#     for device in context.list_devices(subsystem='block', ID_FS_TYPE='swap'):
-#         ret.append("/dev/disk/by-uuid/" + device.get("ID_FS_UUID"))
-#     return ret
-
 # def findSwapFiles():
 #     ret = []
 #     for d in ["/var", "/"]:
