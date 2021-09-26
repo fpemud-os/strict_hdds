@@ -33,7 +33,7 @@ def get_supported_storage_layouts():
     for mod in pkgutil.iter_modules("."):
         print(mod.name)
         if mod.name.startswith("layout_"):
-            ret.append(_modName2layoutName(mod.name))
+            ret.append(util.modName2layoutName(mod.name))
     return ret
 
 
@@ -41,7 +41,7 @@ def create_storage_layout(layout_name, dry_run=False):
     for mod in pkgutil.iter_modules("."):
         print(mod.name)
         if mod.name.startswith("layout_"):
-            if layout_name == _modName2layoutName(mod.name):
+            if layout_name == util.modName2layoutName(mod.name):
                 return mod.create_layout(dry_run=dry_run)
     raise StorageLayoutCreateError("layout \"%s\" not supported")
 
@@ -66,19 +66,10 @@ def parse_storage_layout():
 
 
 def _parseOneStorageLayout(layoutName, bootDev, rootDev):
-    modname = _layoutName2modName(layoutName)
+    modname = util.layoutName2modName(layoutName)
     try:
         exec("import %s" % (modname))
         f = eval("%s.parse_layout" % (modname))
         return f(bootDev, rootDev)
     except ModuleNotFoundError:
         raise StorageLayoutParseError("", "unknown storage layout")
-
-
-def _modName2layoutName(modName):
-    assert modName.startswith("layout_")
-    return modName[len("layout_"):].replace("_", "-")
-
-
-def _layoutName2modName(layoutName):
-    return "layout_" + layoutName.replace("-", "_")

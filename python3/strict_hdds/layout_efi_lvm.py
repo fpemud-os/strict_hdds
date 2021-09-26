@@ -50,12 +50,14 @@ class StorageLayoutImpl(StorageLayout):
            6. extra harddisk is allowed to exist
     """
 
-    name = "efi-lvm"
-
     def __init__(self):
         self._diskList = []         # harddisk list
         self._bSwapLv = None        # whether swap lv exists
         self._bootHdd = None        # boot harddisk name
+
+    @property
+    def name(self):
+        return util.modName2layoutName(self.__module__.__name__)
 
     @property
     def boot_mode(self):

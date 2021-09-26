@@ -56,8 +56,6 @@ class StorageLayoutImpl(StorageLayout):
            7. extra harddisk is allowed to exist
     """
 
-    name = "efi-bcache-lvm"
-
     def __init__(self):
         self._ssd = None
         self._ssdEspParti = None
@@ -65,6 +63,10 @@ class StorageLayoutImpl(StorageLayout):
         self._ssdCacheParti = None
         self._hddDict = dict()           # dict<hddDev,bcacheDev>
         self._bootHdd = None             # boot harddisk name, must be None if ssd exists
+
+    @property
+    def name(self):
+        return util.modName2layoutName(self.__module__.__name__)
 
     @property
     def boot_mode(self):

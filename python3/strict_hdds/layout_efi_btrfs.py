@@ -43,6 +43,6 @@ class StorageLayoutImpl(StorageLayout):
            5. extra harddisk is allowed to exist
     """
 
-    pass
-
-    name = "efi-btrfs"
+    @property
+    def name(self):
+        return util.modName2layoutName(self.__module__.__name__)

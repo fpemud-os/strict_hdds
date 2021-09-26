@@ -52,6 +52,15 @@ fsTypeFat = "vfat"
 fsTypeSwap = "swap"
 
 
+def modName2layoutName(modName):
+    assert modName.startswith("layout_")
+    return modName[len("layout_"):].replace("_", "-")
+
+
+def layoutName2modName(layoutName):
+    return "layout_" + layoutName.replace("-", "_")
+
+
 def lvmGetSlaveDevPathList(vgName):
     ret = []
     out = cmdCall("/sbin/lvm", "pvdisplay", "-c")

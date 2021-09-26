@@ -39,13 +39,15 @@ class StorageLayoutImpl(StorageLayout):
            3. extra partition is allowed to exist
     """
 
-    name = "efi-simple"
-
     def __init__(self):
         self._hdd = None              # boot harddisk name
         self._hddEspParti = None      # ESP partition name
         self._hddRootParti = False    # root partition name
         self._bSwapFile = None        # whether swap file exists
+
+    @property
+    def name(self):
+        return util.modName2layoutName(self.__module__.__name__)
 
     @property
     def boot_mode(self):

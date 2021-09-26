@@ -46,6 +46,10 @@ class StorageLayoutBiosSimple(StorageLayout):
         self._bSwapFile = None        # whether swap file exists
 
     @property
+    def name(self):
+        return util.modName2layoutName(self.__module__.__name__)
+
+    @property
     def boot_mode(self):
         return StorageLayout.BOOT_MODE_BIOS
 

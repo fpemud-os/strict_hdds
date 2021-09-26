@@ -39,9 +39,9 @@ class StorageLayoutImpl(StorageLayout):
            /dev/sdc                      Non-SSD, GPT
                /dev/sdc1                 reserved ESP partition
                /dev/sdc2                 bcache backing device
-           /dev/bcache0                  corresponds to /dev/sdb2, btrfs device
-           /dev/bcache1                  corresponds to /dev/sdc2, btrfs device
            /dev/bcache0:/dev/bcache1     root device, btrfs
+              /dev/bcache0               corresponds to /dev/sdb2, btrfs device
+              /dev/bcache1               corresponds to /dev/sdc2, btrfs device
        Description:
            1. /dev/sda1 and /dev/sd{b,c}1 must has the same size
            2. /dev/sda1, /dev/sda2 and /dev/sda3 is order-sensitive, no extra partition is allowed
@@ -51,4 +51,6 @@ class StorageLayoutImpl(StorageLayout):
            6. extra harddisk is allowed to exist
     """
 
-    name = "efi-bcache-btrfs"
+    @property
+    def name(self):
+        return util.modName2layoutName(self.__module__.__name__)
