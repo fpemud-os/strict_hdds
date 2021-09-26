@@ -33,7 +33,7 @@ from . import StorageLayoutParseError
 
 class StorageLayoutEfiBcacheLvm(StorageLayout):
     """Layout:
-           /dev/sda                 SSD, GPT, EFI-GRUB (cache-disk)
+           /dev/sda                 SSD, GPT (cache-disk)
                /dev/sda1            ESP partition
                /dev/sda2            swap device
                /dev/sda3            bcache cache device

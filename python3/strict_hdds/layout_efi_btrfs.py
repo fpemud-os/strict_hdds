@@ -28,7 +28,7 @@ from . import StorageLayout
 
 class StorageLayoutEfiBtrfs(StorageLayout):
     """Layout:
-           /dev/sda                 GPT, EFI-GRUB
+           /dev/sda                 GPT
                /dev/sda1            ESP partition
                /dev/sda2            btrfs device
            /dev/sdb                 GPT

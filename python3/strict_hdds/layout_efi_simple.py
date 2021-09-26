@@ -30,7 +30,7 @@ from . import StorageLayoutParseError
 
 class StorageLayoutEfiSimple(StorageLayout):
     """Layout:
-           /dev/sda          GPT, EFI-GRUB
+           /dev/sda          GPT
                /dev/sda1     ESP partition
                /dev/sda2     root device, EXT4
        Description:

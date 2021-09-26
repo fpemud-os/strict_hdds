@@ -33,10 +33,10 @@ from . import StorageLayoutParseError
 
 class StorageLayoutEfiLvm(StorageLayout):
     """Layout:
-           /dev/sda                 GPT, EFI-GRUB
+           /dev/sda                 GPT
                /dev/sda1            ESP partition
                /dev/sda2            LVM-PV for VG hdd
-           /dev/sdb                 Non-SSD, GPT
+           /dev/sdb                 GPT
                /dev/sdb1            reserved ESP partition
                /dev/sdb2            LVM-PV for VG hdd
            /dev/mapper/hdd.root     root device, EXT4
