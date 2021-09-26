@@ -26,7 +26,7 @@ from . import util
 from . import StorageLayout
 
 
-class StorageLayoutEfiBtrfs(StorageLayout):
+class StorageLayoutImpl(StorageLayout):
     """Layout:
            /dev/sda                 GPT
                /dev/sda1            ESP partition

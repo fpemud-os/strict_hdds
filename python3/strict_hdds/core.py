@@ -22,33 +22,28 @@
 
 
 import re
+import pkgutil
 from . import util
-from . import layout_bios_simple
-from . import layout_efi_simple
-from . import layout_efi_lvm
-from . import layout_efi_bcache_lvm
+from . import StorageLayoutCreateError
+from . import StorageLayoutParseError
 
 
 def get_supported_storage_layouts():
-    return [
-        layout_bios_simple.StorageLayoutBiosSimple.name,
-        layout_efi_simple.StorageLayoutEfiSimple.name,
-        layout_efi_lvm.StorageLayoutEfiLvm.name,
-        layout_efi_bcache_lvm.StorageLayoutEfiBcacheLvm.name,
-    ]
+    ret = []
+    for mod in pkgutil.iter_modules("."):
+        print(mod.name)
+        if mod.name.startswith("layout_"):
+            ret.append(_modName2layoutName(mod.name))
+    return ret
 
 
 def create_storage_layout(layout_name, dry_run=False):
-    if layout_name == layout_bios_simple.StorageLayoutBiosSimple.name:
-        return layout_bios_simple.create_layout(dry_run=dry_run)
-    elif layout_name == layout_efi_simple.StorageLayoutEfiSimple.name:
-        return layout_efi_simple.create_layout(dry_run=dry_run)
-    elif layout_name == layout_efi_lvm.StorageLayoutEfiLvm.name:
-        return layout_efi_lvm.create_layout(dry_run=dry_run)
-    elif layout_name == layout_efi_bcache_lvm.StorageLayoutEfiBcacheLvm.name:
-        return layout_efi_bcache_lvm.create_layout(dry_run=dry_run)
-    else:
-        assert False
+    for mod in pkgutil.iter_modules("."):
+        print(mod.name)
+        if mod.name.startswith("layout_"):
+            if layout_name == _modName2layoutName(mod.name):
+                return mod.create_layout(dry_run=dry_run)
+    raise StorageLayoutCreateError("layout \"%s\" not supported")
 
 
 def parse_storage_layout():
@@ -61,10 +56,29 @@ def parse_storage_layout():
         if lvmInfo is not None:
             tlist = util.lvmGetSlaveDevPathList(lvmInfo[0])
             if any(re.fullmatch("/dev/bcache[0-9]+", x) is not None for x in tlist):
-                return layout_efi_bcache_lvm.parse_layout(bootDev, rootDev)
+                return _parseOneStorageLayout("efi-bcache-lvm", bootDev, rootDev)
             else:
-                return layout_efi_lvm.parse_layout(bootDev, rootDev)
+                return _parseOneStorageLayout("efi-lvm", bootDev, rootDev)
         else:
-            return layout_efi_simple.parse_layout(bootDev, rootDev)
+            return _parseOneStorageLayout("efi-simple", bootDev, rootDev)
     else:
-        return layout_bios_simple.parse_layout(bootDev, rootDev)
+        return _parseOneStorageLayout("bios-simple", bootDev, rootDev)
+
+
+def _parseOneStorageLayout(layoutName, bootDev, rootDev):
+    modname = _layoutName2modName(layoutName)
+    try:
+        exec("import %s" % (modname))
+        f = eval("%s.parse_layout" % (modname))
+        return f(bootDev, rootDev)
+    except ModuleNotFoundError:
+        raise StorageLayoutParseError("", "unknown storage layout")
+
+
+def _modName2layoutName(modName):
+    assert modName.startswith("layout_")
+    return modName[len("layout_"):].replace("_", "-")
+
+
+def _layoutName2modName(layoutName):
+    return "layout_" + layoutName.replace("-", "_")

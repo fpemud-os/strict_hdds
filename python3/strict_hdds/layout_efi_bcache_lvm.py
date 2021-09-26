@@ -31,7 +31,7 @@ from . import StorageLayoutReleaseDiskError
 from . import StorageLayoutParseError
 
 
-class StorageLayoutEfiBcacheLvm(StorageLayout):
+class StorageLayoutImpl(StorageLayout):
     """Layout:
            /dev/sda                 SSD, GPT (cache-disk)
                /dev/sda1            ESP partition
@@ -325,7 +325,7 @@ def create_layout(ssd=None, hdd_list=None, create_swap=True, dry_run=False):
     else:
         assert hdd_list is not None and len(hdd_list) > 0
 
-    ret = StorageLayoutEfiBcacheLvm()
+    ret = StorageLayoutImpl()
     if ssd is not None:
         ret._ssd = ssd
         ret._ssdEspParti = util.devPathDiskToPartition(ssd, 1)
@@ -403,27 +403,27 @@ def create_layout(ssd=None, hdd_list=None, create_swap=True, dry_run=False):
 
 
 def parse_layout(bootDev, rootDev):
-    ret = StorageLayoutEfiBcacheLvm()
+    ret = StorageLayoutImpl()
 
     if not util.gptIsEspPartition(bootDev):
-        raise StorageLayoutParseError(StorageLayoutEfiBcacheLvm.name, "boot device is not an ESP partitiion")
+        raise StorageLayoutParseError(StorageLayoutImpl.name, "boot device is not an ESP partitiion")
 
     # vg
     if not util.cmdCallTestSuccess("/sbin/lvm", "vgdisplay", util.vgName):
-        raise StorageLayoutParseError(StorageLayoutEfiBcacheLvm.name, "volume group \"%s\" does not exist" % (util.vgName))
+        raise StorageLayoutParseError(StorageLayoutImpl.name, "volume group \"%s\" does not exist" % (util.vgName))
 
     # pv list
     out = util.cmdCall("/sbin/lvm", "pvdisplay", "-c")
     for m in re.finditer("(/dev/\\S+):%s:.*" % (util.vgName), out, re.M):
         if re.fullmatch("/dev/bcache[0-9]+", m.group(1)) is None:
-            raise StorageLayoutParseError(StorageLayoutEfiBcacheLvm.name, "volume group \"%s\" has non-bcache physical volume" % (util.vgName))
+            raise StorageLayoutParseError(StorageLayoutImpl.name, "volume group \"%s\" has non-bcache physical volume" % (util.vgName))
         bcacheDev = m.group(1)
         tlist = util.bcacheGetSlaveDevPathList(bcacheDev)
         hddDev, partId = util.devPathPartitionToDiskAndPartitionId(tlist[-1])
         if partId != 2:
-            raise StorageLayoutParseError(StorageLayoutEfiBcacheLvm.name, "physical volume partition of %s is not %s" % (hddDev, util.devPathDiskToPartition(hddDev, 2)))
+            raise StorageLayoutParseError(StorageLayoutImpl.name, "physical volume partition of %s is not %s" % (hddDev, util.devPathDiskToPartition(hddDev, 2)))
         if os.path.exists(util.devPathDiskToPartition(hddDev, 3)):
-            raise StorageLayoutParseError(StorageLayoutEfiBcacheLvm.name, "redundant partition exists on %s" % (hddDev))
+            raise StorageLayoutParseError(StorageLayoutImpl.name, "redundant partition exists on %s" % (hddDev))
         ret._hddDict[hddDev] = bcacheDev
 
     # root lv
@@ -431,9 +431,9 @@ def parse_layout(bootDev, rootDev):
     if re.search("/dev/hdd/root:%s:.*" % (util.vgName), out, re.M) is not None:
         fs = util.getBlkDevFsType(util.rootLvDevPath)
         if fs != util.fsTypeExt4:
-            raise StorageLayoutParseError(StorageLayoutEfiBcacheLvm.name, "root partition file system is \"%s\", not \"ext4\"" % (fs))
+            raise StorageLayoutParseError(StorageLayoutImpl.name, "root partition file system is \"%s\", not \"ext4\"" % (fs))
     else:
-        raise StorageLayoutParseError(StorageLayoutEfiBcacheLvm.name, "logical volume \"%s\" does not exist" % (util.rootLvDevPath))
+        raise StorageLayoutParseError(StorageLayoutImpl.name, "logical volume \"%s\" does not exist" % (util.rootLvDevPath))
 
     # ssd
     ret._ssd = util.devPathPartitionToDisk(bootDev)
@@ -443,40 +443,40 @@ def parse_layout(bootDev, rootDev):
             ret._ssdSwapParti = util.devPathDiskToPartition(ret._ssd, 2)
             ret._ssdCacheParti = util.devPathDiskToPartition(ret._ssd, 3)
             if os.path.exists(util.devPathDiskToPartition(ret._ssd, 4)):
-                raise StorageLayoutParseError(StorageLayoutEfiBcacheLvm.name, "redundant partition exists on %s" % (ret._ssd))
+                raise StorageLayoutParseError(StorageLayoutImpl.name, "redundant partition exists on %s" % (ret._ssd))
         else:
             ret._ssdCacheParti = util.devPathDiskToPartition(ret._ssd, 2)
 
         # ret._ssdEspParti
         if ret._ssdEspParti != bootDev:
-            raise StorageLayoutParseError(StorageLayoutEfiBcacheLvm.name, "SSD is not boot device")
+            raise StorageLayoutParseError(StorageLayoutImpl.name, "SSD is not boot device")
         if util.getBlkDevSize(ret._ssdEspParti) != util.getEspSizeInMb() * 1024 * 1024:
-            raise StorageLayoutParseError(StorageLayoutEfiBcacheLvm.name, "%s has an invalid size" % (ret._ssdEspParti))
+            raise StorageLayoutParseError(StorageLayoutImpl.name, "%s has an invalid size" % (ret._ssdEspParti))
 
         # ret._ssdSwapParti
         if ret._ssdSwapParti is not None:
             if not os.path.exists(ret._ssdSwapParti):
-                raise StorageLayoutParseError(StorageLayoutEfiBcacheLvm.name, "SSD has no swap partition")
+                raise StorageLayoutParseError(StorageLayoutImpl.name, "SSD has no swap partition")
             if util.getBlkDevFsType(ret._ssdSwapParti) != util.fsTypeSwap:
-                raise StorageLayoutParseError(StorageLayoutEfiBcacheLvm.name, "swap device %s has an invalid file system" % (ret._ssdSwapParti))
+                raise StorageLayoutParseError(StorageLayoutImpl.name, "swap device %s has an invalid file system" % (ret._ssdSwapParti))
 
         # ret._ssdCacheParti
         if not os.path.exists(ret._ssdCacheParti):
-            raise StorageLayoutParseError(StorageLayoutEfiBcacheLvm.name, "SSD has no cache partition")
+            raise StorageLayoutParseError(StorageLayoutImpl.name, "SSD has no cache partition")
 
         for pvHdd, bcacheDev in ret._hddDict.items():
             tlist = util.bcacheGetSlaveDevPathList(bcacheDev)
             if len(tlist) < 2:
-                raise StorageLayoutParseError(StorageLayoutEfiBcacheLvm.name, "%s(%s) has no cache device" % (pvHdd, bcacheDev))
+                raise StorageLayoutParseError(StorageLayoutImpl.name, "%s(%s) has no cache device" % (pvHdd, bcacheDev))
             if len(tlist) > 2:
-                raise StorageLayoutParseError(StorageLayoutEfiBcacheLvm.name, "%s(%s) has multiple cache devices" % (pvHdd, bcacheDev))
+                raise StorageLayoutParseError(StorageLayoutImpl.name, "%s(%s) has multiple cache devices" % (pvHdd, bcacheDev))
             if tlist[0] != ret._ssdCacheParti:
-                raise StorageLayoutParseError(StorageLayoutEfiBcacheLvm.name, "%s(%s) has invalid cache device" % (pvHdd, bcacheDev))
+                raise StorageLayoutParseError(StorageLayoutImpl.name, "%s(%s) has invalid cache device" % (pvHdd, bcacheDev))
         if True:
             partName, partId = util.devPathPartitionToDiskAndPartitionId(ret._ssdCacheParti)
             nextPartName = util.devPathDiskToPartition(partName, partId + 1)
             if os.path.exists(nextPartName):
-                raise StorageLayoutParseError(StorageLayoutEfiBcacheLvm.name, "redundant partition exists on %s" % (ret._ssd))
+                raise StorageLayoutParseError(StorageLayoutImpl.name, "redundant partition exists on %s" % (ret._ssd))
     else:
         ret._ssd = None
 

@@ -27,7 +27,7 @@ from . import util
 from . import StorageLayout
 
 
-class StorageLayoutEfiBcacheBtrfs(StorageLayout):
+class StorageLayoutImpl(StorageLayout):
     """Layout:
            /dev/sda                      SSD, GPT (cache-disk)
                /dev/sda1                 ESP partition

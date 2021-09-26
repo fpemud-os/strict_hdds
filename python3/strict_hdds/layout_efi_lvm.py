@@ -31,7 +31,7 @@ from . import StorageLayoutReleaseDiskError
 from . import StorageLayoutParseError
 
 
-class StorageLayoutEfiLvm(StorageLayout):
+class StorageLayoutImpl(StorageLayout):
     """Layout:
            /dev/sda                 GPT
                /dev/sda1            ESP partition
@@ -207,7 +207,7 @@ def create_layout(hddList=None, dry_run=False):
         util.cmdCall("/sbin/lvm", "lvcreate", "-l", "%d" % (freePe // 2), "-n", util.rootLvName, util.vgName)
 
     # return value
-    ret = StorageLayoutEfiLvm()
+    ret = StorageLayoutImpl()
     ret._diskList = hddList
     ret._bSwapLv = False
     ret._bootHdd = ret._diskList[0]     # FIXME
@@ -215,30 +215,30 @@ def create_layout(hddList=None, dry_run=False):
 
 
 def parse_layout(bootDev, rootDev):
-    ret = StorageLayoutEfiLvm()
+    ret = StorageLayoutImpl()
 
     if not util.gptIsEspPartition(bootDev):
-        raise StorageLayoutParseError(StorageLayoutEfiLvm.name, "boot device is not an ESP partitiion")
+        raise StorageLayoutParseError(StorageLayoutImpl.name, "boot device is not an ESP partitiion")
 
     # boot harddisk
     ret._bootHdd = util.devPathPartitionToDisk(bootDev)
 
     # vg
     if not util.cmdCallTestSuccess("/sbin/lvm", "vgdisplay", util.vgName):
-        raise StorageLayoutParseError(StorageLayoutEfiLvm.name, "volume group \"%s\" does not exist" % (util.vgName))
+        raise StorageLayoutParseError(StorageLayoutImpl.name, "volume group \"%s\" does not exist" % (util.vgName))
 
     # pv list
     out = util.cmdCall("/sbin/lvm", "pvdisplay", "-c")
     for m in re.finditer("(/dev/\\S+):%s:.*" % (util.vgName), out, re.M):
         hdd, partId = util.devPathPartitionToDiskAndPartitionId(m.group(1))
         if util.getBlkDevPartitionTableType(hdd) != "gpt":
-            raise StorageLayoutParseError(StorageLayoutEfiLvm.name, "partition type of %s is not \"gpt\"" % (hdd))
+            raise StorageLayoutParseError(StorageLayoutImpl.name, "partition type of %s is not \"gpt\"" % (hdd))
         if partId != 2:
-            raise StorageLayoutParseError(StorageLayoutEfiLvm.name, "physical volume partition of %s is not %s" % (hdd, util.devPathDiskToPartition(hdd, 2)))
+            raise StorageLayoutParseError(StorageLayoutImpl.name, "physical volume partition of %s is not %s" % (hdd, util.devPathDiskToPartition(hdd, 2)))
         if util.getBlkDevSize(util.devPathDiskToPartition(hdd, 1)) != util.getEspSizeInMb() * 1024 * 1024:
-            raise StorageLayoutParseError(StorageLayoutEfiLvm.name, "%s has an invalid size" % (util.devPathDiskToPartition(hdd, 1)))
+            raise StorageLayoutParseError(StorageLayoutImpl.name, "%s has an invalid size" % (util.devPathDiskToPartition(hdd, 1)))
         if os.path.exists(util.devPathDiskToPartition(hdd, 3)):
-            raise StorageLayoutParseError(StorageLayoutEfiLvm.name, "redundant partition exists on %s" % (hdd))
+            raise StorageLayoutParseError(StorageLayoutImpl.name, "redundant partition exists on %s" % (hdd))
         ret._diskList.append(hdd)
 
     out = util.cmdCall("/sbin/lvm", "lvdisplay", "-c")
@@ -247,14 +247,14 @@ def parse_layout(bootDev, rootDev):
     if re.search("/dev/hdd/root:%s:.*" % (util.vgName), out, re.M) is not None:
         fs = util.getBlkDevFsType(util.rootLvDevPath)
         if fs != util.fsTypeExt4:
-            raise StorageLayoutParseError(StorageLayoutEfiLvm.name, "root partition file system is \"%s\", not \"ext4\"" % (fs))
+            raise StorageLayoutParseError(StorageLayoutImpl.name, "root partition file system is \"%s\", not \"ext4\"" % (fs))
     else:
-        raise StorageLayoutParseError(StorageLayoutEfiLvm.name, "logical volume \"%s\" does not exist" % (util.rootLvDevPath))
+        raise StorageLayoutParseError(StorageLayoutImpl.name, "logical volume \"%s\" does not exist" % (util.rootLvDevPath))
 
     # swap lv
     if re.search("/dev/hdd/swap:%s:.*" % (util.vgName), out, re.M) is not None:
         if util.getBlkDevFsType(util.swapLvDevPath) != util.fsTypeSwap:
-            raise StorageLayoutParseError(StorageLayoutEfiLvm.name, "\"%s\" has an invalid file system" % (util.swapLvDevPath))
+            raise StorageLayoutParseError(StorageLayoutImpl.name, "\"%s\" has an invalid file system" % (util.swapLvDevPath))
         ret._bSwapLv = True
 
     return ret

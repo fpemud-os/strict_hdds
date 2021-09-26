@@ -28,7 +28,7 @@ from . import StorageLayoutCreateError
 from . import StorageLayoutParseError
 
 
-class StorageLayoutEfiSimple(StorageLayout):
+class StorageLayoutImpl(StorageLayout):
     """Layout:
            /dev/sda          GPT
                /dev/sda1     ESP partition
@@ -96,7 +96,7 @@ def create_layout(hdd=None, dry_run=False):
             ("*", util.fsTypeExt4),
         ])
 
-    ret = StorageLayoutEfiSimple()
+    ret = StorageLayoutImpl()
     ret._hdd = hdd
     ret._hddEspParti = util.devPathDiskToPartition(hdd, 1)
     ret._hddRootParti = util.devPathDiskToPartition(hdd, 2)
@@ -104,14 +104,14 @@ def create_layout(hdd=None, dry_run=False):
 
 
 def parse_layout(bootDev, rootDev):
-    ret = StorageLayoutEfiSimple()
+    ret = StorageLayoutImpl()
 
     if not util.gptIsEspPartition(bootDev):
-        raise StorageLayoutParseError(StorageLayoutEfiSimple.name, "boot device is not an ESP partitiion")
+        raise StorageLayoutParseError(StorageLayoutImpl.name, "boot device is not an ESP partitiion")
 
     ret._hdd = util.devPathPartitionToDisk(bootDev)
     if ret._hdd != util.devPathPartitionToDisk(rootDev):
-        raise StorageLayoutParseError(StorageLayoutEfiSimple.name, "boot device and root device is not the same")
+        raise StorageLayoutParseError(StorageLayoutImpl.name, "boot device and root device is not the same")
 
     ret._hddEspParti = bootDev
 
@@ -119,7 +119,7 @@ def parse_layout(bootDev, rootDev):
     if True:
         fs = util.getBlkDevFsType(ret._hddRootParti)
         if fs != util.fsTypeExt4:
-            raise StorageLayoutParseError(StorageLayoutEfiSimple.name, "root partition file system is \"%s\", not \"ext4\"" % (fs))
+            raise StorageLayoutParseError(StorageLayoutImpl.name, "root partition file system is \"%s\", not \"ext4\"" % (fs))
 
     if os.path.exists(util.swapFilename) and util.cmdCallTestSuccess("/sbin/swaplabel", util.swapFilename):
         ret._bSwapFile = True
