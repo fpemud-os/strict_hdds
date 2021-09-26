@@ -24,12 +24,10 @@
 import re
 from . import util
 from . import layout_bios_simple
-from . import layout_bios_lvm
 from . import layout_efi_simple
 from . import layout_efi_lvm
 from . import layout_efi_bcache_lvm
 from .layout_bios_simple import StorageLayoutBiosSimple
-from .layout_bios_lvm import StorageLayoutBiosLvm
 from .layout_efi_simple import StorageLayoutEfiSimple
 from .layout_efi_lvm import StorageLayoutEfiLvm
 from .layout_efi_bcache_lvm import StorageLayoutEfiBcacheLvm
@@ -38,7 +36,6 @@ from .layout_efi_bcache_lvm import StorageLayoutEfiBcacheLvm
 def get_supported_storage_layouts():
     return [
         StorageLayoutBiosSimple.name,
-        StorageLayoutBiosLvm.name,
         StorageLayoutEfiSimple.name,
         StorageLayoutEfiLvm.name,
         StorageLayoutEfiBcacheLvm.name,
@@ -48,8 +45,6 @@ def get_supported_storage_layouts():
 def create_storage_layout(layout_name, dry_run=False):
     if layout_name == StorageLayoutBiosSimple.name:
         return layout_bios_simple.create_layout(dry_run=dry_run)
-    elif layout_name == StorageLayoutBiosLvm.name:
-        return layout_bios_lvm.create_layout(dry_run=dry_run)
     elif layout_name == StorageLayoutEfiSimple.name:
         return layout_efi_simple.create_layout(dry_run=dry_run)
     elif layout_name == StorageLayoutEfiLvm.name:
@@ -76,7 +71,4 @@ def parse_storage_layout():
         else:
             return layout_efi_simple.parse_layout(bootDev, rootDev)
     else:
-        if util.getBlkDevLvmInfo(rootDev) is not None:
-            return layout_bios_lvm.parse_layout(bootDev, rootDev)
-        else:
-            return layout_bios_simple.parse_layout(bootDev, rootDev)
+        return layout_bios_simple.parse_layout(bootDev, rootDev)
