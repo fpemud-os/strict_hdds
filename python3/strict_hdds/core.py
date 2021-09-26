@@ -27,29 +27,25 @@ from . import layout_bios_simple
 from . import layout_efi_simple
 from . import layout_efi_lvm
 from . import layout_efi_bcache_lvm
-from .layout_bios_simple import StorageLayoutBiosSimple
-from .layout_efi_simple import StorageLayoutEfiSimple
-from .layout_efi_lvm import StorageLayoutEfiLvm
-from .layout_efi_bcache_lvm import StorageLayoutEfiBcacheLvm
 
 
 def get_supported_storage_layouts():
     return [
-        StorageLayoutBiosSimple.name,
-        StorageLayoutEfiSimple.name,
-        StorageLayoutEfiLvm.name,
-        StorageLayoutEfiBcacheLvm.name,
+        layout_bios_simple.StorageLayoutBiosSimple.name,
+        layout_efi_simple.StorageLayoutEfiSimple.name,
+        layout_efi_lvm.StorageLayoutEfiLvm.name,
+        layout_efi_bcache_lvm.StorageLayoutEfiBcacheLvm.name,
     ]
 
 
 def create_storage_layout(layout_name, dry_run=False):
-    if layout_name == StorageLayoutBiosSimple.name:
+    if layout_name == layout_bios_simple.StorageLayoutBiosSimple.name:
         return layout_bios_simple.create_layout(dry_run=dry_run)
-    elif layout_name == StorageLayoutEfiSimple.name:
+    elif layout_name == layout_efi_simple.StorageLayoutEfiSimple.name:
         return layout_efi_simple.create_layout(dry_run=dry_run)
-    elif layout_name == StorageLayoutEfiLvm.name:
+    elif layout_name == layout_efi_lvm.StorageLayoutEfiLvm.name:
         return layout_efi_lvm.create_layout(dry_run=dry_run)
-    elif layout_name == StorageLayoutEfiBcacheLvm.name:
+    elif layout_name == layout_efi_bcache_lvm.StorageLayoutEfiBcacheLvm.name:
         return layout_efi_bcache_lvm.create_layout(dry_run=dry_run)
     else:
         assert False
