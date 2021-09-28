@@ -30,16 +30,14 @@ from . import StorageLayoutParseError
 
 def get_supported_storage_layouts():
     ret = []
-    for mod in pkgutil.iter_modules("."):
-        print(mod.name)
+    for mod in pkgutil.iter_modules(["."]):
         if mod.name.startswith("layout_"):
             ret.append(util.modName2layoutName(mod.name))
     return ret
 
 
 def create_storage_layout(layout_name, dry_run=False):
-    for mod in pkgutil.iter_modules("."):
-        print(mod.name)
+    for mod in pkgutil.iter_modules(["."]):
         if mod.name.startswith("layout_"):
             if layout_name == util.modName2layoutName(mod.name):
                 return mod.create_layout(dry_run=dry_run)
@@ -68,8 +66,8 @@ def parse_storage_layout():
 def _parseOneStorageLayout(layoutName, bootDev, rootDev):
     modname = util.layoutName2modName(layoutName)
     try:
-        exec("import %s" % (modname))
-        f = eval("%s.parse_layout" % (modname))
+        exec("import strict_hdds.%s" % (modname))
+        f = eval("strict_hdds.%s.parse_layout" % (modname))
         return f(bootDev, rootDev)
     except ModuleNotFoundError:
         raise StorageLayoutParseError("", "unknown storage layout")
