@@ -24,6 +24,7 @@ import os
 import re
 from . import util
 from . import StorageLayout
+from . import StorageLayoutAddDiskError
 
 
 class StorageLayoutImpl(StorageLayout):
@@ -95,18 +96,17 @@ class StorageLayoutImpl(StorageLayout):
         # create partitions
         util.initializeDisk(devpath, "gpt", [
             ("%dMiB" % (util.getEspSizeInMb()), util.fsTypeFat),
-            ("*", "lvm"),
+            ("*", "btrfs"),
         ])
 
-        # fill partition1, mount boot device if needed
+        # fill partition1, synchronize boot device if needed
         parti = util.devPathDiskToPartition(devpath, 1)
         util.cmdCall("/usr/sbin/mkfs.vfat", parti)
         util.syncBlkDev(util.devPathDiskToPartition(self._bootHdd, 1), parti, mountPoint1=util.bootDir)
 
-        # create lvm physical volume on partition2 and add it to volume group
+        # create btrfs device
         parti = util.devPathDiskToPartition(devpath, 2)
-        util.cmdCall("/sbin/lvm", "pvcreate", parti)
-        util.cmdCall("/sbin/lvm", "vgextend", util.vgName, parti)
+        util.cmdCall("/usr/sbin/mkfs.btrfs", parti)
         self._diskList.append(devpath)
 
         return False
