@@ -38,8 +38,6 @@ class StorageLayoutBiosSimple(StorageLayout):
            3. extra partition is allowed to exist
     """
 
-    name = "bios-simple"
-
     def __init__(self):
         self._hdd = None              # boot harddisk name
         self._hddRootParti = False    # root partition name
