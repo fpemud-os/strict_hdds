@@ -220,27 +220,27 @@ def parse_layout(bootDev, rootDev):
     ret = StorageLayoutImpl()
 
     if not util.gptIsEspPartition(bootDev):
-        raise StorageLayoutParseError(StorageLayoutImpl.name, "boot device is not an ESP partitiion")
+        raise StorageLayoutParseError(ret.name, "boot device is not an ESP partitiion")
 
     # boot harddisk
     ret._bootHdd = util.devPathPartitionToDisk(bootDev)
 
     # vg
     if not util.cmdCallTestSuccess("/sbin/lvm", "vgdisplay", util.vgName):
-        raise StorageLayoutParseError(StorageLayoutImpl.name, "volume group \"%s\" does not exist" % (util.vgName))
+        raise StorageLayoutParseError(ret.name, "volume group \"%s\" does not exist" % (util.vgName))
 
     # pv list
     out = util.cmdCall("/sbin/lvm", "pvdisplay", "-c")
     for m in re.finditer("(/dev/\\S+):%s:.*" % (util.vgName), out, re.M):
         hdd, partId = util.devPathPartitionToDiskAndPartitionId(m.group(1))
         if util.getBlkDevPartitionTableType(hdd) != "gpt":
-            raise StorageLayoutParseError(StorageLayoutImpl.name, "partition type of %s is not \"gpt\"" % (hdd))
+            raise StorageLayoutParseError(ret.name, "partition type of %s is not \"gpt\"" % (hdd))
         if partId != 2:
-            raise StorageLayoutParseError(StorageLayoutImpl.name, "physical volume partition of %s is not %s" % (hdd, util.devPathDiskToPartition(hdd, 2)))
+            raise StorageLayoutParseError(ret.name, "physical volume partition of %s is not %s" % (hdd, util.devPathDiskToPartition(hdd, 2)))
         if util.getBlkDevSize(util.devPathDiskToPartition(hdd, 1)) != util.getEspSizeInMb() * 1024 * 1024:
-            raise StorageLayoutParseError(StorageLayoutImpl.name, "%s has an invalid size" % (util.devPathDiskToPartition(hdd, 1)))
+            raise StorageLayoutParseError(ret.name, "%s has an invalid size" % (util.devPathDiskToPartition(hdd, 1)))
         if os.path.exists(util.devPathDiskToPartition(hdd, 3)):
-            raise StorageLayoutParseError(StorageLayoutImpl.name, "redundant partition exists on %s" % (hdd))
+            raise StorageLayoutParseError(ret.name, "redundant partition exists on %s" % (hdd))
         ret._diskList.append(hdd)
 
     out = util.cmdCall("/sbin/lvm", "lvdisplay", "-c")
@@ -249,14 +249,14 @@ def parse_layout(bootDev, rootDev):
     if re.search("/dev/hdd/root:%s:.*" % (util.vgName), out, re.M) is not None:
         fs = util.getBlkDevFsType(util.rootLvDevPath)
         if fs != util.fsTypeExt4:
-            raise StorageLayoutParseError(StorageLayoutImpl.name, "root partition file system is \"%s\", not \"ext4\"" % (fs))
+            raise StorageLayoutParseError(ret.name, "root partition file system is \"%s\", not \"ext4\"" % (fs))
     else:
-        raise StorageLayoutParseError(StorageLayoutImpl.name, "logical volume \"%s\" does not exist" % (util.rootLvDevPath))
+        raise StorageLayoutParseError(ret.name, "logical volume \"%s\" does not exist" % (util.rootLvDevPath))
 
     # swap lv
     if re.search("/dev/hdd/swap:%s:.*" % (util.vgName), out, re.M) is not None:
         if util.getBlkDevFsType(util.swapLvDevPath) != util.fsTypeSwap:
-            raise StorageLayoutParseError(StorageLayoutImpl.name, "\"%s\" has an invalid file system" % (util.swapLvDevPath))
+            raise StorageLayoutParseError(ret.name, "\"%s\" has an invalid file system" % (util.swapLvDevPath))
         ret._bSwapLv = True
 
     return ret

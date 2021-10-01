@@ -158,7 +158,7 @@ def create_layout(disk_list=None, dry_run=False):
         util.cmdCall("/sbin/lvm", "lvcreate", "-l", "%d" % (freePe // 2), "-n", util.rootLvName, util.vgName)
 
     # return value
-    ret = StorageLayoutBiosLvm()
+    ret = StorageLayoutImpl()
     ret._diskList = disk_list
     ret._bSwapLv = False
     ret._bootHdd = ret._diskList[0]     # FIXME
@@ -166,20 +166,20 @@ def create_layout(disk_list=None, dry_run=False):
 
 
 def parse_layout(booDev, rootDev):
-    ret = StorageLayoutBiosLvm()
+    ret = StorageLayoutImpl()
 
     # vg
     if not util.cmdCallTestSuccess("/sbin/lvm", "vgdisplay", util.vgName):
-        raise StorageLayoutParseError(StorageLayoutBiosLvm.name, "volume group \"%s\" does not exist" % (util.vgName))
+        raise StorageLayoutParseError(ret.name, "volume group \"%s\" does not exist" % (util.vgName))
 
     # pv list
     out = util.cmdCall("/sbin/lvm", "pvdisplay", "-c")
     for m in re.finditer("(/dev/\\S+):%s:.*" % (util.vgName), out, re.M):
         hdd = util.devPathPartitionToDisk(m.group(1))
         if util.getBlkDevPartitionTableType(hdd) != "dos":
-            raise StorageLayoutParseError(StorageLayoutBiosLvm.name, "partition type of %s is not \"dos\"" % (hdd))
+            raise StorageLayoutParseError(ret.name, "partition type of %s is not \"dos\"" % (hdd))
         if os.path.exists(util.devPathDiskToPartition(hdd, 2)):
-            raise StorageLayoutParseError(StorageLayoutBiosLvm.name, "redundant partition exists on %s" % (hdd))
+            raise StorageLayoutParseError(ret.name, "redundant partition exists on %s" % (hdd))
         ret._diskList.append(hdd)
 
     out = util.cmdCall("/sbin/lvm", "lvdisplay", "-c")
@@ -188,14 +188,14 @@ def parse_layout(booDev, rootDev):
     if re.search("/dev/hdd/root:%s:.*" % (util.vgName), out, re.M) is not None:
         fs = util.getBlkDevFsType(util.rootLvDevPath)
         if fs != util.fsTypeExt4:
-            raise StorageLayoutParseError(StorageLayoutBiosLvm.name, "root partition file system is \"%s\", not \"ext4\"" % (fs))
+            raise StorageLayoutParseError(ret.name, "root partition file system is \"%s\", not \"ext4\"" % (fs))
     else:
-        raise StorageLayoutParseError(StorageLayoutBiosLvm.name, "logical volume \"%s\" does not exist" % (util.rootLvDevPath))
+        raise StorageLayoutParseError(ret.name, "logical volume \"%s\" does not exist" % (util.rootLvDevPath))
 
     # swap lv
     if re.search("/dev/hdd/swap:%s:.*" % (util.vgName), out, re.M) is not None:
         if util.getBlkDevFsType(util.swapLvDevPath) != util.fsTypeSwap:
-            raise StorageLayoutParseError(StorageLayoutBiosLvm.name, "\"%s\" has an invalid file system" % (util.swapLvDevPath))
+            raise StorageLayoutParseError(ret.name, "\"%s\" has an invalid file system" % (util.swapLvDevPath))
         ret._bSwapLv = True
 
     # boot harddisk
@@ -203,9 +203,9 @@ def parse_layout(booDev, rootDev):
         with open(hdd, "rb") as f:
             if not util.isBufferAllZero(f.read(440)):
                 if ret._bootHdd is not None:
-                    raise StorageLayoutParseError(StorageLayoutBiosLvm.name, "boot-code exists on multiple harddisks")
+                    raise StorageLayoutParseError(ret.name, "boot-code exists on multiple harddisks")
                 ret._bootHdd = hdd
     if ret._bootHdd is None:
-        raise StorageLayoutParseError(StorageLayoutBiosLvm.name, "no harddisk has boot-code")
+        raise StorageLayoutParseError(ret.name, "no harddisk has boot-code")
 
     return ret

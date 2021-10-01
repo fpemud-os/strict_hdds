@@ -109,11 +109,11 @@ def parse_layout(bootDev, rootDev):
     ret = StorageLayoutImpl()
 
     if not util.gptIsEspPartition(bootDev):
-        raise StorageLayoutParseError(StorageLayoutImpl.name, "boot device is not an ESP partitiion")
+        raise StorageLayoutParseError(ret.name, "boot device is not an ESP partitiion")
 
     ret._hdd = util.devPathPartitionToDisk(bootDev)
     if ret._hdd != util.devPathPartitionToDisk(rootDev):
-        raise StorageLayoutParseError(StorageLayoutImpl.name, "boot device and root device is not the same")
+        raise StorageLayoutParseError(ret.name, "boot device and root device is not the same")
 
     ret._hddEspParti = bootDev
 
@@ -121,7 +121,7 @@ def parse_layout(bootDev, rootDev):
     if True:
         fs = util.getBlkDevFsType(ret._hddRootParti)
         if fs != util.fsTypeExt4:
-            raise StorageLayoutParseError(StorageLayoutImpl.name, "root partition file system is \"%s\", not \"ext4\"" % (fs))
+            raise StorageLayoutParseError(ret.name, "root partition file system is \"%s\", not \"ext4\"" % (fs))
 
     if os.path.exists(util.swapFilename) and util.cmdCallTestSuccess("/sbin/swaplabel", util.swapFilename):
         ret._bSwapFile = True

@@ -92,7 +92,7 @@ def create_layout(hdd=None, dry_run=False):
             ("*", util.fsTypeExt4),
         ])
 
-    ret = StorageLayoutBiosSimple()
+    ret = StorageLayoutImpl()
     ret._hdd = hdd
     ret._hddRootParti = util.devPathDiskToPartition(hdd, 1)
     ret._bSwapFile = False
@@ -100,16 +100,16 @@ def create_layout(hdd=None, dry_run=False):
 
 
 def parse_layout(bootDev, rootDev):
-    ret = StorageLayoutBiosSimple()
+    ret = StorageLayoutImpl()
 
     ret._hdd = util.devPathPartitionToDisk(rootDev)
     if util.getBlkDevPartitionTableType(ret._hdd) != "dos":
-        raise StorageLayoutParseError(StorageLayoutBiosSimple.name, "partition type of %s is not \"dos\"" % (ret._hdd))
+        raise StorageLayoutParseError(ret.name, "partition type of %s is not \"dos\"" % (ret._hdd))
 
     ret._hddRootParti = rootDev
     fs = util.getBlkDevFsType(ret._hddRootParti)
     if fs != util.fsTypeExt4:
-        raise StorageLayoutParseError(StorageLayoutBiosSimple.name, "root partition file system is \"%s\", not \"ext4\"" % (fs))
+        raise StorageLayoutParseError(ret.name, "root partition file system is \"%s\", not \"ext4\"" % (fs))
 
     if os.path.exists(util.swapFilename) and util.cmdCallTestSuccess("/sbin/swaplabel", util.swapFilename):
         ret._bSwapFile = True

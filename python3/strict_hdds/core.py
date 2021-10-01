@@ -60,7 +60,10 @@ def parse_storage_layout():
         else:
             return _parseOneStorageLayout("efi-simple", bootDev, rootDev)
     else:
-        return _parseOneStorageLayout("bios-simple", bootDev, rootDev)
+        if util.getBlkDevLvmInfo(rootDev) is not None:
+            return _parseOneStorageLayout("bios-lvm", bootDev, rootDev)
+        else:
+            return _parseOneStorageLayout("bios-simple", bootDev, rootDev)
 
 
 def _parseOneStorageLayout(layoutName, bootDev, rootDev):
