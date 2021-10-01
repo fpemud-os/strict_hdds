@@ -28,7 +28,7 @@ from . import StorageLayoutCreateError
 from . import StorageLayoutParseError
 
 
-class StorageLayoutBiosSimple(StorageLayout):
+class StorageLayoutImpl(StorageLayout):
     """Layout:
            /dev/sda          MBR, BIOS-GRUB
                /dev/sda1     root device, EXT4
