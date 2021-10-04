@@ -53,4 +53,4 @@ class StorageLayoutImpl(StorageLayout):
 
     @property
     def name(self):
-        return util.modName2layoutName(self.__module__.__name__)
+        return util.modName2layoutName(self.__module__)
