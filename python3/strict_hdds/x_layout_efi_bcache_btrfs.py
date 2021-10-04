@@ -51,6 +51,4 @@ class StorageLayoutImpl(StorageLayout):
            6. extra harddisk is allowed to exist
     """
 
-    @property
-    def name(self):
-        return util.modName2layoutName(self.__module__)
+    pass

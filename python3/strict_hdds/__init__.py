@@ -34,63 +34,13 @@ strict_hdds
 __author__ = "fpemud@sina.com (Fpemud)"
 __version__ = "0.0.1"
 
+from .core import StorageLayout
 
-class StorageLayout:
-
-    BOOT_MODE_BIOS = 1
-    BOOT_MODE_EFI = 2
-
-    @property
-    def name(self):
-        raise NotImplementedError()
-
-    @property
-    def boot_mode(self):
-        raise NotImplementedError()
-
-    @property
-    def dev_rootfs(self):
-        raise NotImplementedError()
-
-    @property
-    def dev_swap(self):
-        raise NotImplementedError()
-
-    def get_boot_disk(self):
-        raise NotImplementedError()
-
-    def check_swap_size(self):
-        raise NotImplementedError()
-
-
-class StorageLayoutError(Exception):
-    pass
-
-
-class StorageLayoutCreateError(StorageLayoutError):
-    pass
-
-
-class StorageLayoutAddDiskError(StorageLayoutError):
-
-    def __init__(self, disk_devpath, message):
-        self.disk_devpath = disk_devpath
-        self.message = message
-
-
-class StorageLayoutReleaseDiskError(StorageLayoutError):
-
-    def __init__(self, disk_devpath, message):
-        self.disk_devpath = disk_devpath
-        self.message = message
-
-
-class StorageLayoutParseError(StorageLayoutError):
-
-    def __init__(self, layout_name, message):
-        self.layout_name = layout_name
-        self.message = message
-
+from .core import StorageLayoutError
+from .core import StorageLayoutCreateError
+from .core import StorageLayoutAddDiskError
+from .core import StorageLayoutReleaseDiskError
+from .core import StorageLayoutParseError
 
 from .core import get_supported_storage_layouts
 from .core import create_storage_layout

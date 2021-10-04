@@ -21,11 +21,70 @@
 # THE SOFTWARE.
 
 
+import os
 import re
+import sys
 import pkgutil
 from . import util
-from . import StorageLayoutCreateError
-from . import StorageLayoutParseError
+
+
+class StorageLayout:
+
+    BOOT_MODE_BIOS = 1
+    BOOT_MODE_EFI = 2
+
+    @property
+    def name(self):
+        fn = sys.modules.get(self.__module__).__file__
+        fn = os.path.basename(fn).replace(".py", "")
+        return util.modName2layoutName(fn)
+
+    @property
+    def boot_mode(self):
+        raise NotImplementedError()
+
+    @property
+    def dev_rootfs(self):
+        raise NotImplementedError()
+
+    @property
+    def dev_swap(self):
+        raise NotImplementedError()
+
+    def get_boot_disk(self):
+        raise NotImplementedError()
+
+    def check_swap_size(self):
+        raise NotImplementedError()
+
+
+class StorageLayoutError(Exception):
+    pass
+
+
+class StorageLayoutCreateError(StorageLayoutError):
+    pass
+
+
+class StorageLayoutAddDiskError(StorageLayoutError):
+
+    def __init__(self, disk_devpath, message):
+        self.disk_devpath = disk_devpath
+        self.message = message
+
+
+class StorageLayoutReleaseDiskError(StorageLayoutError):
+
+    def __init__(self, disk_devpath, message):
+        self.disk_devpath = disk_devpath
+        self.message = message
+
+
+class StorageLayoutParseError(StorageLayoutError):
+
+    def __init__(self, layout_name, message):
+        self.layout_name = layout_name
+        self.message = message
 
 
 def get_supported_storage_layouts():

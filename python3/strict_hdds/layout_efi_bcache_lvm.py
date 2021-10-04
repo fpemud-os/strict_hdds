@@ -65,10 +65,6 @@ class StorageLayoutImpl(StorageLayout):
         self._bootHdd = None             # boot harddisk name, must be None if ssd exists
 
     @property
-    def name(self):
-        return util.modName2layoutName(self.__module__)
-
-    @property
     def boot_mode(self):
         return StorageLayout.BOOT_MODE_EFI
 
