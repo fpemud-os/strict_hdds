@@ -157,7 +157,7 @@ class StorageLayoutImpl(StorageLayout):
         # create partitions
         util.initializeDisk(devpath, "gpt", [
             ("%dMiB" % (util.getEspSizeInMb()), "esp"),
-            (self.swapPartiSizeStr, util.fsTypeSwap),
+            ("%dGiB" % (util.getSwapSizeInGb()), util.fsTypeSwap),
             ("*", "bcache"),
         ])
         self._ssd = devpath
@@ -241,7 +241,7 @@ class StorageLayoutImpl(StorageLayout):
 
         # check
         if util.systemdFindSwapService(self._ssdSwapParti) is not None:
-            raise Exception("swap partition is in use, please use \"sysman disable-swap\" first")
+            raise Exception("swap partition is in use")
 
         # remove cache partition
         setUuid = util.bcacheGetSetUuid(self._ssdCacheParti)

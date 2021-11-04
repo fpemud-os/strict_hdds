@@ -828,6 +828,20 @@ def initializeDisk(devPath, partitionTableType, partitionInfoList):
     time.sleep(3)           # FIXME, wait kernel picks the change
 
 
+def gptToggleEspPartition(devPath, espOrRegular):
+    assert isinstance(espOrRegular, bool)
+
+    diskDevPath, partId = devPathPartitionToDiskAndPartitionId(devPath)
+
+    diskObj = parted.newDisk(parted.getDevice(diskDevPath))
+    partObj = diskObj.partitions[partId - 1]
+    if espOrRegular:
+        partObj.setFlag(parted.PARTITION_ESP)
+    else:
+        partObj.unsetFlag(parted.PARTITION_ESP)
+    diskObj.commit()
+
+
 def isBufferAllZero(buf):
     for b in buf:
         if b != 0:

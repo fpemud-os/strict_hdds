@@ -36,13 +36,13 @@ __version__ = "0.0.1"
 
 
 from .core import StorageLayout
-
-from .core import StorageLayoutError
-from .core import StorageLayoutCreateError
-from .core import StorageLayoutAddDiskError
-from .core import StorageLayoutReleaseDiskError
-from .core import StorageLayoutParseError
-
 from .core import get_supported_storage_layouts
 from .core import create_storage_layout
 from .core import parse_storage_layout
+
+from .errors import StorageLayoutError
+from .errors import StorageLayoutCreateError
+from .errors import StorageLayoutAddDiskError
+from .errors import StorageLayoutReleaseDiskError
+from .errors import StorageLayoutRemoveDiskError
+from .errors import StorageLayoutParseError

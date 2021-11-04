@@ -26,6 +26,7 @@ import re
 import sys
 import pkgutil
 from . import util
+from . import errors
 
 
 class StorageLayout:
@@ -58,42 +59,6 @@ class StorageLayout:
         raise NotImplementedError()
 
 
-class StorageLayoutError(Exception):
-    pass
-
-
-class StorageLayoutCreateError(StorageLayoutError):
-    pass
-
-
-class StorageLayoutAddDiskError(StorageLayoutError):
-
-    def __init__(self, disk_devpath, message):
-        self.disk_devpath = disk_devpath
-        self.message = message
-
-
-class StorageLayoutReleaseDiskError(StorageLayoutError):
-
-    def __init__(self, disk_devpath, message):
-        self.disk_devpath = disk_devpath
-        self.message = message
-
-
-class StorageLayoutRemoveDiskError(StorageLayoutError):
-
-    def __init__(self, disk_devpath, message):
-        self.disk_devpath = disk_devpath
-        self.message = message
-
-
-class StorageLayoutParseError(StorageLayoutError):
-
-    def __init__(self, layout_name, message):
-        self.layout_name = layout_name
-        self.message = message
-
-
 def get_supported_storage_layouts():
     ret = []
     for mod in pkgutil.iter_modules(["."]):
@@ -107,7 +72,7 @@ def create_storage_layout(layout_name, dry_run=False):
         if mod.name.startswith("layout_"):
             if layout_name == util.modName2layoutName(mod.name):
                 return mod.create_layout(dry_run=dry_run)
-    raise StorageLayoutCreateError("layout \"%s\" not supported")
+    raise errors.StorageLayoutCreateError("layout \"%s\" not supported" % (layout_name))
 
 
 def parse_storage_layout():
@@ -139,4 +104,4 @@ def _parseOneStorageLayout(layoutName, bootDev, rootDev):
         f = eval("strict_hdds.%s.parse_layout" % (modname))
         return f(bootDev, rootDev)
     except ModuleNotFoundError:
-        raise StorageLayoutParseError("", "unknown storage layout")
+        raise errors.StorageLayoutParseError("", "unknown storage layout")
