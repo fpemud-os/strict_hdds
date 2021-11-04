@@ -59,7 +59,7 @@ class StorageLayoutParseError(StorageLayoutError):
 
 # common messages for StorageLayoutCreateError
 NO_DISK = "no fixed harddisk"
-MULTIPLE_DISK = "multiple fixed harddisks found while we need one and only one harddisk"
+MULTIPLE_DISKS = "multiple fixed harddisks found while we need one and only one harddisk"
 MULTIPLE_SSD = "multiple SSD harddisks"
 
 # common messages for StorageLayoutAddDiskError
