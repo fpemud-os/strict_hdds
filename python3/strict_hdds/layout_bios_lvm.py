@@ -24,11 +24,8 @@
 import os
 import re
 from . import util
+from . import errors
 from . import StorageLayout
-from . import StorageLayoutCreateError
-from . import StorageLayoutAddDiskError
-from . import StorageLayoutReleaseDiskError
-from . import StorageLayoutParseError
 
 
 class StorageLayoutImpl(StorageLayout):
@@ -83,7 +80,7 @@ class StorageLayoutImpl(StorageLayout):
         assert devpath not in self._diskList
 
         if devpath not in util.getDevPathListForFixedHdd():
-            raise StorageLayoutAddDiskError(devpath, "not a harddisk")
+            raise errors.StorageLayoutAddDiskError(devpath, errors.NOT_DISK)
 
         # FIXME
         assert False
@@ -96,7 +93,7 @@ class StorageLayoutImpl(StorageLayout):
         parti = util.devPathDiskToPartition(devpath, 1)
         rc, out = util.cmdCallWithRetCode("/sbin/lvm", "pvmove", parti)
         if rc != 5:
-            raise StorageLayoutReleaseDiskError(devpath, "failed")
+            raise errors.StorageLayoutReleaseDiskError(devpath, "failed")
 
     def remove_disk(self, devpath):
         assert devpath is not None
@@ -133,7 +130,7 @@ def create_layout(disk_list=None, dry_run=False):
     if disk_list is None:
         disk_list = util.getDevPathListForFixedHdd()
         if len(disk_list) == 0:
-            raise StorageLayoutCreateError("no harddisk")
+            raise errors.StorageLayoutCreateError(errors.NO_HDD)
     else:
         assert len(disk_list) > 0
 
@@ -170,16 +167,16 @@ def parse_layout(booDev, rootDev):
 
     # vg
     if not util.cmdCallTestSuccess("/sbin/lvm", "vgdisplay", util.vgName):
-        raise StorageLayoutParseError(ret.name, "volume group \"%s\" does not exist" % (util.vgName))
+        raise errors.StorageLayoutParseError(ret.name, errors.LVM_VG_NOT_FOUND(util.vgName))
 
     # pv list
     out = util.cmdCall("/sbin/lvm", "pvdisplay", "-c")
     for m in re.finditer("(/dev/\\S+):%s:.*" % (util.vgName), out, re.M):
         hdd = util.devPathPartitionToDisk(m.group(1))
         if util.getBlkDevPartitionTableType(hdd) != "dos":
-            raise StorageLayoutParseError(ret.name, "partition type of %s is not \"dos\"" % (hdd))
+            raise errors.StorageLayoutParseError(ret.name, errors.PART_TYPE_SHOULD_BE(hdd, "dos"))
         if os.path.exists(util.devPathDiskToPartition(hdd, 2)):
-            raise StorageLayoutParseError(ret.name, "redundant partition exists on %s" % (hdd))
+            raise errors.StorageLayoutParseError(ret.name, errors.DISK_HAS_REDUNDANT_PARTITION(hdd))
         ret._diskList.append(hdd)
 
     out = util.cmdCall("/sbin/lvm", "lvdisplay", "-c")
@@ -188,14 +185,14 @@ def parse_layout(booDev, rootDev):
     if re.search("/dev/hdd/root:%s:.*" % (util.vgName), out, re.M) is not None:
         fs = util.getBlkDevFsType(util.rootLvDevPath)
         if fs != util.fsTypeExt4:
-            raise StorageLayoutParseError(ret.name, "root partition file system is \"%s\", not \"ext4\"" % (fs))
+            raise errors.StorageLayoutParseError(ret.name, "root partition file system is \"%s\", not \"ext4\"" % (fs))
     else:
-        raise StorageLayoutParseError(ret.name, "logical volume \"%s\" does not exist" % (util.rootLvDevPath))
+        raise errors.StorageLayoutParseError(ret.name, errors.LVM_LV_NOT_FOUND(util.rootLvDevPath))
 
     # swap lv
     if re.search("/dev/hdd/swap:%s:.*" % (util.vgName), out, re.M) is not None:
         if util.getBlkDevFsType(util.swapLvDevPath) != util.fsTypeSwap:
-            raise StorageLayoutParseError(ret.name, "\"%s\" has an invalid file system" % (util.swapLvDevPath))
+            raise errors.StorageLayoutParseError(ret.name, errors.SWAP_DEV_HAS_INVALID_FS_FLAG(util.swapLvDevPath))
         ret._bSwapLv = True
 
     # boot harddisk
@@ -203,9 +200,9 @@ def parse_layout(booDev, rootDev):
         with open(hdd, "rb") as f:
             if not util.isBufferAllZero(f.read(440)):
                 if ret._bootHdd is not None:
-                    raise StorageLayoutParseError(ret.name, "boot-code exists on multiple harddisks")
+                    raise errors.StorageLayoutParseError(ret.name, errors.BOOT_CODE_ON_MULTIPLE_DISKS)
                 ret._bootHdd = hdd
     if ret._bootHdd is None:
-        raise StorageLayoutParseError(ret.name, "no harddisk has boot-code")
+        raise errors.StorageLayoutParseError(ret.name, errors.BOOT_CODE_NOT_FOUND)
 
     return ret

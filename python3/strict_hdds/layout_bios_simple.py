@@ -23,9 +23,8 @@
 
 import os
 from . import util
+from . import errors
 from . import StorageLayout
-from . import StorageLayoutCreateError
-from . import StorageLayoutParseError
 
 
 class StorageLayoutImpl(StorageLayout):
@@ -77,9 +76,9 @@ def create_layout(hdd=None, dry_run=False):
     if hdd is None:
         hddList = util.getDevPathListForFixedHdd()
         if len(hddList) == 0:
-            raise StorageLayoutCreateError("no harddisk")
+            raise errors.StorageLayoutCreateError(errors.NO_HDD)
         if len(hddList) > 1:
-            raise StorageLayoutCreateError("multiple harddisks")
+            raise errors.StorageLayoutCreateError(errors.MULTIPLE_HDD)
         hdd = hddList[0]
 
     if not dry_run:
@@ -100,12 +99,12 @@ def parse_layout(bootDev, rootDev):
 
     ret._hdd = util.devPathPartitionToDisk(rootDev)
     if util.getBlkDevPartitionTableType(ret._hdd) != "dos":
-        raise StorageLayoutParseError(ret.name, "partition type of %s is not \"dos\"" % (ret._hdd))
+        raise errors.StorageLayoutParseError(ret.name, errors.PART_TYPE_SHOULD_BE(ret._hdd, "dos"))
 
     ret._hddRootParti = rootDev
     fs = util.getBlkDevFsType(ret._hddRootParti)
     if fs != util.fsTypeExt4:
-        raise StorageLayoutParseError(ret.name, "root partition file system is \"%s\", not \"ext4\"" % (fs))
+        raise errors.StorageLayoutParseError(ret.name, "root partition file system is \"%s\", not \"ext4\"" % (fs))
 
     if os.path.exists(util.swapFilename) and util.cmdCallTestSuccess("/sbin/swaplabel", util.swapFilename):
         ret._bSwapFile = True
