@@ -80,6 +80,13 @@ class StorageLayoutReleaseDiskError(StorageLayoutError):
         self.message = message
 
 
+class StorageLayoutRemoveDiskError(StorageLayoutError):
+
+    def __init__(self, disk_devpath, message):
+        self.disk_devpath = disk_devpath
+        self.message = message
+
+
 class StorageLayoutParseError(StorageLayoutError):
 
     def __init__(self, layout_name, message):

@@ -28,6 +28,7 @@ from . import StorageLayout
 from . import StorageLayoutCreateError
 from . import StorageLayoutAddDiskError
 from . import StorageLayoutReleaseDiskError
+from . import StorageLayoutRemoveDiskError
 from . import StorageLayoutParseError
 
 
@@ -130,22 +131,18 @@ class StorageLayoutImpl(StorageLayout):
         assert devpath in self.get_disk_list()
 
         if devpath == self._ssd:
-            return
-
-        parti = util.devPathDiskToPartition(devpath, 2)
-        bcacheDev = util.bcacheFindByBackingDevice(parti)
-        rc, out = util.cmdCallWithRetCode("/sbin/lvm", "pvmove", bcacheDev)
-        if rc != 5:
-            raise StorageLayoutReleaseDiskError("failed")
+            self._releaseSsd()
+        else:
+            self._releaseHdd(devpath)
 
     def remove_disk(self, devpath):
         assert devpath is not None
         assert devpath in self.get_disk_list()
 
         if devpath == self._ssd:
-            return self._removeSsdEfiBcacheLvm()
+            return self._removeSsd()
         else:
-            return self._removeHddEfiBcacheLvm(devpath)
+            return self._removeHdd(devpath)
 
     def _addSsd(self, devpath):
         # create partitions
@@ -229,13 +226,28 @@ class StorageLayoutImpl(StorageLayout):
 
         return False
 
-    def _removeSsdEfiBcacheLvm(self):
+    def _releaseSsd(self):
+        pass
+
+    def _releaseHdd(self, devpath):
+        assert devpath in self._hddDict
+
+        if len(self._hddDict) <= 1:
+            raise StorageLayoutReleaseDiskError("can not release the last physical volume")
+
+        parti = util.devPathDiskToPartition(devpath, 2)
+        bcacheDev = util.bcacheFindByBackingDevice(parti)
+        rc, out = util.cmdCallWithRetCode("/sbin/lvm", "pvmove", bcacheDev)
+        if rc != 5:
+            raise StorageLayoutReleaseDiskError("failed")
+
+    def _removeSsd(self):
         assert self._ssd is not None
         assert len(self._hddDict) > 0
 
         # check
         if util.systemdFindSwapService(self._ssdSwapParti) is not None:
-            raise Exception("swap partition is in use, please use \"sysman disable-swap\" first")
+            raise StorageLayoutRemoveDiskError("swap partition is in use, please use \"sysman disable-swap\" first")
 
         # remove cache partition
         setUuid = util.bcacheGetSetUuid(self._ssdCacheParti)
@@ -259,11 +271,11 @@ class StorageLayoutImpl(StorageLayout):
 
         return True
 
-    def _removeHddEfiBcacheLvm(self, devpath):
+    def _removeHdd(self, devpath):
         assert devpath in self._hddDict
 
         if len(self._hddDict) <= 1:
-            raise Exception("can not remove the last physical volume")
+            raise StorageLayoutRemoveDiskError("can not remove the last physical volume")
 
         # change boot device if needed
         ret = False
