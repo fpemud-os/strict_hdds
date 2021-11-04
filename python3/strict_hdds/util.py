@@ -71,7 +71,7 @@ def lvmGetSlaveDevPathList(vgName):
     return ret
 
 
-def getPhysicalMemorySize():
+def getPhysicalMemorySizeInGb():
     with open("/proc/meminfo", "r") as f:
         # We return memory size in GB.
         # Since the memory size shown in /proc/meminfo is always a
@@ -571,7 +571,11 @@ def createSwapFile(path):
 
 
 def getSwapSizeInGb():
-    return getPhysicalMemorySize() * 2
+    sz = getPhysicalMemorySizeInGb()
+    if sz <= 4:
+        return sz * 2               # 3GB -> 6GB, 4GB -> 8GB
+    else:
+        return (sz + 3) // 2 * 2    # 5GB -> 8GB, 6GB -> 8GB, 7GB -> 10GB, 8GB -> 10GB
 
 
 def getEspSizeInMb():
