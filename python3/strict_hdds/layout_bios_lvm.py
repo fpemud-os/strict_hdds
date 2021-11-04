@@ -130,7 +130,7 @@ def create_layout(disk_list=None, dry_run=False):
     if disk_list is None:
         disk_list = util.getDevPathListForFixedHdd()
         if len(disk_list) == 0:
-            raise errors.StorageLayoutCreateError(errors.NO_HDD)
+            raise errors.StorageLayoutCreateError(errors.NO_DISK)
     else:
         assert len(disk_list) > 0
 

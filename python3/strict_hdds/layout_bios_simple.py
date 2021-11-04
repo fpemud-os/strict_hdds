@@ -76,9 +76,9 @@ def create_layout(hdd=None, dry_run=False):
     if hdd is None:
         hddList = util.getDevPathListForFixedHdd()
         if len(hddList) == 0:
-            raise errors.StorageLayoutCreateError(errors.NO_HDD)
+            raise errors.StorageLayoutCreateError(errors.NO_DISK)
         if len(hddList) > 1:
-            raise errors.StorageLayoutCreateError(errors.MULTIPLE_HDD)
+            raise errors.StorageLayoutCreateError(errors.MULTIPLE_DISK)
         hdd = hddList[0]
 
     if not dry_run:

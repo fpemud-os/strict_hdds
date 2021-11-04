@@ -58,9 +58,9 @@ class StorageLayoutParseError(StorageLayoutError):
 
 
 # common messages for StorageLayoutCreateError
+NO_DISK = "no fixed harddisk"
+MULTIPLE_DISK = "multiple fixed harddisks found while we need one and only one harddisk"
 MULTIPLE_SSD = "multiple SSD harddisks"
-NO_HDD = "no HDD harddisk"
-MULTIPLE_HDD = "multiple harddisks"
 
 # common messages for StorageLayoutAddDiskError
 NOT_DISK = "not a fixed harddisk"
@@ -73,10 +73,11 @@ CAN_NOT_RELEASE_LAST_HDD = "can not release the last physical volume"
 CAN_NOT_REMOVE_LAST_HDD = "can not remove the last physical volume"
 
 # common messages for StorageLayoutParseError
-BOOT_DEV_IS_NOT_ESP = "boot device is not an ESP partitiion"
-SWAP_DEV_HAS_INVALID_FS_FLAG = lambda devpath: f"swap device {devpath!s} has an invalid file system"
 DISK_HAS_REDUNDANT_PARTITION = lambda devpath: f"redundant partition exists on {devpath!s}"
 DISK_HAS_INVALID_SIZE = lambda devpath: f"{devpath!s} has an invalid size"
+PARTITION_HAS_INVALID_SIZE = lambda devpath: f"{devpath!s} has an invalid size"
+BOOT_DEV_IS_NOT_ESP = "boot device is not an ESP partitiion"
+SWAP_DEV_HAS_INVALID_FS_FLAG = lambda devpath: f"swap device {devpath!s} has an invalid file system"
 LVM_VG_NOT_FOUND = lambda vg_name: f"volume group \"{vg_name!s}\" does not exist"
 LVM_LV_NOT_FOUND = lambda lv_name: f"logical volume \"{lv_name!s}\" does not exist"
 BOOT_CODE_NOT_FOUND = "no harddisk has boot-code"

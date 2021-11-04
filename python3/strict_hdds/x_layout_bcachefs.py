@@ -310,7 +310,7 @@ def create_layout(ssd=None, hdd_list=None, create_swap=True, dry_run=False):
         else:
             raise errors.StorageLayoutCreateError(errors.MULTIPLE_SSD)
         if len(hdd_list) == 0:
-            raise errors.StorageLayoutCreateError(errors.NO_HDD)
+            raise errors.StorageLayoutCreateError(errors.NO_DISK)
     else:
         assert hdd_list is not None and len(hdd_list) > 0
 
