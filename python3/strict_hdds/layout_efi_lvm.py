@@ -72,7 +72,7 @@ class StorageLayoutImpl(StorageLayout):
 
     def check_swap_size(self):
         assert self._bSwapLv
-        return util.getBlkDevSize(util.swapLvDevPath) >= util.getSwapSizeInGb() * 1024 * 1024 * 1024
+        return util.getBlkDevSize(util.swapLvDevPath) >= util.getSwapSize()
 
     def optimize_rootdev(self):
         util.autoExtendLv(util.rootLvDevPath)
@@ -233,7 +233,7 @@ def parse_layout(bootDev, rootDev):
             raise StorageLayoutParseError(ret.name, "partition type of %s is not \"gpt\"" % (hdd))
         if partId != 2:
             raise StorageLayoutParseError(ret.name, "physical volume partition of %s is not %s" % (hdd, util.devPathDiskToPartition(hdd, 2)))
-        if util.getBlkDevSize(util.devPathDiskToPartition(hdd, 1)) != util.getEspSizeInMb() * 1024 * 1024:
+        if util.getBlkDevSize(util.devPathDiskToPartition(hdd, 1)) != util.getEspSize():
             raise StorageLayoutParseError(ret.name, "%s has an invalid size" % (util.devPathDiskToPartition(hdd, 1)))
         if os.path.exists(util.devPathDiskToPartition(hdd, 3)):
             raise StorageLayoutParseError(ret.name, "redundant partition exists on %s" % (hdd))

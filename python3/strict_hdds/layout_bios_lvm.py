@@ -70,7 +70,7 @@ class StorageLayoutImpl(StorageLayout):
 
     def check_swap_size(self):
         assert self._bSwapLv
-        return util.getBlkDevSize(util.swapLvDevPath) >= util.getSwapSizeInGb() * 1024 * 1024 * 1024
+        return util.getBlkDevSize(util.swapLvDevPath) >= util.getSwapSize()
 
     def optimize_rootdev(self):
         util.autoExtendLv(util.rootLvDevPath)

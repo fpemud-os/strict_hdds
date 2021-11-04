@@ -60,7 +60,7 @@ class StorageLayoutImpl(StorageLayout):
 
     def check_swap_size(self):
         assert self._bSwapFile
-        return os.path.getsize(util.swapFilename) >= util.getSwapSizeInGb() * 1024 * 1024 * 1024
+        return os.path.getsize(util.swapFilename) >= util.getSwapSize()
 
     def create_swap_file(self):
         assert not self._bSwapFile

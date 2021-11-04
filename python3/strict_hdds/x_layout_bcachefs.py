@@ -78,7 +78,7 @@ class StorageLayoutImpl(StorageLayout):
 
     def check_swap_size(self):
         assert self._ssdSwapParti is not None
-        return util.getBlkDevSize(self._ssdSwapParti) >= util.getSwapSizeInGb() * 1024 * 1024 * 1024
+        return util.getBlkDevSize(self._ssdSwapParti) >= util.getSwapSize()
 
     def get_esp(self):
         return self._getCurEsp()
@@ -442,7 +442,7 @@ def parse_layout(bootDev, rootDev):
         # ret._ssdEspParti
         if ret._ssdEspParti != bootDev:
             raise StorageLayoutParseError(ret.name, "SSD is not boot device")
-        if util.getBlkDevSize(ret._ssdEspParti) != util.getEspSizeInMb() * 1024 * 1024:
+        if util.getBlkDevSize(ret._ssdEspParti) != util.getEspSize():
             raise StorageLayoutParseError(ret.name, "%s has an invalid size" % (ret._ssdEspParti))
 
         # ret._ssdSwapParti

@@ -578,8 +578,16 @@ def getSwapSizeInGb():
         return (sz + 3) // 2 * 2    # 5GB -> 8GB, 6GB -> 8GB, 7GB -> 10GB, 8GB -> 10GB
 
 
+def getSwapSize():
+    return getSwapSizeInGb() * 1024 * 1024 * 1024
+
+
 def getEspSizeInMb():
     return 512
+
+
+def getEspSize():
+    return getEspSizeInMb() * 1024 * 1024
 
 
 def gptNewGuid(guidStr):
