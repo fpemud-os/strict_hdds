@@ -165,13 +165,13 @@ class StorageLayoutImpl(StorageLayout):
 
         # make partition3 as cache partition
         parti = Util.devPathDiskToPartition(devpath, 3)
-        BcacheUtil.bcacheMakeDevice(parti, False)
+        BcacheUtil.makeDevice(parti, False)
         self._ssdCacheParti = parti
 
         # enable cache partition
         with open("/sys/fs/bcache/register", "w") as f:
             f.write(parti)
-        setUuid = BcacheUtil.bcacheGetSetUuid(self._ssdCacheParti)
+        setUuid = BcacheUtil.getSetUuid(self._ssdCacheParti)
         for bcacheDev in self._hddDict.values():
             with open("/sys/block/%s/bcache/attach" % (os.path.basename(bcacheDev)), "w") as f:
                 f.write(str(setUuid))
@@ -201,12 +201,12 @@ class StorageLayoutImpl(StorageLayout):
 
         # add partition2 to bcache
         parti = Util.devPathDiskToPartition(devpath, 2)
-        BcacheUtil.bcacheMakeDevice(parti, True)
+        BcacheUtil.makeDevice(parti, True)
         with open("/sys/fs/bcache/register", "w") as f:
             f.write(parti)
         bcacheDev = BcacheUtil.bcacheFindByBackingDevice(parti)
         if self._ssd is not None:
-            setUuid = BcacheUtil.bcacheGetSetUuid(self._ssdCacheParti)
+            setUuid = BcacheUtil.getSetUuid(self._ssdCacheParti)
             with open("/sys/block/%s/bcache/attach" % os.path.basename(bcacheDev), "w") as f:
                 f.write(str(setUuid))
 
@@ -238,7 +238,7 @@ class StorageLayoutImpl(StorageLayout):
             raise errors.StorageLayoutRemoveDiskError(errors.SWAP_IS_IN_USE)
 
         # remove cache partition
-        setUuid = BcacheUtil.bcacheGetSetUuid(self._ssdCacheParti)
+        setUuid = BcacheUtil.getSetUuid(self._ssdCacheParti)
         with open("/sys/fs/bcache/%s/unregister" % (setUuid), "w") as f:
             f.write(self._ssdCacheParti)
         self._ssdCacheParti = None
@@ -349,10 +349,10 @@ def create_layout(ssd=None, hdd_list=None, create_swap=True, dry_run=False):
                 Util.cmdCall("/sbin/mkswap", ret._ssdSwapParti)
 
             # cache partition
-            BcacheUtil.bcacheMakeDevice(ret._ssdCacheParti, False)
+            BcacheUtil.makeDevice(ret._ssdCacheParti, False)
             with open("/sys/fs/bcache/register", "w") as f:
                 f.write(ret._ssdCacheParti)
-            setUuid = BcacheUtil.bcacheGetSetUuid(ret._ssdCacheParti)
+            setUuid = BcacheUtil.getSetUuid(ret._ssdCacheParti)
 
         for devpath in ret._hddDict:
             # create partitions
@@ -367,7 +367,7 @@ def create_layout(ssd=None, hdd_list=None, create_swap=True, dry_run=False):
 
             # add partition2 to bcache
             parti = Util.devPathDiskToPartition(devpath, 2)
-            BcacheUtil.bcacheMakeDevice(parti, True)
+            BcacheUtil.makeDevice(parti, True)
             with open("/sys/fs/bcache/register", "w") as f:
                 f.write(parti)
             bcacheDev = BcacheUtil.bcacheFindByBackingDevice(parti)

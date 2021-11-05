@@ -788,43 +788,20 @@ class BcacheUtil:
         return BcacheUtil._isBackingDeviceOrCachDevice(devPath, False)
 
     @staticmethod
-    def _isBackingDeviceOrCachDevice(devPath, backingDeviceOrCacheDevice):
-        # see C struct definition in bcacheMakeDevice()
-        bcacheSbMagicPreFmt = "QQQ"
-        bcacheSbMagicFmt = "16B"
-        bcacheSbVersionPreFmt = "QQ"
-        bcacheSbVersionFmt = "Q"
+    def registerCacheDevice(devPath):
+        with open("/sys/fs/bcache/register", "w") as f:
+            f.write(devPath)
 
-        bcacheSbMagic = [0xc6, 0x85, 0x73, 0xf6, 0x4e, 0x1a, 0x45, 0xca,
-                         0x82, 0x65, 0xf5, 0x7f, 0x48, 0xba, 0x6d, 0x81]
-        if backingDeviceOrCacheDevice:
-            versionValueList = [
-                1,           # BCACHE_SB_VERSION_BDEV
-                4,           # BCACHE_SB_VERSION_BDEV_WITH_OFFSET
-            ]
-        else:
-            versionValueList = [
-                0,           # BCACHE_SB_VERSION_CDEV
-                3,           # BCACHE_SB_VERSION_CDEV_WITH_UUID
-            ]
-
-        with open(devPath, "rb") as f:
-            f.seek(8 * 512 + struct.calcsize(bcacheSbMagicPreFmt))
-            buf = f.read(struct.calcsize(bcacheSbMagicFmt))
-            if list(buf) != bcacheSbMagic:
-                return False
-
-            f.seek(8 * 512 + struct.calcsize(bcacheSbVersionPreFmt))
-            buf = f.read(struct.calcsize(bcacheSbVersionFmt))
-            value = struct.unpack(bcacheSbVersionFmt, buf)[0]
-            if value not in versionValueList:
-                return False
-
-            return True
+    @staticmethod
+    def attachCacheDevice(backingDevPathList, cacheDevPath):
+        setUuid = BcacheUtil.getSetUuid(cacheDevPath)
+        for backingDevPath in backingDevPathList:
+            with open("/sys/block/%s/bcache/attach" % (os.path.basename(backingDevPath)), "w") as f:
+                f.write(str(setUuid))
 
     @staticmethod
     def getSetUuid(devPath):
-        # see C struct definition in bcacheMakeDevice()
+        # see C struct definition in makeDevice()
         bcacheSbSetUuidPreFmt = "QQQ16B16B"
         bcacheSbSetUuidFmt = "16B"
 
@@ -862,6 +839,41 @@ class BcacheUtil:
                 if os.path.basename(devPath) == backingDev:
                     return fn
         return None
+
+    @staticmethod
+    def _isBackingDeviceOrCachDevice(devPath, backingDeviceOrCacheDevice):
+        # see C struct definition in makeDevice()
+        bcacheSbMagicPreFmt = "QQQ"
+        bcacheSbMagicFmt = "16B"
+        bcacheSbVersionPreFmt = "QQ"
+        bcacheSbVersionFmt = "Q"
+
+        bcacheSbMagic = [0xc6, 0x85, 0x73, 0xf6, 0x4e, 0x1a, 0x45, 0xca,
+                         0x82, 0x65, 0xf5, 0x7f, 0x48, 0xba, 0x6d, 0x81]
+        if backingDeviceOrCacheDevice:
+            versionValueList = [
+                1,           # BCACHE_SB_VERSION_BDEV
+                4,           # BCACHE_SB_VERSION_BDEV_WITH_OFFSET
+            ]
+        else:
+            versionValueList = [
+                0,           # BCACHE_SB_VERSION_CDEV
+                3,           # BCACHE_SB_VERSION_CDEV_WITH_UUID
+            ]
+
+        with open(devPath, "rb") as f:
+            f.seek(8 * 512 + struct.calcsize(bcacheSbMagicPreFmt))
+            buf = f.read(struct.calcsize(bcacheSbMagicFmt))
+            if list(buf) != bcacheSbMagic:
+                return False
+
+            f.seek(8 * 512 + struct.calcsize(bcacheSbVersionPreFmt))
+            buf = f.read(struct.calcsize(bcacheSbVersionFmt))
+            value = struct.unpack(bcacheSbVersionFmt, buf)[0]
+            if value not in versionValueList:
+                return False
+
+            return True
 
 
 class LvmUtil:

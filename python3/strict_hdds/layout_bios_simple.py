@@ -40,6 +40,8 @@ class StorageLayoutImpl(StorageLayout):
     """
 
     def __init__(self):
+        super().__init__()
+
         self._hdd = None              # boot harddisk name
         self._hddRootParti = False    # root partition name
         self._bSwapFile = None        # whether swap file exists

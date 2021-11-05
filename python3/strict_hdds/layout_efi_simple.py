@@ -41,6 +41,8 @@ class StorageLayoutImpl(StorageLayout):
     """
 
     def __init__(self):
+        super().__init__()
+
         self._hdd = None              # boot harddisk name
         self._hddEspParti = None      # ESP partition name
         self._hddRootParti = False    # root partition name

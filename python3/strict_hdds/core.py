@@ -24,7 +24,6 @@
 import os
 import re
 import sys
-import abc
 import pkgutil
 
 from .util import Util
@@ -32,7 +31,7 @@ from .util import Util
 from . import errors
 
 
-class StorageLayout(abc.ABC):
+class StorageLayout:
 
     BOOT_MODE_BIOS = 1
     BOOT_MODE_EFI = 2
@@ -44,25 +43,20 @@ class StorageLayout(abc.ABC):
         return Util.modName2layoutName(fn)
 
     @property
-    @abc.abstractmethod
     def boot_mode(self):
         raise NotImplementedError()
 
     @property
-    @abc.abstractmethod
     def dev_rootfs(self):
         raise NotImplementedError()
 
     @property
-    @abc.abstractmethod
     def dev_swap(self):
         raise NotImplementedError()
 
-    @abc.abstractmethod
     def get_boot_disk(self):
         raise NotImplementedError()
 
-    @abc.abstractmethod
     def check_swap_size(self):
         raise NotImplementedError()
 
