@@ -23,7 +23,10 @@
 
 import os
 import re
+
 from . import util
+from .util import LvmUtil
+
 from . import StorageLayout
 from . import StorageLayoutCreateError
 from . import StorageLayoutAddDiskError
@@ -70,7 +73,7 @@ class StorageLayoutImpl(StorageLayout):
 
     @property
     def dev_rootfs(self):
-        return util.rootLvDevPath
+        return LvmUtil.rootLvDevPath
 
     @property
     def dev_swap(self):
@@ -84,7 +87,7 @@ class StorageLayoutImpl(StorageLayout):
         return util.getBlkDevSize(self._ssdSwapParti) >= util.getSwapSize()
 
     def optimize_rootdev(self):
-        util.autoExtendLv(util.rootLvDevPath)
+        util.autoExtendLv(LvmUtil.rootLvDevPath)
 
     def get_esp(self):
         return self._getCurEsp()
@@ -230,7 +233,7 @@ class StorageLayoutImpl(StorageLayout):
 
         # create lvm physical volume on bcache device and add it to volume group
         util.cmdCall("/sbin/lvm", "pvcreate", bcacheDev)
-        util.cmdCall("/sbin/lvm", "vgextend", util.vgName, bcacheDev)
+        util.cmdCall("/sbin/lvm", "vgextend", LvmUtil.vgName, bcacheDev)
         self._hddDict[devpath] = bcacheDev
 
         return False
@@ -283,7 +286,7 @@ class StorageLayoutImpl(StorageLayout):
 
         # remove harddisk
         bcacheDev = util.bcacheFindByBackingDevice(util.devPathDiskToPartition(devpath, 2))
-        util.cmdCall("/sbin/lvm", "vgreduce", util.vgName, bcacheDev)
+        util.cmdCall("/sbin/lvm", "vgreduce", LvmUtil.vgName, bcacheDev)
         with open("/sys/block/%s/bcache/stop" % (os.path.basename(bcacheDev)), "w") as f:
             f.write("1")
         util.wipeHarddisk(devpath)
@@ -384,18 +387,18 @@ def create_layout(ssd=None, hdd_list=None, create_swap=True, dry_run=False):
 
             # create lvm physical volume on bcache device and add it to volume group
             util.cmdCall("/sbin/lvm", "pvcreate", bcacheDev)
-            if not util.cmdCallTestSuccess("/sbin/lvm", "vgdisplay", util.vgName):
-                util.cmdCall("/sbin/lvm", "vgcreate", util.vgName, bcacheDev)
+            if not util.cmdCallTestSuccess("/sbin/lvm", "vgdisplay", LvmUtil.vgName):
+                util.cmdCall("/sbin/lvm", "vgcreate", LvmUtil.vgName, bcacheDev)
             else:
-                util.cmdCall("/sbin/lvm", "vgextend", util.vgName, bcacheDev)
+                util.cmdCall("/sbin/lvm", "vgextend", LvmUtil.vgName, bcacheDev)
 
             # record to return value
             ret._hddDict[devpath] = bcacheDev
 
         # create root lv
-        out = util.cmdCall("/sbin/lvm", "vgdisplay", "-c", util.vgName)
+        out = util.cmdCall("/sbin/lvm", "vgdisplay", "-c", LvmUtil.vgName)
         freePe = int(out.split(":")[15])
-        util.cmdCall("/sbin/lvm", "lvcreate", "-l", "%d" % (freePe // 2), "-n", util.rootLvName, util.vgName)
+        util.cmdCall("/sbin/lvm", "lvcreate", "-l", "%d" % (freePe // 2), "-n", LvmUtil.rootLvName, LvmUtil.vgName)
 
     return ret
 
@@ -407,14 +410,14 @@ def parse_layout(bootDev, rootDev):
         raise StorageLayoutParseError(ret.name, "boot device is not an ESP partitiion")
 
     # vg
-    if not util.cmdCallTestSuccess("/sbin/lvm", "vgdisplay", util.vgName):
-        raise StorageLayoutParseError(ret.name, "volume group \"%s\" does not exist" % (util.vgName))
+    if not util.cmdCallTestSuccess("/sbin/lvm", "vgdisplay", LvmUtil.vgName):
+        raise StorageLayoutParseError(ret.name, "volume group \"%s\" does not exist" % (LvmUtil.vgName))
 
     # pv list
     out = util.cmdCall("/sbin/lvm", "pvdisplay", "-c")
-    for m in re.finditer("(/dev/\\S+):%s:.*" % (util.vgName), out, re.M):
+    for m in re.finditer("(/dev/\\S+):%s:.*" % (LvmUtil.vgName), out, re.M):
         if re.fullmatch("/dev/bcache[0-9]+", m.group(1)) is None:
-            raise StorageLayoutParseError(ret.name, "volume group \"%s\" has non-bcache physical volume" % (util.vgName))
+            raise StorageLayoutParseError(ret.name, "volume group \"%s\" has non-bcache physical volume" % (LvmUtil.vgName))
         bcacheDev = m.group(1)
         tlist = util.bcacheGetSlaveDevPathList(bcacheDev)
         hddDev, partId = util.devPathPartitionToDiskAndPartitionId(tlist[-1])
@@ -426,12 +429,12 @@ def parse_layout(bootDev, rootDev):
 
     # root lv
     out = util.cmdCall("/sbin/lvm", "lvdisplay", "-c")
-    if re.search("/dev/hdd/root:%s:.*" % (util.vgName), out, re.M) is not None:
-        fs = util.getBlkDevFsType(util.rootLvDevPath)
+    if re.search("/dev/hdd/root:%s:.*" % (LvmUtil.vgName), out, re.M) is not None:
+        fs = util.getBlkDevFsType(LvmUtil.rootLvDevPath)
         if fs != util.fsTypeExt4:
             raise StorageLayoutParseError(ret.name, "root partition file system is \"%s\", not \"ext4\"" % (fs))
     else:
-        raise StorageLayoutParseError(ret.name, "logical volume \"%s\" does not exist" % (util.rootLvDevPath))
+        raise StorageLayoutParseError(ret.name, "logical volume \"%s\" does not exist" % (LvmUtil.rootLvDevPath))
 
     # ssd
     ret._ssd = util.devPathPartitionToDisk(bootDev)

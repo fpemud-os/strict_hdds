@@ -22,7 +22,9 @@
 
 
 import os
+
 from . import util
+
 from . import errors
 from . import StorageLayout
 
@@ -63,7 +65,7 @@ class StorageLayoutImpl(StorageLayout):
 
     @property
     def dev_rootfs(self):
-        return util.rootLvDevPath
+        return LvmUtil.rootLvDevPath
 
     @property
     def dev_swap(self):
@@ -210,7 +212,7 @@ class StorageLayoutImpl(StorageLayout):
 
         # create lvm physical volume on bcache device and add it to volume group
         util.cmdCall("/sbin/lvm", "pvcreate", bcacheDev)
-        util.cmdCall("/sbin/lvm", "vgextend", util.vgName, bcacheDev)
+        util.cmdCall("/sbin/lvm", "vgextend", LvmUtil.vgName, bcacheDev)
         self._hddDict[devpath] = bcacheDev
 
         return False
@@ -274,7 +276,7 @@ class StorageLayoutImpl(StorageLayout):
 
         # remove harddisk
         bcacheDev = util.bcacheFindByBackingDevice(util.devPathDiskToPartition(devpath, 2))
-        util.cmdCall("/sbin/lvm", "vgreduce", util.vgName, bcacheDev)
+        util.cmdCall("/sbin/lvm", "vgreduce", LvmUtil.vgName, bcacheDev)
         with open("/sys/block/%s/bcache/stop" % (os.path.basename(bcacheDev)), "w") as f:
             f.write("1")
         util.wipeHarddisk(devpath)
@@ -375,18 +377,18 @@ def create_layout(ssd=None, hdd_list=None, create_swap=True, dry_run=False):
 
             # create lvm physical volume on bcache device and add it to volume group
             util.cmdCall("/sbin/lvm", "pvcreate", bcacheDev)
-            if not util.cmdCallTestSuccess("/sbin/lvm", "vgdisplay", util.vgName):
-                util.cmdCall("/sbin/lvm", "vgcreate", util.vgName, bcacheDev)
+            if not util.cmdCallTestSuccess("/sbin/lvm", "vgdisplay", LvmUtil.vgName):
+                util.cmdCall("/sbin/lvm", "vgcreate", LvmUtil.vgName, bcacheDev)
             else:
-                util.cmdCall("/sbin/lvm", "vgextend", util.vgName, bcacheDev)
+                util.cmdCall("/sbin/lvm", "vgextend", LvmUtil.vgName, bcacheDev)
 
             # record to return value
             ret._hddDict[devpath] = bcacheDev
 
         # create root lv
-        out = util.cmdCall("/sbin/lvm", "vgdisplay", "-c", util.vgName)
+        out = util.cmdCall("/sbin/lvm", "vgdisplay", "-c", LvmUtil.vgName)
         freePe = int(out.split(":")[15])
-        util.cmdCall("/sbin/lvm", "lvcreate", "-l", "%d" % (freePe // 2), "-n", util.rootLvName, util.vgName)
+        util.cmdCall("/sbin/lvm", "lvcreate", "-l", "%d" % (freePe // 2), "-n", LvmUtil.rootLvName, LvmUtil.vgName)
 
     return ret
 

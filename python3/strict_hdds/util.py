@@ -36,14 +36,6 @@ import subprocess
 
 bootDir = "/boot"
 
-
-vgName = "hdd"
-rootLvName = "root"
-rootLvDevPath = "/dev/mapper/hdd.root"
-swapLvName = "swap"
-swapLvDevPath = "/dev/mapper/hdd.swap"
-
-
 swapFilename = "/var/cache/swap.dat"
 
 
@@ -59,16 +51,6 @@ def modName2layoutName(modName):
 
 def layoutName2modName(layoutName):
     return "layout_" + layoutName.replace("-", "_")
-
-
-def lvmGetSlaveDevPathList(vgName):
-    ret = []
-    out = cmdCall("/sbin/lvm", "pvdisplay", "-c")
-    for m in re.finditer("^\\s*(\\S+):%s:.*" % (vgName), out, re.M):
-        if m.group(1) == "[unknown]":
-            raise Exception("volume group %s not fully loaded" % (vgName))
-        ret.append(m.group(1))
-    return ret
 
 
 def getPhysicalMemorySizeInGb():
@@ -554,16 +536,6 @@ def syncBlkDev(devPath1, devPath2, mountPoint1=None, mountPoint2=None):
                 shellExec(cmd % (mp1.mountpoint, mp2.mountpoint))
 
 
-def autoExtendLv(lvDevPath):
-    total, used = getBlkDevCapacity(lvDevPath)
-    if used / total < 0.9:
-        return
-    added = int(used / 0.7) - total
-    added = (added // 1024 + 1) * 1024      # change unit from MB to GB
-    cmdCall("/sbin/lvm", "lvextend", "-L+%dG" % (added), lvDevPath)
-    cmdExec("/sbin/resize2fs", lvDevPath)                                   # FIXME: detect and support more fs-types
-
-
 def createSwapFile(path):
     cmdCall("/bin/dd", "if=/dev/zero", "of=%s" % (path), "bs=%d" % (1024 * 1024), "count=%d" % (getSwapSizeInGb() * 1024))
     cmdCall("/bin/chmod", "600", path)
@@ -886,6 +858,37 @@ def systemdFindSwapService(path):
             if os.path.realpath(path) == os.path.realpath(swapServiceName2Path(f)):
                 return f
     return None
+
+
+class LvmUtil:
+
+    vgName = "hdd"
+
+    rootLvName = "root"
+    rootLvDevPath = "/dev/mapper/hdd.root"
+
+    swapLvName = "swap"
+    swapLvDevPath = "/dev/mapper/hdd.swap"
+
+    @staticmethod
+    def lvmGetSlaveDevPathList(vgName):
+        ret = []
+        out = cmdCall("/sbin/lvm", "pvdisplay", "-c")
+        for m in re.finditer("^\\s*(\\S+):%s:.*" % (vgName), out, re.M):
+            if m.group(1) == "[unknown]":
+                raise Exception("volume group %s not fully loaded" % (vgName))
+            ret.append(m.group(1))
+        return ret
+
+    @staticmethod
+    def autoExtendLv(lvDevPath):
+        total, used = getBlkDevCapacity(lvDevPath)
+        if used / total < 0.9:
+            return
+        added = int(used / 0.7) - total
+        added = (added // 1024 + 1) * 1024      # change unit from MB to GB
+        cmdCall("/sbin/lvm", "lvextend", "-L+%dG" % (added), lvDevPath)
+        cmdExec("/sbin/resize2fs", lvDevPath)                                   # FIXME: detect and support more fs-types
 
 
 class TmpMount:

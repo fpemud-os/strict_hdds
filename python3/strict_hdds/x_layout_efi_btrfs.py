@@ -22,7 +22,9 @@
 
 import os
 import re
+
 from . import util
+
 from . import StorageLayout
 from . import StorageLayoutAddDiskError
 
@@ -55,7 +57,7 @@ class StorageLayoutImpl(StorageLayout):
 
     @property
     def dev_rootfs(self):
-        return util.rootLvDevPath
+        return LvmUtil.rootLvDevPath
 
     @property
     def dev_swap(self):
@@ -135,19 +137,19 @@ class StorageLayoutImpl(StorageLayout):
 
         # remove harddisk
         parti = util.devPathDiskToPartition(devpath, 2)
-        util.cmdCall("/sbin/lvm", "vgreduce", util.vgName, parti)
+        util.cmdCall("/sbin/lvm", "vgreduce", LvmUtil.vgName, parti)
         util.wipeHarddisk(devpath)
 
         return ret
 
     def create_swap_lv(self):
         assert not self._bSwapLv
-        util.cmdCall("/sbin/lvm", "lvcreate", "-L", "%dGiB" % (util.getSwapSizeInGb()), "-n", util.swapLvName, util.vgName)
+        util.cmdCall("/sbin/lvm", "lvcreate", "-L", "%dGiB" % (util.getSwapSizeInGb()), "-n", LvmUtil.swapLvName, LvmUtil.vgName)
         self._bSwapLv = True
 
     def remove_swap_lv(self):
         assert self._bSwapLv
-        util.cmdCall("/sbin/lvm", "lvremove", util.swapLvDevPath)
+        util.cmdCall("/sbin/lvm", "lvremove", LvmUtil.swapLvDevPath)
         self._bSwapLv = False
 
     def _getCurEsp(self):
@@ -184,15 +186,15 @@ def create_layout(hddList=None, dry_run=False):
             # create lvm physical volume on partition2 and add it to volume group
             parti = util.devPathDiskToPartition(devpath, 2)
             util.cmdCall("/sbin/lvm", "pvcreate", parti)
-            if not util.cmdCallTestSuccess("/sbin/lvm", "vgdisplay", util.vgName):
-                util.cmdCall("/sbin/lvm", "vgcreate", util.vgName, parti)
+            if not util.cmdCallTestSuccess("/sbin/lvm", "vgdisplay", LvmUtil.vgName):
+                util.cmdCall("/sbin/lvm", "vgcreate", LvmUtil.vgName, parti)
             else:
-                util.cmdCall("/sbin/lvm", "vgextend", util.vgName, parti)
+                util.cmdCall("/sbin/lvm", "vgextend", LvmUtil.vgName, parti)
 
         # create root lv
-        out = util.cmdCall("/sbin/lvm", "vgdisplay", "-c", util.vgName)
+        out = util.cmdCall("/sbin/lvm", "vgdisplay", "-c", LvmUtil.vgName)
         freePe = int(out.split(":")[15])
-        util.cmdCall("/sbin/lvm", "lvcreate", "-l", "%d" % (freePe // 2), "-n", util.rootLvName, util.vgName)
+        util.cmdCall("/sbin/lvm", "lvcreate", "-l", "%d" % (freePe // 2), "-n", LvmUtil.rootLvName, LvmUtil.vgName)
 
     # return value
     ret = StorageLayoutImpl()
@@ -212,12 +214,12 @@ def parse_layout(bootDev, rootDev):
     ret._bootHdd = util.devPathPartitionToDisk(bootDev)
 
     # vg
-    if not util.cmdCallTestSuccess("/sbin/lvm", "vgdisplay", util.vgName):
-        raise StorageLayoutParseError(ret.name, "volume group \"%s\" does not exist" % (util.vgName))
+    if not util.cmdCallTestSuccess("/sbin/lvm", "vgdisplay", LvmUtil.vgName):
+        raise StorageLayoutParseError(ret.name, "volume group \"%s\" does not exist" % (LvmUtil.vgName))
 
     # pv list
     out = util.cmdCall("/sbin/lvm", "pvdisplay", "-c")
-    for m in re.finditer("(/dev/\\S+):%s:.*" % (util.vgName), out, re.M):
+    for m in re.finditer("(/dev/\\S+):%s:.*" % (LvmUtil.vgName), out, re.M):
         hdd, partId = util.devPathPartitionToDiskAndPartitionId(m.group(1))
         if util.getBlkDevPartitionTableType(hdd) != "gpt":
             raise StorageLayoutParseError(ret.name, "partition type of %s is not \"gpt\"" % (hdd))
@@ -232,17 +234,17 @@ def parse_layout(bootDev, rootDev):
     out = util.cmdCall("/sbin/lvm", "lvdisplay", "-c")
 
     # root lv
-    if re.search("/dev/hdd/root:%s:.*" % (util.vgName), out, re.M) is not None:
-        fs = util.getBlkDevFsType(util.rootLvDevPath)
+    if re.search("/dev/hdd/root:%s:.*" % (LvmUtil.vgName), out, re.M) is not None:
+        fs = util.getBlkDevFsType(LvmUtil.rootLvDevPath)
         if fs != util.fsTypeExt4:
             raise StorageLayoutParseError(ret.name, "root partition file system is \"%s\", not \"ext4\"" % (fs))
     else:
-        raise StorageLayoutParseError(ret.name, "logical volume \"%s\" does not exist" % (util.rootLvDevPath))
+        raise StorageLayoutParseError(ret.name, "logical volume \"%s\" does not exist" % (LvmUtil.rootLvDevPath))
 
     # swap lv
-    if re.search("/dev/hdd/swap:%s:.*" % (util.vgName), out, re.M) is not None:
-        if util.getBlkDevFsType(util.swapLvDevPath) != util.fsTypeSwap:
-            raise StorageLayoutParseError(ret.name, "\"%s\" has an invalid file system" % (util.swapLvDevPath))
+    if re.search("/dev/hdd/swap:%s:.*" % (LvmUtil.vgName), out, re.M) is not None:
+        if util.getBlkDevFsType(LvmUtil.swapLvDevPath) != util.fsTypeSwap:
+            raise StorageLayoutParseError(ret.name, "\"%s\" has an invalid file system" % (LvmUtil.swapLvDevPath))
         ret._bSwapLv = True
 
     return ret
