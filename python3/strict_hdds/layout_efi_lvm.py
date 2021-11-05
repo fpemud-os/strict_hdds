@@ -120,21 +120,17 @@ class StorageLayoutImpl(StorageLayout):
 
         return False
 
-    def release_disk(self, devpath):
+    def remove_disk(self, devpath):
         assert devpath is not None
         assert devpath in self._diskList
         assert len(self._diskList) > 1
 
         parti = Util.devPathDiskToPartition(devpath, 2)
+
+        # move data
         rc, out = Util.cmdCallWithRetCode("/sbin/lvm", "pvmove", parti)
         if rc != 5:
-            raise errors.StorageLayoutReleaseDiskError("failed")
-        return
-
-    def remove_disk(self, devpath):
-        assert devpath is not None
-        assert devpath in self._diskList
-        assert len(self._diskList) > 1
+            raise errors.StorageLayoutRemoveDiskError("failed")
 
         # change boot device if needed
         ret = False
@@ -147,7 +143,6 @@ class StorageLayoutImpl(StorageLayout):
             ret = True
 
         # remove harddisk
-        parti = Util.devPathDiskToPartition(devpath, 2)
         Util.cmdCall("/sbin/lvm", "vgreduce", LvmUtil.vgName, parti)
         Util.wipeHarddisk(devpath)
 

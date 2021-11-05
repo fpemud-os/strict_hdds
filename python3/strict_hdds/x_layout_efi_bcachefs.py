@@ -123,16 +123,6 @@ class StorageLayoutImpl(StorageLayout):
         else:
             return self._addHdd(devpath)
 
-    def release_disk(self, devpath):
-        assert devpath is not None
-
-        if devpath == self._ssd:
-            assert len(self._hddDict) > 0
-            self._releaseSsd()
-        else:
-            assert devpath in self._hddDict
-            self._releaseHdd(devpath)
-
     def remove_disk(self, devpath):
         assert devpath is not None
 
@@ -223,14 +213,14 @@ class StorageLayoutImpl(StorageLayout):
     def _releaseHdd(self, devpath):
         # check
         if len(self._hddDict) <= 1:
-            raise errors.StorageLayoutReleaseDiskError(errors.CAN_NOT_RELEASE_LAST_HDD)
+            raise errors.StorageLayoutRemoveDiskError(errors.CAN_NOT_RELEASE_LAST_HDD)
 
         # do work
         parti = Util.devPathDiskToPartition(devpath, 2)
         bcacheDev = BcacheUtil.findByBackingDevice(parti)
         rc, out = Util.cmdCallWithRetCode("/sbin/lvm", "pvmove", bcacheDev)
         if rc != 5:
-            raise errors.StorageLayoutReleaseDiskError("failed")
+            raise errors.StorageLayoutRemoveDiskError("failed")
 
     def _removeSsd(self):
         # check

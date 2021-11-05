@@ -109,17 +109,6 @@ class StorageLayoutImpl(StorageLayout):
 
         return False
 
-    def release_disk(self, devpath):
-        assert devpath is not None
-        assert devpath in self._diskList
-        assert len(self._diskList) > 1
-
-        parti = Util.devPathDiskToPartition(devpath, 2)
-        rc, out = Util.cmdCallWithRetCode("/sbin/lvm", "pvmove", parti)
-        if rc != 5:
-            raise StorageLayoutReleaseDiskError("failed")
-        return
-
     def remove_disk(self, devpath):
         assert devpath is not None
         assert devpath in self._diskList

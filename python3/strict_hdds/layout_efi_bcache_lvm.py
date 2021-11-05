@@ -135,15 +135,6 @@ class StorageLayoutImpl(StorageLayout):
         else:
             return self._addHdd(devpath)
 
-    def release_disk(self, devpath):
-        assert devpath is not None
-        assert devpath in self.get_disk_list()
-
-        if devpath == self._ssd:
-            self._releaseSsd()
-        else:
-            self._releaseHdd()
-
     def remove_disk(self, devpath):
         assert devpath is not None
         assert devpath in self.get_disk_list()
@@ -228,19 +219,6 @@ class StorageLayoutImpl(StorageLayout):
 
         return False
 
-    def _releaseSsd(self):
-        pass
-
-    def _releaseHdd(self, devpath):
-        if len(self._hddDict) <= 1:
-            raise errors.StorageLayoutReleaseDiskError(errors.CAN_NOT_RELEASE_LAST_HDD)
-
-        parti = Util.devPathDiskToPartition(devpath, 2)
-        bcacheDev = BcacheUtil.findByBackingDevice(parti)
-        rc, out = Util.cmdCallWithRetCode("/sbin/lvm", "pvmove", bcacheDev)
-        if rc != 5:
-            raise errors.StorageLayoutReleaseDiskError("failed")
-
     def _removeSsd(self):
         assert self._ssd is not None
         assert len(self._hddDict) > 0
@@ -275,7 +253,14 @@ class StorageLayoutImpl(StorageLayout):
         assert devpath in self._hddDict
 
         if len(self._hddDict) <= 1:
-            raise Exception("can not remove the last physical volume")
+            raise errors.StorageLayoutRemoveDiskError(errors.CAN_NOT_REMOVE_LAST_HDD)
+
+        bcacheDev = BcacheUtil.findByBackingDevice(Util.devPathDiskToPartition(devpath, 2))
+
+        # move data
+        rc, out = Util.cmdCallWithRetCode("/sbin/lvm", "pvmove", bcacheDev)
+        if rc != 5:
+            raise errors.StorageLayoutRemoveDiskError("failed")
 
         # change boot device if needed
         ret = False
@@ -288,7 +273,6 @@ class StorageLayoutImpl(StorageLayout):
             ret = True
 
         # remove harddisk
-        bcacheDev = BcacheUtil.findByBackingDevice(Util.devPathDiskToPartition(devpath, 2))
         Util.cmdCall("/sbin/lvm", "vgreduce", LvmUtil.vgName, bcacheDev)
         with open("/sys/block/%s/bcache/stop" % (os.path.basename(bcacheDev)), "w") as f:
             f.write("1")

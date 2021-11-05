@@ -36,13 +36,6 @@ class StorageLayoutAddDiskError(StorageLayoutError):
         self.message = message
 
 
-class StorageLayoutReleaseDiskError(StorageLayoutError):
-
-    def __init__(self, disk_devpath, message):
-        self.disk_devpath = disk_devpath
-        self.message = message
-
-
 class StorageLayoutRemoveDiskError(StorageLayoutError):
 
     def __init__(self, disk_devpath, message):
@@ -65,11 +58,8 @@ MULTIPLE_SSD = "multiple SSD harddisks"
 # common messages for StorageLayoutAddDiskError
 NOT_DISK = "not a fixed harddisk"
 
-# common messages for StorageLayoutReleaseDiskError
-SWAP_IS_IN_USE = "swap partition is in use"
-CAN_NOT_RELEASE_LAST_HDD = "can not release the last physical volume"
-
 # common messages for StorageLayoutRemoveDiskError
+SWAP_IS_IN_USE = "swap partition is in use"
 CAN_NOT_REMOVE_LAST_HDD = "can not remove the last physical volume"
 
 # common messages for StorageLayoutParseError

@@ -43,6 +43,5 @@ from .core import parse_storage_layout
 from .errors import StorageLayoutError
 from .errors import StorageLayoutCreateError
 from .errors import StorageLayoutAddDiskError
-from .errors import StorageLayoutReleaseDiskError
 from .errors import StorageLayoutRemoveDiskError
 from .errors import StorageLayoutParseError

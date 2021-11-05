@@ -130,16 +130,6 @@ class StorageLayoutImpl(StorageLayout):
         else:
             return self._addHdd(devpath)
 
-    def release_disk(self, devpath):
-        assert devpath is not None
-
-        if devpath == self._ssd:
-            assert len(self._hddDict) > 0
-            self._releaseSsd()
-        else:
-            assert devpath in self._hddDict
-            self._releaseHdd(devpath)
-
     def remove_disk(self, devpath):
         assert devpath is not None
 
@@ -213,14 +203,6 @@ class StorageLayoutImpl(StorageLayout):
         self._hddDict[devpath] = bcacheDev
 
         return False
-
-    def _releaseSsd(self):
-        pass
-
-    def _releaseHdd(self, devpath):
-        if len(self._hddDict) <= 1:
-            raise errors.StorageLayoutReleaseDiskError(errors.CAN_NOT_RELEASE_LAST_HDD)
-        pass
 
     def _removeSsd(self):
         # check
