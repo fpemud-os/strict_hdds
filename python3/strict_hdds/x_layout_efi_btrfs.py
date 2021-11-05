@@ -25,6 +25,7 @@ import re
 
 from .util import Util, MultiDisk
 
+from . import errors
 from . import StorageLayout
 
 
@@ -46,8 +47,7 @@ class StorageLayoutImpl(StorageLayout):
     """
 
     def __init__(self):
-        self._diskList = []         # harddisk list
-        self._bootHdd = None        # boot harddisk name
+        self._md = None         # MultiDisk
 
     @property
     def boot_mode(self):
@@ -61,132 +61,80 @@ class StorageLayoutImpl(StorageLayout):
     def dev_swap(self):
         return None
 
+    @MultiDisk.proxy
     def get_boot_disk(self):
-        return self._bootHdd
+        pass
 
     def check_swap_size(self):
         assert False
 
+    @MultiDisk.proxy
     def get_esp(self):
-        return self._getCurEsp()
+        pass
 
+    @MultiDisk.proxy
     def get_esp_sync_info(self):
-        return (self._getCurEsp(), self._getOtherEspList())
+        pass
 
+    @MultiDisk.proxy
     def sync_esp(self, src, dst):
-        assert src is not None and dst is not None
-        assert src == self._getCurEsp() and dst in self._getOtherEspList()
-        Util.syncBlkDev(src, dst, mountPoint1=Util.bootDir)
+        pass
 
+    @MultiDisk.proxy
     def get_disk_list(self):
-        return self._diskList
+        pass
 
     def add_disk(self, devpath):
         assert devpath is not None
-        assert devpath not in self._diskList
 
         if devpath not in Util.getDevPathListForFixedHdd():
-            raise StorageLayoutAddDiskError(devpath, "not a harddisk")
+            raise errors.StorageLayoutAddDiskError(devpath, errors.NOT_DISK)
 
-        # create partitions
-        Util.initializeDisk(devpath, "gpt", [
-            ("%dMiB" % (Util.getEspSizeInMb()), Util.fsTypeFat),
-            ("*", "btrfs"),
-        ])
+        lastBootDisk = self._md.get_boot_disk()
 
-        # fill partition1, synchronize boot device if needed
-        parti = Util.devPathDiskToPartition(devpath, 1)
-        Util.cmdCall("/usr/sbin/mkfs.vfat", parti)
-        Util.syncBlkDev(Util.devPathDiskToPartition(self._bootHdd, 1), parti, mountPoint1=Util.bootDir)
+        # add
+        self._md.add_disk(devpath)
 
-        # create btrfs device
-        parti = Util.devPathDiskToPartition(devpath, 2)
-        Util.cmdCall("/usr/sbin/mkfs.btrfs", parti)
-        self._diskList.append(devpath)
+        # hdd partition 2: make it as backing device and add it to btrfs filesystem
+        Util.cmdCall("/sbin/btrfs", "device", "add", self._md.get_disk_data_partition(devpath), "/")
 
-        return False
+        return lastBootDisk != self._md.get_boot_disk()     # boot disk may change
 
     def remove_disk(self, devpath):
         assert devpath is not None
-        assert devpath in self._diskList
-        assert len(self._diskList) > 1
+        assert devpath in self._md.get_disk_list()
 
-        # change boot device if needed
-        ret = False
-        if self._bootHdd == devpath:
-            Util.cmdCall("/bin/umount", Util.bootDir)
-            self._diskList.remove(devpath)
-            self._bootHdd = self._diskList[0]
-            Util.gptToggleEspPartition(Util.devPathDiskToPartition(self._bootHdd, 1), True)
-            Util.cmdCall("/bin/mount", Util.devPathDiskToPartition(self._bootHdd, 1), Util.bootDir, "-o", "ro")
-            ret = True
+        if self._md.get_disk_count() <= 1:
+            raise errors.StorageLayoutRemoveDiskError(errors.CAN_NOT_REMOVE_LAST_HDD)
 
-        # remove harddisk
-        parti = Util.devPathDiskToPartition(devpath, 2)
-        Util.cmdCall("/sbin/lvm", "vgreduce", LvmUtil.vgName, parti)
-        Util.wipeHarddisk(devpath)
+        lastBootHdd = self._md.get_boot_disk()
 
-        return ret
+        # hdd partition 2: remove from btrfs and bcache
+        Util.cmdCall("/sbin/btrfs", "device", "delete", self._md.get_disk_data_partition(devpath), "/")
 
-    def create_swap_lv(self):
-        assert not self._bSwapLv
-        Util.cmdCall("/sbin/lvm", "lvcreate", "-L", "%dGiB" % (Util.getSwapSizeInGb()), "-n", LvmUtil.swapLvName, LvmUtil.vgName)
-        self._bSwapLv = True
+        # remove
+        self._md.remove_disk(devpath)
 
-    def remove_swap_lv(self):
-        assert self._bSwapLv
-        Util.cmdCall("/sbin/lvm", "lvremove", LvmUtil.swapLvDevPath)
-        self._bSwapLv = False
-
-    def _getCurEsp(self):
-        return Util.devPathDiskToPartition(self._bootHdd, 1)
-
-    def _getOtherEspList(self):
-        ret = []
-        for hdd in self._diskList:
-            if hdd != self._bootHdd:
-                ret.append(Util.devPathDiskToPartition(hdd, 1))
-        return ret
+        return lastBootHdd != self._md.get_boot_disk()     # boot disk may change
 
 
-def create_layout(hddList=None, dry_run=False):
-    if hddList is None:
-        hddList = Util.getDevPathListForFixedHdd()
-        if len(hddList) == 0:
-            raise StorageLayoutCreateError("no harddisk")
+def create_layout(disk_list=None, dry_run=False):
+    if disk_list is None:
+        disk_list = Util.getDevPathListForFixedHdd()
+        if len(disk_list) == 0:
+            raise errors.StorageLayoutCreateError(errors.NO_DISK)
     else:
-        assert len(hddList) > 0
+        assert len(disk_list) > 0
+
+    ret = StorageLayoutImpl()
 
     if not dry_run:
-        for devpath in hddList:
-            # create partitions
-            Util.initializeDisk(devpath, "gpt", [
-                ("%dMiB" % (Util.getEspSizeInMb()), Util.fsTypeFat),
-                ("*", "lvm"),
-            ])
+        ret._md = MultiDisk()
+        for devpath in disk_list:
+            ret._md.add_disk(devpath)
+    else:
+        ret._md = MultiDisk(disk_list)
 
-            # fill partition1
-            parti = Util.devPathDiskToPartition(devpath, 1)
-            Util.cmdCall("/usr/sbin/mkfs.vfat", parti)
-
-            # create lvm physical volume on partition2 and add it to volume group
-            parti = Util.devPathDiskToPartition(devpath, 2)
-            Util.cmdCall("/sbin/lvm", "pvcreate", parti)
-            if not Util.cmdCallTestSuccess("/sbin/lvm", "vgdisplay", LvmUtil.vgName):
-                Util.cmdCall("/sbin/lvm", "vgcreate", LvmUtil.vgName, parti)
-            else:
-                Util.cmdCall("/sbin/lvm", "vgextend", LvmUtil.vgName, parti)
-
-        # create root lv
-        out = Util.cmdCall("/sbin/lvm", "vgdisplay", "-c", LvmUtil.vgName)
-        freePe = int(out.split(":")[15])
-        Util.cmdCall("/sbin/lvm", "lvcreate", "-l", "%d" % (freePe // 2), "-n", LvmUtil.rootLvName, LvmUtil.vgName)
-
-    # return value
-    ret = StorageLayoutImpl()
-    ret._diskList = hddList
-    ret._bSwapLv = False
-    ret._bootHdd = ret._diskList[0]     # FIXME
     return ret
 
 
@@ -194,43 +142,11 @@ def parse_layout(bootDev, rootDev):
     ret = StorageLayoutImpl()
 
     if not Util.gptIsEspPartition(bootDev):
-        raise StorageLayoutParseError(ret.name, "boot device is not an ESP partitiion")
+        raise errors.StorageLayoutParseError(ret.name, errors.BOOT_DEV_IS_NOT_ESP)
 
     # boot harddisk
-    ret._bootHdd = Util.devPathPartitionToDisk(bootDev)
-
-    # vg
-    if not Util.cmdCallTestSuccess("/sbin/lvm", "vgdisplay", LvmUtil.vgName):
-        raise StorageLayoutParseError(ret.name, "volume group \"%s\" does not exist" % (LvmUtil.vgName))
-
-    # pv list
-    out = Util.cmdCall("/sbin/lvm", "pvdisplay", "-c")
-    for m in re.finditer("(/dev/\\S+):%s:.*" % (LvmUtil.vgName), out, re.M):
-        hdd, partId = Util.devPathPartitionToDiskAndPartitionId(m.group(1))
-        if Util.getBlkDevPartitionTableType(hdd) != "gpt":
-            raise StorageLayoutParseError(ret.name, "partition type of %s is not \"gpt\"" % (hdd))
-        if partId != 2:
-            raise StorageLayoutParseError(ret.name, "physical volume partition of %s is not %s" % (hdd, Util.devPathDiskToPartition(hdd, 2)))
-        if Util.getBlkDevSize(Util.devPathDiskToPartition(hdd, 1)) != Util.getEspSize():
-            raise StorageLayoutParseError(ret.name, "%s has an invalid size" % (Util.devPathDiskToPartition(hdd, 1)))
-        if os.path.exists(Util.devPathDiskToPartition(hdd, 3)):
-            raise StorageLayoutParseError(ret.name, "redundant partition exists on %s" % (hdd))
-        ret._diskList.append(hdd)
-
-    out = Util.cmdCall("/sbin/lvm", "lvdisplay", "-c")
-
-    # root lv
-    if re.search("/dev/hdd/root:%s:.*" % (LvmUtil.vgName), out, re.M) is not None:
-        fs = Util.getBlkDevFsType(LvmUtil.rootLvDevPath)
-        if fs != Util.fsTypeExt4:
-            raise StorageLayoutParseError(ret.name, "root partition file system is \"%s\", not \"ext4\"" % (fs))
-    else:
-        raise StorageLayoutParseError(ret.name, "logical volume \"%s\" does not exist" % (LvmUtil.rootLvDevPath))
-
-    # swap lv
-    if re.search("/dev/hdd/swap:%s:.*" % (LvmUtil.vgName), out, re.M) is not None:
-        if Util.getBlkDevFsType(LvmUtil.swapLvDevPath) != Util.fsTypeSwap:
-            raise StorageLayoutParseError(ret.name, "\"%s\" has an invalid file system" % (LvmUtil.swapLvDevPath))
-        ret._bSwapLv = True
+    ret._md = MultiDisk()
+    
+    ret._md = Util.devPathPartitionToDisk(bootDev)
 
     return ret

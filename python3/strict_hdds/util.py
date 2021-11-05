@@ -1008,11 +1008,11 @@ class MultiDisk:
         assert src == self._getCurEsp() and dst in self._getOtherEspList()
         Util.syncBlkDev(src, dst, mountPoint1=Util.bootDir)
 
+    def get_disk_count(self):
+        return len(self._hddList)
+
     def get_disk_list(self):
-        if self._ssd is not None:
-            return [self._ssd] + self._hddList
-        else:
-            return self._hddList
+        return self._hddList
 
     def get_disk_esp_partition(self, disk):
         assert disk in self._hddList
