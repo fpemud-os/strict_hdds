@@ -1220,6 +1220,9 @@ class SwapLvmLv:
     def __init__(self, bSwapLv):
         self._bSwapLv = bSwapLv
 
+    def get_swap_devname(self):
+        return LvmUtil.swapLvDevPath if self._bSwapLv else None
+
     def check_swap_size(self):
         assert self._bSwapLv
         return Util.getBlkDevSize(LvmUtil.swapLvDevPath) >= Util.getSwapSize()
@@ -1253,7 +1256,7 @@ class SwapFile:
     def __init__(self, bSwapFile):
         self._bSwapFile = bSwapFile
 
-    def get_swap_filename(self):
+    def get_swap_devname(self):
         return Util.swapFilename if self._bSwapFile else None
 
     def check_swap_size(self):

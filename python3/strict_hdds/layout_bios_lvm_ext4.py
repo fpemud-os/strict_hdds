@@ -60,7 +60,7 @@ class StorageLayoutImpl(StorageLayout):
 
     @property
     def dev_swap(self):
-        return LvmUtil.swapLvDevPath if self._bSwapLv else None
+        return self._slv.get_swap_devname()
 
     def get_boot_disk(self):
         return self._bootHdd
