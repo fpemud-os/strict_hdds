@@ -23,10 +23,9 @@
 import os
 import re
 
-from .util import Util
+from .util import Util, MultiDisk
 
 from . import StorageLayout
-from . import StorageLayoutAddDiskError
 
 
 class StorageLayoutImpl(StorageLayout):
@@ -48,7 +47,6 @@ class StorageLayoutImpl(StorageLayout):
 
     def __init__(self):
         self._diskList = []         # harddisk list
-        self._bSwapFile = None      # whether swap file exists
         self._bootHdd = None        # boot harddisk name
 
     @property
@@ -57,18 +55,17 @@ class StorageLayoutImpl(StorageLayout):
 
     @property
     def dev_rootfs(self):
-        return LvmUtil.rootLvDevPath
+        return sorted(self._diskList)[0]
 
     @property
     def dev_swap(self):
-        return Util.swapFilename if self._bSwapFile else None
+        return None
 
     def get_boot_disk(self):
         return self._bootHdd
 
     def check_swap_size(self):
-        assert self._bSwapFile
-        return os.path.getsize(Util.swapFilename) >= Util.getSwapSize()
+        assert False
 
     def get_esp(self):
         return self._getCurEsp()

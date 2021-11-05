@@ -23,8 +23,7 @@
 
 import os
 
-from .util import Util
-from .util import BcachefsUtil
+from .util import Util, BcachefsUtil, CacheGroup, SwapParti
 
 from . import errors
 from . import StorageLayout
@@ -55,12 +54,7 @@ class StorageLayoutImpl(StorageLayout):
     def __init__(self):
         super().__init__()
 
-        self._ssd = None
-        self._ssdEspParti = None
-        self._ssdSwapParti = None
-        self._ssdCacheParti = None
-        self._hddDict = dict()           # dict<hddDev,bcacheDev>
-        self._bootHdd = None             # boot harddisk name, must be None if ssd exists
+        self._cg = None
 
     @property
     def boot_mode(self):
@@ -75,59 +69,65 @@ class StorageLayoutImpl(StorageLayout):
 
     @property
     def dev_swap(self):
-        return self._ssdSwapParti
+        return self._cg.get_ssd_swap_partition()
 
+    @SwapParti.proxy
     def get_boot_disk(self):
-        return self._ssd if self._ssd is not None else self._bootHdd
+        pass
 
+    @SwapParti.proxy
     def check_swap_size(self):
-        assert self._ssdSwapParti is not None
-        return Util.getBlkDevSize(self._ssdSwapParti) >= Util.getSwapSize()
+        pass
 
+    @CacheGroup.proxy
     def get_esp(self):
-        return self._getCurEsp()
+        pass
 
+    @CacheGroup.proxy
     def get_esp_sync_info(self):
-        return (self._getCurEsp(), self._getOtherEspList())
+        pass
 
+    @CacheGroup.proxy
     def sync_esp(self, src, dst):
-        assert src is not None and dst is not None
-        assert src == self._getCurEsp() and dst in self._getOtherEspList()
-        Util.syncBlkDev(src, dst, mountPoint1=Util.bootDir)
+        pass
 
+    @CacheGroup.proxy
     def get_ssd(self):
-        return self._ssd
+        pass
 
+    @CacheGroup.proxy
     def get_ssd_esp_partition(self):
-        assert self._ssd is not None
-        return self._ssdEspParti
+        pass
 
+    @CacheGroup.proxy
     def get_ssd_swap_partition(self):
-        assert self._ssd is not None
-        return self._ssdSwapParti
+        pass
 
+    @CacheGroup.proxy
     def get_ssd_cache_partition(self):
-        assert self._ssd is not None
-        return self._ssdCacheParti
+        pass
 
+    @CacheGroup.proxy
     def get_disk_list(self):
-        if self._ssd is not None:
-            return [self._ssd] + list(self._hddDict.keys())
-        else:
-            return list(self._hddDict.keys())
+        pass
 
     def add_disk(self, devpath):
         assert devpath is not None
-        assert devpath not in self.get_disk_list()
 
         if devpath not in Util.getDevPathListForFixedHdd():
             raise errors.StorageLayoutAddDiskError(devpath, errors.NOT_DISK)
 
         if Util.isBlkDevSsdOrHdd(devpath):
             assert self._ssd is None
-            return self._addSsd(devpath)
+
+
+            BcachefsUtil.makeDevice(self._ssdCacheParti)
+
+            # enable cache partition
+            pass
+
         else:
-            return self._addHdd(devpath)
+            pass
 
     def remove_disk(self, devpath):
         assert devpath is not None
