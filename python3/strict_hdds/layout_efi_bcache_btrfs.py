@@ -183,11 +183,11 @@ class StorageLayoutImpl(StorageLayout):
 def create_layout(ssd=None, hdd_list=None, dry_run=False):
     if ssd is None and hdd_list is None:
         # discover all fixed harddisks
-        ssdList, hdd_list = Util.getDevPathListForFixedSsdAndHdd()
-        if len(ssdList) == 0:
+        ssd_list, hdd_list = Util.getDevPathListForFixedSsdAndHdd()
+        if len(ssd_list) == 0:
             pass
-        elif len(ssdList) == 1:
-            ssd = ssdList[0]
+        elif len(ssd_list) == 1:
+            ssd = ssd_list[0]
         else:
             raise errors.StorageLayoutCreateError(errors.MULTIPLE_SSD)
         if len(hdd_list) == 0:
@@ -196,6 +196,7 @@ def create_layout(ssd=None, hdd_list=None, dry_run=False):
         assert hdd_list is not None and len(hdd_list) > 0
 
     ret = StorageLayoutImpl()
+
     if not dry_run:
         ret._cg = CacheGroup()
 
@@ -220,7 +221,11 @@ def create_layout(ssd=None, hdd_list=None, dry_run=False):
         # create btrfs filesystem
         Util.cmdCall("/usr/sbin/mkfs.btrfs", "-d", "single", "-m", "single", *ret._hddDict.values())
     else:
-        ret._cg = CacheGroup(ssd=ssd, has_swap=True, hddList=hdd_list)
+        ret._cg = CacheGroup(ssd=ssd,
+                             ssdEspParti=Util.devPathDiskToPartition(ssd, 1),
+                             ssdSwapParti=Util.devPathDiskToPartition(ssd, 2),
+                             ssdCacheParti=Util.devPathDiskToPartition(ssd, 3),
+                             hddList=hdd_list)
         for i in range(0, len(hdd_list)):
             ret._hddDict[hdd_list[i]] = "/dev/bcache%d" % (i)
 
