@@ -187,11 +187,11 @@ def parse_layout(bootDev, rootDev):
     for m in re.finditer("(/dev/\\S+):%s:.*" % (LvmUtil.vgName), out, re.M):
         hdd, partId = Util.devPathPartitionToDiskAndPartitionId(m.group(1))
         if Util.getBlkDevPartitionTableType(hdd) != "gpt":
-            raise errors.StorageLayoutParseError(ret.name, errors.PART_TYPE_SHOULD_BE(hdd, "gpt"))
+            raise errors.StorageLayoutParseError(ret.name, errors.PARTITION_TYPE_SHOULD_BE(hdd, "gpt"))
         if partId != 2:
             raise errors.StorageLayoutParseError(ret.name, "physical volume partition of %s is not %s" % (hdd, Util.devPathDiskToPartition(hdd, 2)))
         if Util.getBlkDevSize(Util.devPathDiskToPartition(hdd, 1)) != Util.getEspSize():
-            raise errors.StorageLayoutParseError(ret.name, errors.PARTITION_HAS_INVALID_SIZE(Util.devPathDiskToPartition(hdd, 1)))
+            raise errors.StorageLayoutParseError(ret.name, errors.PARTITION_SIZE_INVALID(Util.devPathDiskToPartition(hdd, 1)))
         if os.path.exists(Util.devPathDiskToPartition(hdd, 3)):
             raise errors.StorageLayoutParseError(ret.name, errors.DISK_HAS_REDUNDANT_PARTITION(hdd))
         diskList.append(hdd)

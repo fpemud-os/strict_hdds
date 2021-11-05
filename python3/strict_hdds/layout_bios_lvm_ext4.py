@@ -162,7 +162,7 @@ def parse_layout(booDev, rootDev):
     for m in re.finditer("(/dev/\\S+):%s:.*" % (LvmUtil.vgName), out, re.M):
         hdd = Util.devPathPartitionToDisk(m.group(1))
         if Util.getBlkDevPartitionTableType(hdd) != "dos":
-            raise errors.StorageLayoutParseError(ret.name, errors.PART_TYPE_SHOULD_BE(hdd, "dos"))
+            raise errors.StorageLayoutParseError(ret.name, errors.PARTITION_TYPE_SHOULD_BE(hdd, "dos"))
         if os.path.exists(Util.devPathDiskToPartition(hdd, 2)):
             raise errors.StorageLayoutParseError(ret.name, errors.DISK_HAS_REDUNDANT_PARTITION(hdd))
         ret._diskList.append(hdd)

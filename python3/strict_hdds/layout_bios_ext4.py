@@ -99,7 +99,7 @@ def parse_layout(bootDev, rootDev):
 
     ret._hdd = Util.devPathPartitionToDisk(rootDev)
     if Util.getBlkDevPartitionTableType(ret._hdd) != "dos":
-        raise errors.StorageLayoutParseError(ret.name, errors.PART_TYPE_SHOULD_BE(ret._hdd, "dos"))
+        raise errors.StorageLayoutParseError(ret.name, errors.PARTITION_TYPE_SHOULD_BE(ret._hdd, "dos"))
 
     ret._hddRootParti = rootDev
     fs = Util.getBlkDevFsType(ret._hddRootParti)

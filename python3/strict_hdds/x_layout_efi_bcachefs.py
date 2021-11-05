@@ -210,7 +210,7 @@ def parse_layout(bootDev, rootDev):
         if ret._ssdEspParti != bootDev:
             raise errors.StorageLayoutParseError(ret.name, "SSD is not boot device")
         if Util.getBlkDevSize(ret._ssdEspParti) != Util.getEspSize():
-            raise errors.StorageLayoutParseError(ret.name, errors.DISK_HAS_INVALID_SIZE(ret._ssdEspParti))
+            raise errors.StorageLayoutParseError(ret.name, errors.DISK_SIZE_INVALID(ret._ssdEspParti))
 
         # ret._ssdSwapParti
         if ret._ssdSwapParti is not None:
