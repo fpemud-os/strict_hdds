@@ -24,6 +24,7 @@
 import os
 
 from .util import Util
+from .util import BcachefsUtil
 
 from . import errors
 from . import StorageLayout
@@ -52,6 +53,8 @@ class StorageLayoutImpl(StorageLayout):
     """
 
     def __init__(self):
+        super().__init__()
+
         self._ssd = None
         self._ssdEspParti = None
         self._ssdSwapParti = None
@@ -65,7 +68,10 @@ class StorageLayoutImpl(StorageLayout):
 
     @property
     def dev_rootfs(self):
-        return LvmUtil.rootLvDevPath
+        if self._ssd is None:
+            return ":".join(self._hddDict)
+        else:
+            return self._ssd + ":" + ":".join(self._hddDict)
 
     @property
     def dev_swap(self):
@@ -143,28 +149,20 @@ class StorageLayoutImpl(StorageLayout):
         self._ssd = devpath
 
         # sync partition1 as boot partition
-        parti = Util.devPathDiskToPartition(devpath, 1)
-        Util.cmdCall("/usr/sbin/mkfs.vfat", parti)
-        Util.syncBlkDev(Util.devPathDiskToPartition(self._bootHdd, 1), parti, mountPoint1=Util.bootDir)
-        self._ssdEspParti = parti
+        self._ssdEspParti = Util.devPathDiskToPartition(devpath, 1)
+        Util.cmdCall("/usr/sbin/mkfs.vfat", self._ssdEspParti)
+        Util.syncBlkDev(Util.devPathDiskToPartition(self._bootHdd, 1), self._ssdEspParti, mountPoint1=Util.bootDir)
 
         # make partition2 as swap partition
-        parti = Util.devPathDiskToPartition(devpath, 2)
-        Util.cmdCall("/sbin/mkswap", parti)
-        self._ssdSwapParti = parti
+        self._ssdSwapParti = Util.devPathDiskToPartition(devpath, 2)
+        Util.cmdCall("/sbin/mkswap", self._ssdSwapParti)
 
         # make partition3 as cache partition
-        parti = Util.devPathDiskToPartition(devpath, 3)
-        BcacheUtil.makeDevice(parti, False)
-        self._ssdCacheParti = parti
+        self._ssdCacheParti = Util.devPathDiskToPartition(devpath, 3)
+        BcachefsUtil.makeDevice(self._ssdCacheParti)
 
         # enable cache partition
-        with open("/sys/fs/bcache/register", "w") as f:
-            f.write(parti)
-        setUuid = BcacheUtil.getSetUuid(self._ssdCacheParti)
-        for bcacheDev in self._hddDict.values():
-            with open("/sys/block/%s/bcache/attach" % (os.path.basename(bcacheDev)), "w") as f:
-                f.write(str(setUuid))
+        pass
 
         # change boot device
         Util.cmdCall("/bin/umount", Util.bootDir)

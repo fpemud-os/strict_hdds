@@ -30,6 +30,7 @@ import stat
 import crcmod
 import parted
 import struct
+import pathlib
 import tempfile
 import subprocess
 
@@ -573,6 +574,17 @@ class Util:
         return ret
 
     @staticmethod
+    def getDevPathListForFixedSsdAndHdd():
+        ssdList = []
+        hddList = []
+        for devpath in Util.getDevPathListForFixedHdd():
+            if Util.isBlkDevSsdOrHdd(devpath):
+                ssdList.append(devpath)
+            else:
+                hddList.append(devpath)
+        return (ssdList, hddList)
+
+    @staticmethod
     def getMountDeviceForPath(pathname):
         buf = Util.cmdCall("/bin/mount")
         for line in buf.split("\n"):
@@ -596,6 +608,14 @@ class Util:
                 if os.path.realpath(path) == os.path.realpath(Util.swapServiceName2Path(f)):
                     return f
         return None
+
+    @staticmethod
+    def swapDeviceIsBusy(path):
+        buf = pathlib.Path(path).read_text()
+        for line in buf.split("\n")[1:]:
+            if line.startswith(path + " "):
+                return True
+        return False
 
 
 class BcacheUtil:
@@ -896,6 +916,13 @@ class BcacheUtil:
             f.write(devPath)
 
 
+class BcachefsUtil:
+
+    @staticmethod
+    def makeDevice(devPath, backingDeviceOrCacheDevice, blockSize=None, bucketSize=None, dataOffset=None):
+        pass
+
+
 class LvmUtil:
 
     vgName = "hdd"
@@ -938,6 +965,223 @@ class LvmUtil:
         added = int(used / 0.7) - total
         added = (added // 1024 + 1) * 1024      # change unit from MB to GB
         Util.cmdCall("/sbin/lvm", "lvextend", "-L+%dG" % (added), lvDevPath)
+
+
+class CacheGroup:
+
+    def __init__(self, ssd=None, has_swap=False, hdd_list=[], boot_hdd=None):
+        # assign self._ssd and friends
+        self._ssd = ssd
+        if self._ssd is not None:
+            self._ssdEspParti = Util.devPathDiskToPartition(ssd, 1)
+            if has_swap:
+                self._ssdSwapParti = Util.devPathDiskToPartition(ssd, 2)
+                self._ssdCacheParti = Util.devPathDiskToPartition(ssd, 3)
+            else:
+                self._ssdSwapParti = None
+                self._ssdCacheParti = Util.devPathDiskToPartition(ssd, 2)
+        else:
+            assert not has_swap
+
+        # assign self._hddList
+        assert hdd_list is not None
+        self._hddList = hdd_list
+
+        # assign self._bootHdd
+        if self._ssd is not None:
+            assert boot_hdd is None
+        else:
+            if len(self._hddList) > 0:
+                if boot_hdd is None:
+                    boot_hdd = self._hddList[0]
+                else:
+                    assert boot_hdd in self._hddList
+            else:
+                assert boot_hdd is None
+        self._bootHdd = boot_hdd
+
+    def get_esp(self):
+        curEsp = self._getCurEsp()
+        assert curEsp is not None
+        return curEsp
+
+    def get_esp_sync_info(self):
+        curEsp = self._getCurEsp()
+        assert curEsp is not None
+        return (curEsp, self._getOtherEspList())
+
+    def sync_esp(self, src, dst):
+        assert src is not None and dst is not None
+        assert src == self._getCurEsp() and dst in self._getOtherEspList()
+        Util.syncBlkDev(src, dst, mountPoint1=Util.bootDir)
+
+    def get_ssd(self):
+        return self._ssd
+
+    def get_ssd_esp_partition(self):
+        assert self._ssd is not None
+        assert self._ssdEspParti is not None
+        assert self._bootHdd is None
+        return self._ssdEspParti
+
+    def get_ssd_swap_partition(self):
+        assert self._ssd is not None
+        assert self._bootHdd is None
+        return self._ssdSwapParti
+
+    def get_ssd_cache_partition(self):
+        assert self._ssd is not None
+        assert self._ssdCacheParti is not None
+        assert self._bootHdd is None
+        return self._ssdCacheParti
+
+    def get_disk_list(self):
+        if self._ssd is not None:
+            return [self._ssd] + self._hddList
+        else:
+            return self._hddList
+
+    def get_hdd_count(self):
+        return len(self._hddList)
+
+    def get_hdd_list(self):
+        return self._hddList
+
+    def get_boot_hdd(self):
+        return self._bootHdd
+
+    def get_hdd_esp_partition(self, hdd):
+        assert hdd in self._hddList
+        return Util.devPathDiskToPartition(hdd, 1)
+
+    def get_hdd_data_partition(self, hdd):
+        assert hdd in self._hddList
+        return Util.devPathDiskToPartition(hdd, 2)
+
+    def add_ssd(self, ssd):
+        assert self._ssd is None
+        assert ssd is not None and ssd not in self._hddList
+
+        self._ssd = ssd
+        self._ssdEspParti = Util.devPathDiskToPartition(ssd, 1)
+        self._ssdSwapParti = Util.devPathDiskToPartition(ssd, 2)
+        self._ssdCacheParti = Util.devPathDiskToPartition(ssd, 3)
+
+        # create partitions
+        Util.initializeDisk(self._ssd, "gpt", [
+            ("%dMiB" % (Util.getEspSizeInMb()), "esp"),
+            ("%dGiB" % (Util.getSwapSizeInGb()), Util.fsTypeSwap),
+            ("*", "bcache"),
+        ])
+
+        # partition1: ESP partition
+        Util.cmdCall("/usr/sbin/mkfs.vfat", self._ssdEspParti)
+        if self._bootHdd is not None:
+            Util.syncBlkDev(Util.devPathDiskToPartition(self._bootHdd, 1), self._ssdEspParti, mountPoint1=Util.bootDir)
+        else:
+            pass
+
+        # partition2: swap partition
+        Util.cmdCall("/sbin/mkswap", self._ssdSwapParti)
+
+        # partition3: cache partition, leave it to caller
+        pass
+
+        # change boot device
+        if self._bootHdd is not None:
+            self._unmountCurrentBootHdd()
+        Util.cmdCall("/bin/mount", self._ssdEspParti, Util.bootDir, "-o", "ro")
+
+    def remove_ssd(self):
+        assert self._ssd is not None
+
+        # partition3: cache partition, the caller should have processed it
+        self._ssdCacheParti = None
+
+        # partition2: swap partition
+        if self._ssdSwapParti is not None:
+            assert not Util.swapDeviceIsBusy(self._ssdSwapParti)
+            self._ssdSwapParti = None
+
+        # partition1: ESP partition
+        Util.cmdCall("/bin/umount", Util.bootDir)
+        self._ssdEspParti = None
+
+        # change boot device
+        if len(self._hddList) > 0:
+            self._mountFirstHddAsBootHdd()
+
+        # wipe disk
+        Util.wipeHarddisk(self._ssd)
+        self._ssd = None
+
+    def add_hdd(self, hdd):
+        assert hdd is not None and hdd not in self._hddList
+
+        # create partitions
+        Util.initializeDisk(hdd, "gpt", [
+            ("%dMiB" % (Util.getEspSizeInMb()), Util.fsTypeFat),
+            ("*", "bcache"),
+        ])
+
+        # partition1: pending ESP partition
+        parti = Util.devPathDiskToPartition(hdd, 1)
+        Util.cmdCall("/usr/sbin/mkfs.vfat", parti)
+        if self._ssd is not None:
+            Util.syncBlkDev(self._ssdEspParti, parti, mountPoint1=Util.bootDir)
+        elif self._bootHdd is not None:
+            Util.syncBlkDev(Util.devPathDiskToPartition(self._bootHdd, 1), parti, mountPoint1=Util.bootDir)
+        else:
+            pass
+
+        # partition2: data partition, leave it to user
+        pass
+
+        # record result
+        self._hddList.append(hdd)
+
+        # change boot disk if needed
+        if self._bootHdd is None:
+            self._mountFirstHddAsBootHdd()
+
+    def remove_hdd(self, hdd):
+        assert hdd is not None and hdd in self._hddList
+
+        # change boot device if needed
+        if self._bootHdd is not None and self._bootHdd == hdd:
+            self._unmountCurrentBootHdd()
+            self._hddList.remove(hdd)
+            self._mountFirstHddAsBootHdd()
+        else:
+            self._hddList.remove(hdd)
+
+        # wipe disk
+        Util.wipeHarddisk(hdd)
+
+    def _getCurEsp(self):
+        if self._ssd is not None:
+            return self._ssdEspParti
+        elif self._bootHdd is not None:
+            return Util.devPathDiskToPartition(self._bootHdd, 1)
+        else:
+            return None
+
+    def _getOtherEspList(self):
+        ret = []
+        for hdd in self._hddList:
+            if self._bootHdd is None or hdd != self._bootHdd:
+                ret.append(Util.devPathDiskToPartition(hdd, 1))
+        return ret
+
+    def _mountFirstHddAsBootHdd(self):
+        self._bootHdd = self._hddList[0]
+        Util.gptToggleEspPartition(Util.devPathDiskToPartition(self._bootHdd, 1), True)
+        Util.cmdCall("/bin/mount", Util.devPathDiskToPartition(self._bootHdd, 1), Util.bootDir, "-o", "ro")
+
+    def _unmountCurrentBootHdd(self):
+        Util.cmdCall("/bin/umount", Util.bootDir)
+        Util.gptToggleEspPartition(Util.devPathDiskToPartition(self._bootHdd, 1), False)
+        self._bootHdd = None
 
 
 class TmpMount:
