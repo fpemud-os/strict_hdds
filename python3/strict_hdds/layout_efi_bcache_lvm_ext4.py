@@ -213,8 +213,7 @@ class StorageLayoutImpl(StorageLayout):
             BcacheUtil.attachCacheDevice([parti], self._ssdCacheParti)
 
         # create lvm physical volume on bcache device and add it to volume group
-        Util.cmdCall("/sbin/lvm", "pvcreate", bcacheDev)
-        Util.cmdCall("/sbin/lvm", "vgextend", LvmUtil.vgName, bcacheDev)
+        LvmUtil.addPvToVg(bcacheDev, LvmUtil.vgName)
         self._hddDict[devpath] = bcacheDev
 
         return False
@@ -366,16 +365,10 @@ def create_layout(ssd=None, hdd_list=None, dry_run=False):
 
         # create lvm physical volume on bcache device and add it to volume group
         for bcacheDev in ret._hddDict.values():
-            Util.cmdCall("/sbin/lvm", "pvcreate", bcacheDev)
-            if not Util.cmdCallTestSuccess("/sbin/lvm", "vgdisplay", LvmUtil.vgName):
-                Util.cmdCall("/sbin/lvm", "vgcreate", LvmUtil.vgName, bcacheDev)
-            else:
-                Util.cmdCall("/sbin/lvm", "vgextend", LvmUtil.vgName, bcacheDev)
+            LvmUtil.addPvToVg(bcacheDev, LvmUtil.vgName, mayCreate=True)
 
         # create root lv
-        out = Util.cmdCall("/sbin/lvm", "vgdisplay", "-c", LvmUtil.vgName)
-        freePe = int(out.split(":")[15])
-        Util.cmdCall("/sbin/lvm", "lvcreate", "-l", "%d" % (freePe // 2), "-n", LvmUtil.rootLvName, LvmUtil.vgName)
+        LvmUtil.createLv(LvmUtil.vgName, LvmUtil.rootLvName)
 
     return ret
 

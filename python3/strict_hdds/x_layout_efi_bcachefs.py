@@ -201,6 +201,7 @@ class StorageLayoutImpl(StorageLayout):
                 f.write(str(setUuid))
 
         # create lvm physical volume on bcache device and add it to volume group
+
         Util.cmdCall("/sbin/lvm", "pvcreate", bcacheDev)
         Util.cmdCall("/sbin/lvm", "vgextend", LvmUtil.vgName, bcacheDev)
         self._hddDict[devpath] = bcacheDev

@@ -114,8 +114,7 @@ class StorageLayoutImpl(StorageLayout):
 
         # create lvm physical volume on partition2 and add it to volume group
         parti = Util.devPathDiskToPartition(devpath, 2)
-        Util.cmdCall("/sbin/lvm", "pvcreate", parti)
-        Util.cmdCall("/sbin/lvm", "vgextend", LvmUtil.vgName, parti)
+        LvmUtil.addPvToVg(parti, LvmUtil.vgName)
         self._diskList.append(devpath)
 
         return False
@@ -191,16 +190,10 @@ def create_layout(hddList=None, dry_run=False):
 
             # create lvm physical volume on partition2 and add it to volume group
             parti = Util.devPathDiskToPartition(devpath, 2)
-            Util.cmdCall("/sbin/lvm", "pvcreate", parti)
-            if not Util.cmdCallTestSuccess("/sbin/lvm", "vgdisplay", LvmUtil.vgName):
-                Util.cmdCall("/sbin/lvm", "vgcreate", LvmUtil.vgName, parti)
-            else:
-                Util.cmdCall("/sbin/lvm", "vgextend", LvmUtil.vgName, parti)
+            LvmUtil.addPvToVg(parti, LvmUtil.vgName, mayCreate=True)
 
         # create root lv
-        out = Util.cmdCall("/sbin/lvm", "vgdisplay", "-c", LvmUtil.vgName)
-        freePe = int(out.split(":")[15])
-        Util.cmdCall("/sbin/lvm", "lvcreate", "-l", "%d" % (freePe // 2), "-n", LvmUtil.rootLvName, LvmUtil.vgName)
+        LvmUtil.createLv(LvmUtil.vgName, LvmUtil.rootLvName)
 
     # return value
     ret = StorageLayoutImpl()

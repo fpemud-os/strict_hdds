@@ -917,6 +917,20 @@ class LvmUtil:
         return ret
 
     @staticmethod
+    def addPvToVg(pvDevPath, vgName, mayCreate=False):
+        Util.cmdCall("/sbin/lvm", "pvcreate", pvDevPath)
+        if mayCreate and not Util.cmdCallTestSuccess("/sbin/lvm", "vgdisplay", vgName):
+            Util.cmdCall("/sbin/lvm", "vgcreate", vgName, pvDevPath)
+        else:
+            Util.cmdCall("/sbin/lvm", "vgextend", vgName, pvDevPath)
+
+    @staticmethod
+    def createLvWithDefaultSize(vgName, lvName):
+        out = Util.cmdCall("/sbin/lvm", "vgdisplay", "-c", vgName)
+        freePe = int(out.split(":")[15])
+        Util.cmdCall("/sbin/lvm", "lvcreate", "-l", "%d" % (freePe // 2), "-n", lvName, vgName)
+
+    @staticmethod
     def autoExtendLv(lvDevPath):
         total, used = Util.getBlkDevCapacity(lvDevPath)
         if used / total < 0.9:

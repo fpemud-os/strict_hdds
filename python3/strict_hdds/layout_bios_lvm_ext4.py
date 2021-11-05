@@ -140,17 +140,10 @@ def create_layout(disk_list=None, dry_run=False):
             ])
 
             # create lvm physical volume on partition1 and add it to volume group
-            parti = Util.devPathDiskToPartition(devpath, 1)
-            Util.cmdCall("/sbin/lvm", "pvcreate", parti)
-            if not Util.cmdCallTestSuccess("/sbin/lvm", "vgdisplay", LvmUtil.vgName):
-                Util.cmdCall("/sbin/lvm", "vgcreate", LvmUtil.vgName, parti)
-            else:
-                Util.cmdCall("/sbin/lvm", "vgextend", LvmUtil.vgName, parti)
+            LvmUtil.addPvToVg(Util.devPathDiskToPartition(devpath, 1), LvmUtil.vgName, mayCreate=True)
 
         # create root lv
-        out = Util.cmdCall("/sbin/lvm", "vgdisplay", "-c", LvmUtil.vgName)
-        freePe = int(out.split(":")[15])
-        Util.cmdCall("/sbin/lvm", "lvcreate", "-l", "%d" % (freePe // 2), "-n", LvmUtil.rootLvName, LvmUtil.vgName)
+        LvmUtil.createLvWithDefaultSize(LvmUtil.vgName, LvmUtil.rootLvName)
 
     # return value
     ret = StorageLayoutImpl()
