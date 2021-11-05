@@ -25,6 +25,7 @@ import os
 import re
 
 from .util import Util
+from .util import BcacheUtil
 
 from . import StorageLayout
 

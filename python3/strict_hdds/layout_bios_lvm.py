@@ -73,7 +73,8 @@ class StorageLayoutImpl(StorageLayout):
         return Util.getBlkDevSize(LvmUtil.swapLvDevPath) >= Util.getSwapSize()
 
     def optimize_rootdev(self):
-        Util.autoExtendLv(LvmUtil.rootLvDevPath)
+        LvmUtil.autoExtendLv(LvmUtil.rootLvDevPath)
+        Util.cmdExec("/sbin/resize2fs", LvmUtil.rootLvDevPath)
 
     def get_disk_list(self):
         return self._diskList

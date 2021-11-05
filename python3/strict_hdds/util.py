@@ -196,270 +196,6 @@ class Util:
         assert False
 
     @staticmethod
-    def bcacheMakeDevice(devPath, backingDeviceOrCacheDevice, blockSize=None, bucketSize=None, dataOffset=None):
-        assert isinstance(backingDeviceOrCacheDevice, bool)
-        assert blockSize is None or (isinstance(blockSize, int) and blockSize > 0)
-        assert bucketSize is None or (isinstance(bucketSize, int) and bucketSize > 0)
-        assert dataOffset is None or (isinstance(dataOffset, int) and dataOffset > 0)
-
-        #######################################################################
-        # code from bcache-tools-1.0.8
-        #######################################################################
-        # struct cache_sb {
-        #     uint64_t        csum;
-        #     uint64_t        offset;    /* sector where this sb was written */
-        #     uint64_t        version;
-        #     uint8_t         magic[16];
-        #     uint8_t         uuid[16];
-        #     union {
-        #         uint8_t     set_uuid[16];
-        #         uint64_t    set_magic;
-        #     };
-        #     uint8_t         label[SB_LABEL_SIZE];
-        #     uint64_t        flags;
-        #     uint64_t        seq;
-        #     uint64_t        pad[8];
-        #     union {
-        #         struct {
-        #             /* Cache devices */
-        #             uint64_t    nbuckets;      /* device size */
-        #             uint16_t    block_size;    /* sectors */
-        #             uint16_t    bucket_size;   /* sectors */
-        #             uint16_t    nr_in_set;
-        #             uint16_t    nr_this_dev;
-        #         };
-        #         struct {
-        #             /* Backing devices */
-        #             uint64_t    data_offset;
-        #             /*
-        #             * block_size from the cache device section is still used by
-        #             * backing devices, so don't add anything here until we fix
-        #             * things to not need it for backing devices anymore
-        #             */
-        #         };
-        #     };
-        #     uint32_t        last_mount;        /* time_t */
-        #     uint16_t        first_bucket;
-        #     union {
-        #         uint16_t    njournal_buckets;
-        #         uint16_t    keys;
-        #     };
-        #     uint64_t        d[SB_JOURNAL_BUCKETS];    /* journal buckets */
-        # };
-        bcacheSbFmt = "QQQ16B16B16B32BQQ8QQHHHHIHH"     # without cache_sb.d
-
-        bcacheSbMagic = [0xc6, 0x85, 0x73, 0xf6, 0x4e, 0x1a, 0x45, 0xca,
-                         0x82, 0x65, 0xf5, 0x7f, 0x48, 0xba, 0x6d, 0x81]
-
-        if blockSize is None:
-            st = os.stat(devPath)
-            if stat.S_ISBLK(st.st_mode):
-                out = Util.cmdCall("/sbin/blockdev", "--getss", devPath)
-                blockSize = int(out) // 512
-            else:
-                blockSize = st.st_blksize // 512
-
-        if bucketSize is None:
-            bucketSize = 1024
-        if bucketSize < blockSize:
-            raise Exception("bucket size (%d) cannot be smaller than block size (%d)", bucketSize, blockSize)
-
-        devUuid = uuid.uuid4()
-        setUuid = uuid.uuid4()
-
-        bcacheSb = bytearray(struct.calcsize(bcacheSbFmt))
-        offset_content = None
-        offset_version = None
-
-        # cache_sb.csum
-        p = struct.calcsize("Q")
-        offset_content = p
-
-        # cache_sb.offset
-        value = 8               # SB_SECTOR
-        struct.pack_into("Q", bcacheSb, p, value)
-        p += struct.calcsize("Q")
-
-        # cache_sb.version
-        if backingDeviceOrCacheDevice:
-            value = 1           # BCACHE_SB_VERSION_BDEV
-        else:
-            value = 0           # BCACHE_SB_VERSION_CDEV
-        offset_version = p
-        struct.pack_into("Q", bcacheSb, p, value)
-        p += struct.calcsize("Q")
-
-        # cache_sb.magic
-        struct.pack_into("16B", bcacheSb, p, *bcacheSbMagic)
-        p += struct.calcsize("16B")
-
-        # cache_sb.uuid
-        struct.pack_into("16B", bcacheSb, p, *devUuid.bytes)
-        p += struct.calcsize("16B")
-
-        # cache_sb.set_uuid
-        struct.pack_into("16B", bcacheSb, p, *setUuid.bytes)
-        p += struct.calcsize("16B")
-
-        # cache_sb.label
-        p += struct.calcsize("32B")
-
-        # cache_sb.flags
-        if backingDeviceOrCacheDevice:
-            value = 0x01                        # CACHE_MODE_WRITEBACK
-        else:
-            value = 0x00
-        struct.pack_into("Q", bcacheSb, p, value)
-        p += struct.calcsize("Q")
-
-        # cache_sb.seq
-        p += struct.calcsize("Q")
-
-        # cache_sb.pad
-        p += struct.calcsize("8Q")
-
-        if backingDeviceOrCacheDevice:
-            if dataOffset is not None:
-                # modify cache_sb.version
-                value = 4                       # BCACHE_SB_VERSION_BDEV_WITH_OFFSET
-                struct.pack_into("Q", bcacheSb, offset_version, value)
-
-                # cache_sb.data_offset
-                struct.pack_into("Q", bcacheSb, p, dataOffset)
-                p += struct.calcsize("Q")
-            else:
-                # cache_sb.data_offset
-                p += struct.calcsize("Q")
-        else:
-            # cache_sb.nbuckets
-            value = Util.getBlkDevSize(devPath) // 512 // bucketSize
-            if value < 0x80:
-                raise Exception("not enough buckets: %d, need %d", value, 0x80)
-            struct.pack_into("Q", bcacheSb, p, value)
-            p += struct.calcsize("Q")
-
-        # cache_sb.block_size
-        struct.pack_into("H", bcacheSb, p, blockSize)
-        p += struct.calcsize("H")
-
-        # cache_sb.bucket_size
-        struct.pack_into("H", bcacheSb, p, bucketSize)
-        p += struct.calcsize("H")
-
-        # cache_sb.nr_in_set
-        if not backingDeviceOrCacheDevice:
-            value = 1
-            struct.pack_into("H", bcacheSb, p, value)
-            p += struct.calcsize("H")
-
-        # cache_sb.nr_this_dev
-        p += struct.calcsize("H")
-
-        # cache_sb.last_mount
-        p += struct.calcsize("I")
-
-        # cache_sb.first_bucket
-        value = (23 // bucketSize) + 1
-        struct.pack_into("H", bcacheSb, p, value)
-        p += struct.calcsize("H")
-
-        # cache_sb.csum
-        crc64 = crcmod.predefined.Crc("crc-64-we")
-        crc64.update(bcacheSb[offset_content:])
-        struct.pack_into("Q", bcacheSb, 0, crc64.crcValue)
-
-        with open(devPath, "r+b") as f:
-            f.write(bytearray(8 * 512))
-            f.write(bcacheSb)
-            f.write(bytearray(256 * 8))         # cacbe_sb.d
-
-        return (devUuid, setUuid)
-
-    @staticmethod
-    def bcacheIsBackingDevice(devPath):
-        return Util._bcacheIsBackingDeviceOrCachDevice(devPath, True)
-
-    @staticmethod
-    def bcacheIsCacheDevice(devPath):
-        return Util._bcacheIsBackingDeviceOrCachDevice(devPath, False)
-
-    @staticmethod
-    def _bcacheIsBackingDeviceOrCachDevice(devPath, backingDeviceOrCacheDevice):
-        # see C struct definition in bcacheMakeDevice()
-        bcacheSbMagicPreFmt = "QQQ"
-        bcacheSbMagicFmt = "16B"
-        bcacheSbVersionPreFmt = "QQ"
-        bcacheSbVersionFmt = "Q"
-
-        bcacheSbMagic = [0xc6, 0x85, 0x73, 0xf6, 0x4e, 0x1a, 0x45, 0xca,
-                         0x82, 0x65, 0xf5, 0x7f, 0x48, 0xba, 0x6d, 0x81]
-        if backingDeviceOrCacheDevice:
-            versionValueList = [
-                1,           # BCACHE_SB_VERSION_BDEV
-                4,           # BCACHE_SB_VERSION_BDEV_WITH_OFFSET
-            ]
-        else:
-            versionValueList = [
-                0,           # BCACHE_SB_VERSION_CDEV
-                3,           # BCACHE_SB_VERSION_CDEV_WITH_UUID
-            ]
-
-        with open(devPath, "rb") as f:
-            f.seek(8 * 512 + struct.calcsize(bcacheSbMagicPreFmt))
-            buf = f.read(struct.calcsize(bcacheSbMagicFmt))
-            if list(buf) != bcacheSbMagic:
-                return False
-
-            f.seek(8 * 512 + struct.calcsize(bcacheSbVersionPreFmt))
-            buf = f.read(struct.calcsize(bcacheSbVersionFmt))
-            value = struct.unpack(bcacheSbVersionFmt, buf)[0]
-            if value not in versionValueList:
-                return False
-
-            return True
-
-    @staticmethod
-    def bcacheGetSetUuid(devPath):
-        # see C struct definition in bcacheMakeDevice()
-        bcacheSbSetUuidPreFmt = "QQQ16B16B"
-        bcacheSbSetUuidFmt = "16B"
-
-        assert Util.bcacheIsCacheDevice(devPath)
-
-        with open(devPath, "rb") as f:
-            f.seek(8 * 512 + struct.calcsize(bcacheSbSetUuidPreFmt))
-            buf = f.read(struct.calcsize(bcacheSbSetUuidFmt))
-            return uuid.UUID(bytes=buf)
-
-    @staticmethod
-    def bcacheGetSlaveDevPathList(bcacheDevPath):
-        """Last element in the returned list is the backing device, others are cache device"""
-
-        retList = []
-
-        slavePath = "/sys/block/" + os.path.basename(bcacheDevPath) + "/slaves"
-        for slaveDev in os.listdir(slavePath):
-            retList.append(os.path.join("/dev", slaveDev))
-
-        bcachePath = os.path.realpath("/sys/block/" + os.path.basename(bcacheDevPath) + "/bcache")
-        backingDev = os.path.basename(os.path.dirname(bcachePath))
-        backingDevPath = os.path.join("/dev", backingDev)
-
-        retList.remove(backingDevPath)
-        retList.append(backingDevPath)
-        return retList
-
-    @staticmethod
-    def bcacheFindByBackingDevice(devPath):
-        for fn in glob.glob("/dev/bcache*"):
-            if re.fullmatch("/dev/bcache[0-9]+", fn):
-                bcachePath = os.path.realpath("/sys/block/" + os.path.basename(devPath) + "/bcache")
-                backingDev = os.path.basename(os.path.dirname(bcachePath))
-                if os.path.basename(devPath) == backingDev:
-                    return fn
-        return None
-
-    @staticmethod
     def isBlkDevSsdOrHdd(devPath):
         bn = os.path.basename(devPath)
         with open("/sys/block/%s/queue/rotational" % (bn), "r") as f:
@@ -861,6 +597,273 @@ class Util:
         return None
 
 
+class BcacheUtil:
+
+    @staticmethod
+    def makeDevice(devPath, backingDeviceOrCacheDevice, blockSize=None, bucketSize=None, dataOffset=None):
+        assert isinstance(backingDeviceOrCacheDevice, bool)
+        assert blockSize is None or (isinstance(blockSize, int) and blockSize > 0)
+        assert bucketSize is None or (isinstance(bucketSize, int) and bucketSize > 0)
+        assert dataOffset is None or (isinstance(dataOffset, int) and dataOffset > 0)
+
+        #######################################################################
+        # code from bcache-tools-1.0.8
+        #######################################################################
+        # struct cache_sb {
+        #     uint64_t        csum;
+        #     uint64_t        offset;    /* sector where this sb was written */
+        #     uint64_t        version;
+        #     uint8_t         magic[16];
+        #     uint8_t         uuid[16];
+        #     union {
+        #         uint8_t     set_uuid[16];
+        #         uint64_t    set_magic;
+        #     };
+        #     uint8_t         label[SB_LABEL_SIZE];
+        #     uint64_t        flags;
+        #     uint64_t        seq;
+        #     uint64_t        pad[8];
+        #     union {
+        #         struct {
+        #             /* Cache devices */
+        #             uint64_t    nbuckets;      /* device size */
+        #             uint16_t    block_size;    /* sectors */
+        #             uint16_t    bucket_size;   /* sectors */
+        #             uint16_t    nr_in_set;
+        #             uint16_t    nr_this_dev;
+        #         };
+        #         struct {
+        #             /* Backing devices */
+        #             uint64_t    data_offset;
+        #             /*
+        #             * block_size from the cache device section is still used by
+        #             * backing devices, so don't add anything here until we fix
+        #             * things to not need it for backing devices anymore
+        #             */
+        #         };
+        #     };
+        #     uint32_t        last_mount;        /* time_t */
+        #     uint16_t        first_bucket;
+        #     union {
+        #         uint16_t    njournal_buckets;
+        #         uint16_t    keys;
+        #     };
+        #     uint64_t        d[SB_JOURNAL_BUCKETS];    /* journal buckets */
+        # };
+        bcacheSbFmt = "QQQ16B16B16B32BQQ8QQHHHHIHH"     # without cache_sb.d
+
+        bcacheSbMagic = [0xc6, 0x85, 0x73, 0xf6, 0x4e, 0x1a, 0x45, 0xca,
+                         0x82, 0x65, 0xf5, 0x7f, 0x48, 0xba, 0x6d, 0x81]
+
+        if blockSize is None:
+            st = os.stat(devPath)
+            if stat.S_ISBLK(st.st_mode):
+                out = Util.cmdCall("/sbin/blockdev", "--getss", devPath)
+                blockSize = int(out) // 512
+            else:
+                blockSize = st.st_blksize // 512
+
+        if bucketSize is None:
+            bucketSize = 1024
+        if bucketSize < blockSize:
+            raise Exception("bucket size (%d) cannot be smaller than block size (%d)", bucketSize, blockSize)
+
+        devUuid = uuid.uuid4()
+        setUuid = uuid.uuid4()
+
+        bcacheSb = bytearray(struct.calcsize(bcacheSbFmt))
+        offset_content = None
+        offset_version = None
+
+        # cache_sb.csum
+        p = struct.calcsize("Q")
+        offset_content = p
+
+        # cache_sb.offset
+        value = 8               # SB_SECTOR
+        struct.pack_into("Q", bcacheSb, p, value)
+        p += struct.calcsize("Q")
+
+        # cache_sb.version
+        if backingDeviceOrCacheDevice:
+            value = 1           # BCACHE_SB_VERSION_BDEV
+        else:
+            value = 0           # BCACHE_SB_VERSION_CDEV
+        offset_version = p
+        struct.pack_into("Q", bcacheSb, p, value)
+        p += struct.calcsize("Q")
+
+        # cache_sb.magic
+        struct.pack_into("16B", bcacheSb, p, *bcacheSbMagic)
+        p += struct.calcsize("16B")
+
+        # cache_sb.uuid
+        struct.pack_into("16B", bcacheSb, p, *devUuid.bytes)
+        p += struct.calcsize("16B")
+
+        # cache_sb.set_uuid
+        struct.pack_into("16B", bcacheSb, p, *setUuid.bytes)
+        p += struct.calcsize("16B")
+
+        # cache_sb.label
+        p += struct.calcsize("32B")
+
+        # cache_sb.flags
+        if backingDeviceOrCacheDevice:
+            value = 0x01                        # CACHE_MODE_WRITEBACK
+        else:
+            value = 0x00
+        struct.pack_into("Q", bcacheSb, p, value)
+        p += struct.calcsize("Q")
+
+        # cache_sb.seq
+        p += struct.calcsize("Q")
+
+        # cache_sb.pad
+        p += struct.calcsize("8Q")
+
+        if backingDeviceOrCacheDevice:
+            if dataOffset is not None:
+                # modify cache_sb.version
+                value = 4                       # BCACHE_SB_VERSION_BDEV_WITH_OFFSET
+                struct.pack_into("Q", bcacheSb, offset_version, value)
+
+                # cache_sb.data_offset
+                struct.pack_into("Q", bcacheSb, p, dataOffset)
+                p += struct.calcsize("Q")
+            else:
+                # cache_sb.data_offset
+                p += struct.calcsize("Q")
+        else:
+            # cache_sb.nbuckets
+            value = Util.getBlkDevSize(devPath) // 512 // bucketSize
+            if value < 0x80:
+                raise Exception("not enough buckets: %d, need %d", value, 0x80)
+            struct.pack_into("Q", bcacheSb, p, value)
+            p += struct.calcsize("Q")
+
+        # cache_sb.block_size
+        struct.pack_into("H", bcacheSb, p, blockSize)
+        p += struct.calcsize("H")
+
+        # cache_sb.bucket_size
+        struct.pack_into("H", bcacheSb, p, bucketSize)
+        p += struct.calcsize("H")
+
+        # cache_sb.nr_in_set
+        if not backingDeviceOrCacheDevice:
+            value = 1
+            struct.pack_into("H", bcacheSb, p, value)
+            p += struct.calcsize("H")
+
+        # cache_sb.nr_this_dev
+        p += struct.calcsize("H")
+
+        # cache_sb.last_mount
+        p += struct.calcsize("I")
+
+        # cache_sb.first_bucket
+        value = (23 // bucketSize) + 1
+        struct.pack_into("H", bcacheSb, p, value)
+        p += struct.calcsize("H")
+
+        # cache_sb.csum
+        crc64 = crcmod.predefined.Crc("crc-64-we")
+        crc64.update(bcacheSb[offset_content:])
+        struct.pack_into("Q", bcacheSb, 0, crc64.crcValue)
+
+        with open(devPath, "r+b") as f:
+            f.write(bytearray(8 * 512))
+            f.write(bcacheSb)
+            f.write(bytearray(256 * 8))         # cacbe_sb.d
+
+        return (devUuid, setUuid)
+
+    @staticmethod
+    def isBackingDevice(devPath):
+        return BcacheUtil._isBackingDeviceOrCachDevice(devPath, True)
+
+    @staticmethod
+    def isCacheDevice(devPath):
+        return BcacheUtil._isBackingDeviceOrCachDevice(devPath, False)
+
+    @staticmethod
+    def _isBackingDeviceOrCachDevice(devPath, backingDeviceOrCacheDevice):
+        # see C struct definition in bcacheMakeDevice()
+        bcacheSbMagicPreFmt = "QQQ"
+        bcacheSbMagicFmt = "16B"
+        bcacheSbVersionPreFmt = "QQ"
+        bcacheSbVersionFmt = "Q"
+
+        bcacheSbMagic = [0xc6, 0x85, 0x73, 0xf6, 0x4e, 0x1a, 0x45, 0xca,
+                         0x82, 0x65, 0xf5, 0x7f, 0x48, 0xba, 0x6d, 0x81]
+        if backingDeviceOrCacheDevice:
+            versionValueList = [
+                1,           # BCACHE_SB_VERSION_BDEV
+                4,           # BCACHE_SB_VERSION_BDEV_WITH_OFFSET
+            ]
+        else:
+            versionValueList = [
+                0,           # BCACHE_SB_VERSION_CDEV
+                3,           # BCACHE_SB_VERSION_CDEV_WITH_UUID
+            ]
+
+        with open(devPath, "rb") as f:
+            f.seek(8 * 512 + struct.calcsize(bcacheSbMagicPreFmt))
+            buf = f.read(struct.calcsize(bcacheSbMagicFmt))
+            if list(buf) != bcacheSbMagic:
+                return False
+
+            f.seek(8 * 512 + struct.calcsize(bcacheSbVersionPreFmt))
+            buf = f.read(struct.calcsize(bcacheSbVersionFmt))
+            value = struct.unpack(bcacheSbVersionFmt, buf)[0]
+            if value not in versionValueList:
+                return False
+
+            return True
+
+    @staticmethod
+    def getSetUuid(devPath):
+        # see C struct definition in bcacheMakeDevice()
+        bcacheSbSetUuidPreFmt = "QQQ16B16B"
+        bcacheSbSetUuidFmt = "16B"
+
+        assert BcacheUtil.isCacheDevice(devPath)
+
+        with open(devPath, "rb") as f:
+            f.seek(8 * 512 + struct.calcsize(bcacheSbSetUuidPreFmt))
+            buf = f.read(struct.calcsize(bcacheSbSetUuidFmt))
+            return uuid.UUID(bytes=buf)
+
+    @staticmethod
+    def getSlaveDevPathList(bcacheDevPath):
+        """Last element in the returned list is the backing device, others are cache device"""
+
+        retList = []
+
+        slavePath = "/sys/block/" + os.path.basename(bcacheDevPath) + "/slaves"
+        for slaveDev in os.listdir(slavePath):
+            retList.append(os.path.join("/dev", slaveDev))
+
+        bcachePath = os.path.realpath("/sys/block/" + os.path.basename(bcacheDevPath) + "/bcache")
+        backingDev = os.path.basename(os.path.dirname(bcachePath))
+        backingDevPath = os.path.join("/dev", backingDev)
+
+        retList.remove(backingDevPath)
+        retList.append(backingDevPath)
+        return retList
+
+    @staticmethod
+    def findByBackingDevice(devPath):
+        for fn in glob.glob("/dev/bcache*"):
+            if re.fullmatch("/dev/bcache[0-9]+", fn):
+                bcachePath = os.path.realpath("/sys/block/" + os.path.basename(devPath) + "/bcache")
+                backingDev = os.path.basename(os.path.dirname(bcachePath))
+                if os.path.basename(devPath) == backingDev:
+                    return fn
+        return None
+
+
 class LvmUtil:
 
     vgName = "hdd"
@@ -872,7 +875,7 @@ class LvmUtil:
     swapLvDevPath = "/dev/mapper/hdd.swap"
 
     @staticmethod
-    def lvmGetSlaveDevPathList(vgName):
+    def getSlaveDevPathList(vgName):
         ret = []
         out = Util.cmdCall("/sbin/lvm", "pvdisplay", "-c")
         for m in re.finditer("^\\s*(\\S+):%s:.*" % (vgName), out, re.M):
@@ -889,7 +892,6 @@ class LvmUtil:
         added = int(used / 0.7) - total
         added = (added // 1024 + 1) * 1024      # change unit from MB to GB
         Util.cmdCall("/sbin/lvm", "lvextend", "-L+%dG" % (added), lvDevPath)
-        Util.cmdExec("/sbin/resize2fs", lvDevPath)                                   # FIXME: detect and support more fs-types
 
 
 class TmpMount:
