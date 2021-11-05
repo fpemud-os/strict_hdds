@@ -23,7 +23,7 @@
 
 import os
 
-from . import util
+from .util import Util
 
 from . import errors
 from . import StorageLayout
@@ -56,21 +56,21 @@ class StorageLayoutImpl(StorageLayout):
 
     @property
     def dev_swap(self):
-        return util.swapFilename if self._bSwapFile else None
+        return Util.swapFilename if self._bSwapFile else None
 
     def get_boot_disk(self):
         return self._hdd
 
     def check_swap_size(self):
         assert self._bSwapFile
-        return os.path.getsize(util.swapFilename) >= util.getSwapSize()
+        return os.path.getsize(Util.swapFilename) >= Util.getSwapSize()
 
     def get_esp(self):
         return self._hddEspParti
 
     def create_swap_file(self):
         assert not self._bSwapFile
-        util.createSwapFile(util.swapFilename)
+        Util.createSwapFile(Util.swapFilename)
         self._bSwapFile = True
 
     def remove_swap_file(self):
@@ -81,7 +81,7 @@ class StorageLayoutImpl(StorageLayout):
 
 def create_layout(hdd=None, dry_run=False):
     if hdd is None:
-        hddList = util.getDevPathListForFixedHdd()
+        hddList = Util.getDevPathListForFixedHdd()
         if len(hddList) == 0:
             raise errors.StorageLayoutCreateError(errors.NO_DISK)
         if len(hddList) > 1:
@@ -90,37 +90,37 @@ def create_layout(hdd=None, dry_run=False):
 
     if not dry_run:
         # create partitions
-        util.initializeDisk(hdd, "gpt", [
-            ("%dMiB" % (util.getEspSizeInMb()), util.fsTypeFat),
-            ("*", util.fsTypeExt4),
+        Util.initializeDisk(hdd, "gpt", [
+            ("%dMiB" % (Util.getEspSizeInMb()), Util.fsTypeFat),
+            ("*", Util.fsTypeExt4),
         ])
 
     ret = StorageLayoutImpl()
     ret._hdd = hdd
-    ret._hddEspParti = util.devPathDiskToPartition(hdd, 1)
-    ret._hddRootParti = util.devPathDiskToPartition(hdd, 2)
+    ret._hddEspParti = Util.devPathDiskToPartition(hdd, 1)
+    ret._hddRootParti = Util.devPathDiskToPartition(hdd, 2)
     return ret
 
 
 def parse_layout(bootDev, rootDev):
     ret = StorageLayoutImpl()
 
-    if not util.gptIsEspPartition(bootDev):
+    if not Util.gptIsEspPartition(bootDev):
         raise errors.StorageLayoutParseError(ret.name, errors.BOOT_DEV_IS_NOT_ESP)
 
-    ret._hdd = util.devPathPartitionToDisk(bootDev)
-    if ret._hdd != util.devPathPartitionToDisk(rootDev):
+    ret._hdd = Util.devPathPartitionToDisk(bootDev)
+    if ret._hdd != Util.devPathPartitionToDisk(rootDev):
         raise errors.StorageLayoutParseError(ret.name, "boot device and root device is not the same")
 
     ret._hddEspParti = bootDev
 
     ret._hddRootParti = rootDev
     if True:
-        fs = util.getBlkDevFsType(ret._hddRootParti)
-        if fs != util.fsTypeExt4:
+        fs = Util.getBlkDevFsType(ret._hddRootParti)
+        if fs != Util.fsTypeExt4:
             raise errors.StorageLayoutParseError(ret.name, "root partition file system is \"%s\", not \"ext4\"" % (fs))
 
-    if os.path.exists(util.swapFilename) and util.cmdCallTestSuccess("/sbin/swaplabel", util.swapFilename):
+    if os.path.exists(Util.swapFilename) and Util.cmdCallTestSuccess("/sbin/swaplabel", Util.swapFilename):
         ret._bSwapFile = True
     else:
         ret._bSwapFile = False

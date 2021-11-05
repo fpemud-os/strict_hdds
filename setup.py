@@ -10,7 +10,7 @@ except:
     from distutils.core import setup
 
 # check linux platform
-platform = distutils.util.get_platform()
+platform = distutils.Util.get_platform()
 if not platform.startswith('linux'):
     sys.stderr.write("This module is not available on %s\n" % platform)
     sys.exit(1)

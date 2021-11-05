@@ -24,7 +24,7 @@
 import os
 import re
 
-from . import util
+from .util import Util
 
 from . import StorageLayout
 

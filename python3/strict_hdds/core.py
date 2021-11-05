@@ -25,7 +25,7 @@ import os
 import re
 import sys
 import pkgutil
-from . import util
+from .util import Util
 from . import errors
 
 
@@ -38,7 +38,7 @@ class StorageLayout:
     def name(self):
         fn = sys.modules.get(self.__module__).__file__
         fn = os.path.basename(fn).replace(".py", "")
-        return util.modName2layoutName(fn)
+        return Util.modName2layoutName(fn)
 
     @property
     def boot_mode(self):
@@ -63,27 +63,27 @@ def get_supported_storage_layouts():
     ret = []
     for mod in pkgutil.iter_modules(["."]):
         if mod.name.startswith("layout_"):
-            ret.append(util.modName2layoutName(mod.name))
+            ret.append(Util.modName2layoutName(mod.name))
     return ret
 
 
 def create_storage_layout(layout_name, dry_run=False):
     for mod in pkgutil.iter_modules(["."]):
         if mod.name.startswith("layout_"):
-            if layout_name == util.modName2layoutName(mod.name):
+            if layout_name == Util.modName2layoutName(mod.name):
                 return mod.create_layout(dry_run=dry_run)
     raise errors.StorageLayoutCreateError("layout \"%s\" not supported" % (layout_name))
 
 
 def parse_storage_layout():
-    rootDev = util.getMountDeviceForPath("/")
-    bootDev = util.getMountDeviceForPath("/boot")
+    rootDev = Util.getMountDeviceForPath("/")
+    bootDev = Util.getMountDeviceForPath("/boot")
 
     assert rootDev is not None
     if bootDev is not None:
-        lvmInfo = util.getBlkDevLvmInfo(rootDev)
+        lvmInfo = Util.getBlkDevLvmInfo(rootDev)
         if lvmInfo is not None:
-            tlist = util.lvmGetSlaveDevPathList(lvmInfo[0])
+            tlist = Util.lvmGetSlaveDevPathList(lvmInfo[0])
             if any(re.fullmatch("/dev/bcache[0-9]+", x) is not None for x in tlist):
                 return _parseOneStorageLayout("efi-bcache-lvm", bootDev, rootDev)
             else:
@@ -91,14 +91,14 @@ def parse_storage_layout():
         else:
             return _parseOneStorageLayout("efi-simple", bootDev, rootDev)
     else:
-        if util.getBlkDevLvmInfo(rootDev) is not None:
+        if Util.getBlkDevLvmInfo(rootDev) is not None:
             return _parseOneStorageLayout("bios-lvm", bootDev, rootDev)
         else:
             return _parseOneStorageLayout("bios-simple", bootDev, rootDev)
 
 
 def _parseOneStorageLayout(layoutName, bootDev, rootDev):
-    modname = util.layoutName2modName(layoutName)
+    modname = Util.layoutName2modName(layoutName)
     try:
         exec("import strict_hdds.%s" % (modname))
         f = eval("strict_hdds.%s.parse_layout" % (modname))
