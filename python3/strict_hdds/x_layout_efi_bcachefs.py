@@ -25,7 +25,6 @@ import os
 
 from .util import Util
 
-
 from . import errors
 from . import StorageLayout
 
