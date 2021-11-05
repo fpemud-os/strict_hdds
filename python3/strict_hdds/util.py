@@ -969,36 +969,41 @@ class LvmUtil:
 
 class CacheGroup:
 
-    def __init__(self, ssd=None, has_swap=False, hdd_list=[], boot_hdd=None):
+    def __init__(self, ssd=None, ssdEspParti=None, ssdSwapParti=None, ssdCacheParti=None, hddList=[], bootHdd=None):
         # assign self._ssd and friends
         self._ssd = ssd
         if self._ssd is not None:
             self._ssdEspParti = Util.devPathDiskToPartition(ssd, 1)
-            if has_swap:
+            if ssdSwapParti is not None:
                 self._ssdSwapParti = Util.devPathDiskToPartition(ssd, 2)
                 self._ssdCacheParti = Util.devPathDiskToPartition(ssd, 3)
             else:
                 self._ssdSwapParti = None
                 self._ssdCacheParti = Util.devPathDiskToPartition(ssd, 2)
         else:
-            assert not has_swap
+            self._ssdEspParti is None
+            self._ssdSwapParti is None
+            self._ssdCacheParti is None
+        assert self._ssdEspParti == ssdEspParti
+        assert self._ssdSwapParti == ssdSwapParti
+        assert self._ssdCacheParti == ssdCacheParti
 
         # assign self._hddList
-        assert hdd_list is not None
-        self._hddList = hdd_list
+        assert hddList is not None
+        self._hddList = hddList
 
         # assign self._bootHdd
         if self._ssd is not None:
-            assert boot_hdd is None
+            assert bootHdd is None
         else:
             if len(self._hddList) > 0:
-                if boot_hdd is None:
-                    boot_hdd = self._hddList[0]
+                if bootHdd is None:
+                    bootHdd = self._hddList[0]
                 else:
-                    assert boot_hdd in self._hddList
+                    assert bootHdd in self._hddList
             else:
-                assert boot_hdd is None
-        self._bootHdd = boot_hdd
+                assert bootHdd is None
+        self._bootHdd = bootHdd
 
     def get_esp(self):
         curEsp = self._getCurEsp()

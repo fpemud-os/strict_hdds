@@ -53,6 +53,8 @@ class StorageLayoutImpl(StorageLayout):
     """
 
     def __init__(self):
+        super().__init__()
+
         self._cg = CacheGroup()
         self._hddDict = dict()              # dict<hddDev,bcacheDev>
 
@@ -121,9 +123,10 @@ class StorageLayoutImpl(StorageLayout):
             self._cg.add_ssd(devpath)
 
             # ssd partition 3: make it as cache device
-            BcacheUtil.makeDevice(self._cg.get_ssd_cache_partition(), False)
-            BcacheUtil.registerCacheDevice(self._cg.get_ssd_cache_partition())
-            BcacheUtil.attachCacheDevice(self._cg.get_hdd_list(), self._cg.get_ssd_cache_partition())
+            parti = self._cg.get_ssd_cache_partition()
+            BcacheUtil.makeDevice(parti, False)
+            BcacheUtil.registerCacheDevice(parti)
+            BcacheUtil.attachCacheDevice(self._cg.get_hdd_list(), parti)
 
             return True     # boot disk changed
         else:
@@ -146,7 +149,7 @@ class StorageLayoutImpl(StorageLayout):
     def remove_disk(self, devpath):
         assert devpath is not None
 
-        if devpath == self._cg:
+        if self._cg.get_ssd() is not None and devpath == self._cg.get_ssd():
             if self._cg.get_ssd_swap_partition() is not None:
                 if Util.systemdFindSwapService(self._cg.get_ssd_swap_partition()) is not None:
                     raise errors.StorageLayoutRemoveDiskError(errors.SWAP_IS_IN_USE)
@@ -159,6 +162,8 @@ class StorageLayoutImpl(StorageLayout):
 
             return True     # boot disk changed
         else:
+            assert devpath in self._cg.get_hdd_list()
+
             if self._cg.get_hdd_count() <= 1:
                 raise errors.StorageLayoutRemoveDiskError(errors.CAN_NOT_REMOVE_LAST_HDD)
 
@@ -217,9 +222,8 @@ def create_layout(ssd=None, hdd_list=None, dry_run=False):
         Util.cmdCall("/usr/sbin/mkfs.btrfs", "-d", "single", "-m", "single", *ret._hddDict.values())
     else:
         ret._cg = CacheGroup(ssd=ssd, has_swap=True, hdd_list=hdd_list)
-        for hdd in hdd_list:
-            parti = ret._cg.get_hdd_data_partition(hdd)
-            ret._hddDict[hdd] = BcacheUtil.findByBackingDevice(parti)
+        for i in range(0, len(hdd_list)):
+            ret._hddDict[hdd_list[i]] = "/dev/bcache%d" % (i)
 
     return ret
 
