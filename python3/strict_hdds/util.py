@@ -969,6 +969,12 @@ class LvmUtil:
 
 class CacheGroup:
 
+    @staticmethod
+    def proxy(func):
+        def f(self, *args):
+            return getattr(self._cg, func.__name__)(*args)
+        return f
+
     def __init__(self, ssd=None, ssdEspParti=None, ssdSwapParti=None, ssdCacheParti=None, hddList=[], bootHdd=None):
         # assign self._ssd and friends
         self._ssd = ssd
@@ -1187,6 +1193,82 @@ class CacheGroup:
         Util.cmdCall("/bin/umount", Util.bootDir)
         Util.gptToggleEspPartition(Util.devPathDiskToPartition(self._bootHdd, 1), False)
         self._bootHdd = None
+
+
+class SwapParti:
+
+    @staticmethod
+    def proxy(func):
+        def f(self, *args):
+            return getattr(SwapParti, func.__name__)(self, *args)
+        return f
+
+    @staticmethod
+    def check_swap_size(parent):
+        assert parent.dev_swap is not None
+        return Util.getBlkDevSize(parent.dev_swap) >= Util.getSwapSize()
+
+
+class SwapLvmLv:
+
+    @staticmethod
+    def proxy(func):
+        def f(self, *args):
+            return getattr(self._slv, func.__name__)(*args)
+        return f
+
+    def __init__(self, bSwapLv):
+        self._bSwapLv = bSwapLv
+
+    def check_swap_size(self):
+        assert self._bSwapLv
+        return Util.getBlkDevSize(LvmUtil.swapLvDevPath) >= Util.getSwapSize()
+
+    def create_swap_lv(self):
+        assert not self._bSwapLv
+        Util.cmdCall("/sbin/lvm", "lvcreate", "-L", "%dGiB" % (Util.getSwapSizeInGb()), "-n", LvmUtil.swapLvName, LvmUtil.vgName)
+        self._bSwapLv = True
+
+    def remove_swap_lv(self):
+        assert self._bSwapLv
+        Util.cmdCall("/sbin/lvm", "lvremove", LvmUtil.swapLvDevPath)
+        self._bSwapLv = False
+
+
+class SwapFile:
+
+    @staticmethod
+    def detect_and_new_swap_file_object():
+        if os.path.exists(Util.swapFilename) and Util.cmdCallTestSuccess("/sbin/swaplabel", Util.swapFilename):
+            return SwapFile(True)
+        else:
+            return SwapFile(False)
+
+    @staticmethod
+    def proxy(func):
+        def f(self, *args):
+            return getattr(self._sf, func.__name__)(*args)
+        return f
+
+    def __init__(self, bSwapFile):
+        self._bSwapFile = bSwapFile
+
+    def get_swap_filename(self):
+        return Util.swapFilename if self._bSwapFile else None
+
+    def check_swap_size(self):
+        assert self._bSwapFile
+        return os.path.getsize(Util.swapFilename) >= Util.getSwapSize()
+
+    def create_swap_file(self):
+        assert not self._bSwapFile
+        Util.createSwapFile(Util.swapFilename)
+        self._bSwapFile = True
+
+    def remove_swap_file(self):
+        assert self._bSwapFile
+        os.remove(Util.swapFilename)
+        self._bSwapFile = False
 
 
 class TmpMount:

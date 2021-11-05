@@ -24,8 +24,7 @@
 import os
 import re
 
-from .util import Util
-from .util import LvmUtil
+from .util import Util, LvmUtil, SwapLvmLv
 
 from . import errors
 from . import StorageLayout
@@ -48,7 +47,7 @@ class StorageLayoutImpl(StorageLayout):
         super().__init__()
 
         self._diskList = []         # harddisk list
-        self._bSwapLv = None        # whether swap lv exists
+        self._slv = None            # SwapLvmLv
         self._bootHdd = None        # boot harddisk name
 
     @property
@@ -66,9 +65,9 @@ class StorageLayoutImpl(StorageLayout):
     def get_boot_disk(self):
         return self._bootHdd
 
+    @SwapLvmLv.proxy
     def check_swap_size(self):
-        assert self._bSwapLv
-        return Util.getBlkDevSize(LvmUtil.swapLvDevPath) >= Util.getSwapSize()
+        pass
 
     def optimize_rootdev(self):
         LvmUtil.autoExtendLv(LvmUtil.rootLvDevPath)
@@ -113,15 +112,13 @@ class StorageLayoutImpl(StorageLayout):
 
         return ret
 
+    @SwapLvmLv.proxy
     def create_swap_lv(self):
-        assert not self._bSwapLv
-        Util.cmdCall("/sbin/lvm", "lvcreate", "-L", "%dGiB" % (Util.getSwapSizeInGb()), "-n", LvmUtil.swapLvName, LvmUtil.vgName)
-        self._bSwapLv = True
+        pass
 
+    @SwapLvmLv.proxy
     def remove_swap_lv(self):
-        assert self._bSwapLv
-        Util.cmdCall("/sbin/lvm", "lvremove", LvmUtil.swapLvDevPath)
-        self._bSwapLv = False
+        pass
 
 
 def create_layout(disk_list=None, dry_run=False):
@@ -148,7 +145,7 @@ def create_layout(disk_list=None, dry_run=False):
     # return value
     ret = StorageLayoutImpl()
     ret._diskList = disk_list
-    ret._bSwapLv = False
+    ret._slv = SwapLvmLv()
     ret._bootHdd = ret._diskList[0]     # FIXME
     return ret
 
@@ -184,7 +181,9 @@ def parse_layout(booDev, rootDev):
     if re.search("/dev/hdd/swap:%s:.*" % (LvmUtil.vgName), out, re.M) is not None:
         if Util.getBlkDevFsType(LvmUtil.swapLvDevPath) != Util.fsTypeSwap:
             raise errors.StorageLayoutParseError(ret.name, errors.SWAP_DEV_HAS_INVALID_FS_FLAG(LvmUtil.swapLvDevPath))
-        ret._bSwapLv = True
+        ret._slv = SwapLvmLv(True)
+    else:
+        ret._slv = SwapLvmLv(False)
 
     # boot harddisk
     for hdd in ret._diskList:

@@ -21,8 +21,7 @@
 # THE SOFTWARE.
 
 
-from .util import CacheGroup, Util
-from .util import BcacheUtil
+from .util import Util, BcacheUtil, CacheGroup, SwapParti
 
 from . import errors
 from . import StorageLayout
@@ -55,7 +54,7 @@ class StorageLayoutImpl(StorageLayout):
     def __init__(self):
         super().__init__()
 
-        self._cg = CacheGroup()
+        self._cg = None                     # CacheGroup
         self._hddDict = dict()              # dict<hddDev,bcacheDev>
 
     @property
@@ -73,9 +72,9 @@ class StorageLayoutImpl(StorageLayout):
     def get_boot_disk(self):
         return self._cg.get_ssd() if self._cg.get_ssd() is not None else self._cg.get_boot_hdd()
 
+    @SwapParti.proxy
     def check_swap_size(self):
-        assert self._cg.get_ssd_swap_partition() is not None
-        return Util.getBlkDevSize(self._cg.get_ssd_swap_partition()) >= Util.getSwapSize()
+        pass
 
     def optimize_rootdev(self):
         # FIXME: btrfs balance
@@ -221,7 +220,7 @@ def create_layout(ssd=None, hdd_list=None, dry_run=False):
         # create btrfs filesystem
         Util.cmdCall("/usr/sbin/mkfs.btrfs", "-d", "single", "-m", "single", *ret._hddDict.values())
     else:
-        ret._cg = CacheGroup(ssd=ssd, has_swap=True, hdd_list=hdd_list)
+        ret._cg = CacheGroup(ssd=ssd, has_swap=True, hddList=hdd_list)
         for i in range(0, len(hdd_list)):
             ret._hddDict[hdd_list[i]] = "/dev/bcache%d" % (i)
 

@@ -24,10 +24,7 @@
 import os
 import re
 
-from .util import Util
-from .util import BcacheUtil
-from .util import LvmUtil
-from .util import CacheGroup
+from .util import Util, BcacheUtil, LvmUtil, CacheGroup, SwapParti
 
 from . import errors
 from . import StorageLayout
@@ -61,7 +58,7 @@ class StorageLayoutImpl(StorageLayout):
     def __init__(self):
         super().__init__()
 
-        self._cg = CacheGroup()
+        self._cg = None                  # CacheGroup
         self._hddDict = dict()           # dict<hddDev,bcacheDev>
 
     @property
@@ -79,9 +76,9 @@ class StorageLayoutImpl(StorageLayout):
     def get_boot_disk(self):
         return self._cg.get_ssd() if self._cg.get_ssd() is not None else self._cg.get_boot_hdd()
 
+    @SwapParti.proxy
     def check_swap_size(self):
-        assert self._cg.get_ssd_swap_partition() is not None
-        return Util.getBlkDevSize(self._cg.get_ssd_swap_partition()) >= Util.getSwapSize()
+        pass
 
     def optimize_rootdev(self):
         LvmUtil.autoExtendLv(LvmUtil.rootLvDevPath)

@@ -21,9 +21,7 @@
 # THE SOFTWARE.
 
 
-import os
-
-from .util import Util
+from .util import Util, SwapFile
 
 from . import errors
 from . import StorageLayout
@@ -46,7 +44,7 @@ class StorageLayoutImpl(StorageLayout):
         self._hdd = None              # boot harddisk name
         self._hddEspParti = None      # ESP partition name
         self._hddRootParti = False    # root partition name
-        self._bSwapFile = None        # whether swap file exists
+        self._sf = None               # SwapFile
 
     @property
     def boot_mode(self):
@@ -58,27 +56,25 @@ class StorageLayoutImpl(StorageLayout):
 
     @property
     def dev_swap(self):
-        return Util.swapFilename if self._bSwapFile else None
+        return self._sf.get_swap_filename()
 
     def get_boot_disk(self):
         return self._hdd
 
+    @SwapFile.proxy
     def check_swap_size(self):
-        assert self._bSwapFile
-        return os.path.getsize(Util.swapFilename) >= Util.getSwapSize()
+        pass
 
     def get_esp(self):
         return self._hddEspParti
 
+    @SwapFile.proxy
     def create_swap_file(self):
-        assert not self._bSwapFile
-        Util.createSwapFile(Util.swapFilename)
-        self._bSwapFile = True
+        pass
 
+    @SwapFile.proxy
     def remove_swap_file(self):
-        assert self._bSwapFile
-        os.remove(self._bSwapFile)
-        self._bSwapFile = False
+        pass
 
 
 def create_layout(hdd=None, dry_run=False):
@@ -101,6 +97,7 @@ def create_layout(hdd=None, dry_run=False):
     ret._hdd = hdd
     ret._hddEspParti = Util.devPathDiskToPartition(hdd, 1)
     ret._hddRootParti = Util.devPathDiskToPartition(hdd, 2)
+    ret._sf = SwapFile(False)
     return ret
 
 
@@ -122,9 +119,6 @@ def parse_layout(bootDev, rootDev):
         if fs != Util.fsTypeExt4:
             raise errors.StorageLayoutParseError(ret.name, "root partition file system is \"%s\", not \"ext4\"" % (fs))
 
-    if os.path.exists(Util.swapFilename) and Util.cmdCallTestSuccess("/sbin/swaplabel", Util.swapFilename):
-        ret._bSwapFile = True
-    else:
-        ret._bSwapFile = False
+    ret._sf = SwapFile.detect_and_new_swap_file_object()
 
     return ret
