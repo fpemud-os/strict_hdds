@@ -533,8 +533,9 @@ class Util:
             else:
                 assert False
 
+        # commit and notify kernel (don't wait kernel picks up this change by itself)
         disk.commit()
-        time.sleep(3)           # FIXME, wait kernel picks the change
+        Util.cmdCall("/sbin/partprobe")
 
     @staticmethod
     def gptToggleEspPartition(devPath, espOrRegular):
@@ -788,9 +789,12 @@ class BcacheUtil:
         return BcacheUtil._isBackingDeviceOrCachDevice(devPath, False)
 
     @staticmethod
+    def registerBackingDevice(devPath):
+        BcacheUtil._registerDevice(devPath)
+
+    @staticmethod
     def registerCacheDevice(devPath):
-        with open("/sys/fs/bcache/register", "w") as f:
-            f.write(devPath)
+        BcacheUtil._registerDevice(devPath)
 
     @staticmethod
     def attachCacheDevice(backingDevPathList, cacheDevPath):
@@ -798,6 +802,17 @@ class BcacheUtil:
         for backingDevPath in backingDevPathList:
             with open("/sys/block/%s/bcache/attach" % (os.path.basename(backingDevPath)), "w") as f:
                 f.write(str(setUuid))
+
+    @staticmethod
+    def stopBackingDevice(devPath):
+        with open("/sys/block/%s/bcache/stop" % (os.path.basename(devPath)), "w") as f:
+            f.write("1")
+
+    @staticmethod
+    def unregisterCacheDevice(devPath):
+        setUuid = BcacheUtil.getSetUuid(devPath)
+        with open("/sys/fs/bcache/%s/unregister" % (setUuid), "w") as f:
+            f.write(devPath)
 
     @staticmethod
     def getSetUuid(devPath):
@@ -874,6 +889,11 @@ class BcacheUtil:
                 return False
 
             return True
+
+    @staticmethod
+    def _registerDevice(devPath):
+        with open("/sys/fs/bcache/register", "w") as f:
+            f.write(devPath)
 
 
 class LvmUtil:
