@@ -919,7 +919,31 @@ class BcacheUtil:
 class BcachefsUtil:
 
     @staticmethod
-    def makeDevice(devPath, backingDeviceOrCacheDevice, blockSize=None, bucketSize=None, dataOffset=None):
+    def createBcachefs(ssdList, hddList):
+        assert len(hddList) > 0
+
+        cmdList = ["/sbin/bcachefs", "format"]
+        if len(ssdList) > 0:
+            cmdList.append("--group=ssd")
+            cmdList += ssdList
+        if True:
+            cmdList.append("--group=hdd")
+            cmdList += hddList
+        cmdList += ["--data_replicas=1", "--metadata_replicas=1", "--foreground_target=ssd", "--background_target=hdd", "--promote_target=ssd"]
+
+        Util.cmdCall(*cmdList)
+
+    @staticmethod
+    def addSsdToBcachefs(ssd):
+        Util.cmdCall("")
+
+
+        cmdList = ["/sbin/bcachefs", "device", "add", "--group=ssd", "/mnt", ssd]
+
+        pass
+
+    @staticmethod
+    def addHddToBcachefs(hdd):
         pass
 
 
@@ -978,7 +1002,7 @@ class MultiDisk:
     def __init__(self, diskList=[], bootHdd=None):
         # assign self._hddList
         assert diskList is not None
-        self._hddList = diskList
+        self._hddList = sorted(diskList)
 
         # assign self._bootHdd
         if len(self._hddList) > 0:
@@ -1044,6 +1068,7 @@ class MultiDisk:
 
         # record result
         self._hddList.append(disk)
+        self._hddList.sort()
 
         # change boot disk if needed
         if self._bootHdd is None:
@@ -1116,7 +1141,7 @@ class CacheGroup:
 
         # assign self._hddList
         assert hddList is not None
-        self._hddList = hddList
+        self._hddList = sorted(hddList)
 
         # assign self._bootHdd
         if self._ssd is not None:
@@ -1270,6 +1295,7 @@ class CacheGroup:
 
         # record result
         self._hddList.append(hdd)
+        self._hddList.sort()
 
         # change boot disk if needed
         if self._bootHdd is None:

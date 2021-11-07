@@ -22,7 +22,6 @@
 
 
 from .util import Util, SwapFile
-
 from . import errors
 from . import StorageLayout
 

@@ -23,9 +23,7 @@
 
 import os
 import re
-
 from .util import Util, LvmUtil, SwapLvmLv
-
 from . import errors
 from . import StorageLayout
 

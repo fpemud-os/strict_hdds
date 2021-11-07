@@ -22,7 +22,6 @@
 
 
 from .util import Util, BcacheUtil, CacheGroup, SwapParti
-
 from . import errors
 from . import StorageLayout
 

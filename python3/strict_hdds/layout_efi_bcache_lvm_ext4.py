@@ -23,9 +23,7 @@
 
 import os
 import re
-
 from .util import Util, BcacheUtil, LvmUtil, CacheGroup, SwapParti
-
 from . import errors
 from . import StorageLayout
 

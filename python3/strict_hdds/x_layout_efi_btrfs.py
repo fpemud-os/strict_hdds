@@ -20,8 +20,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-import os
-import re
 
 from .util import Util, MultiDisk
 
@@ -55,7 +53,7 @@ class StorageLayoutImpl(StorageLayout):
 
     @property
     def dev_rootfs(self):
-        return sorted(self._diskList)[0]
+        return self._md.get_disk_list()[0]
 
     @property
     def dev_swap(self):
