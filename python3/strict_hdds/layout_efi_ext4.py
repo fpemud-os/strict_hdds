@@ -76,9 +76,9 @@ class StorageLayoutImpl(StorageLayout):
         pass
 
 
-def create_layout(hdd=None, dry_run=False):
+def create(hdd=None, dry_run=False):
     if hdd is None:
-        hddList = Util.getDevPathListForFixedHdd()
+        hddList = Util.getDevPathListForFixedDisk()
         if len(hddList) == 0:
             raise errors.StorageLayoutCreateError(errors.NO_DISK)
         if len(hddList) > 1:
@@ -100,7 +100,7 @@ def create_layout(hdd=None, dry_run=False):
     return ret
 
 
-def parse_layout(bootDev, rootDev):
+def parse(bootDev, rootDev):
     ret = StorageLayoutImpl()
 
     if not Util.gptIsEspPartition(bootDev):
@@ -118,6 +118,6 @@ def parse_layout(bootDev, rootDev):
         if fs != Util.fsTypeExt4:
             raise errors.StorageLayoutParseError(ret.name, "root partition file system is \"%s\", not \"ext4\"" % (fs))
 
-    ret._sf = SwapFile.detect_and_new_swap_file_object()
+    ret._sf = SwapFile.detectAndNewSwapFileObjectMounted()
 
     return ret

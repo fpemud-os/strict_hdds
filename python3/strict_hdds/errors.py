@@ -63,6 +63,8 @@ SWAP_IS_IN_USE = "swap partition is in use"
 CAN_NOT_REMOVE_LAST_HDD = "can not remove the last physical volume"
 
 # common messages for StorageLayoutParseError
+NO_LAYOUT_FOUND = "no valid storage layout found"
+MULTIPLE_ROOT_PARTITIONS = "multiple partitions found while we need one and only one root partition"
 DISK_HAS_REDUNDANT_PARTITION = lambda devpath: f"redundant partition exists on {devpath!s}"
 DISK_SIZE_INVALID = lambda devpath: f"{devpath!s} has an invalid size"
 PARTITION_SIZE_INVALID = lambda devpath: f"{devpath!s} has an invalid size"

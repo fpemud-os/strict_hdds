@@ -71,11 +71,11 @@ def create_storage_layout(layout_name, dry_run=False):
     for mod in pkgutil.iter_modules(["."]):
         if mod.name.startswith("layout_"):
             if layout_name == Util.modName2layoutName(mod.name):
-                return mod.create_layout(dry_run=dry_run)
+                return mod.create(dry_run=dry_run)
     raise errors.StorageLayoutCreateError("layout \"%s\" not supported" % (layout_name))
 
 
-def parse_storage_layout(online_or_offline):
+def get_current_storage_layout():
     rootDev = Util.getMountDeviceForPath("/")
     bootDev = Util.getMountDeviceForPath("/boot")
 
@@ -85,33 +85,46 @@ def parse_storage_layout(online_or_offline):
         if lvmInfo is not None:
             tlist = Util.lvmGetSlaveDevPathList(lvmInfo[0])
             if any(re.fullmatch("/dev/bcache[0-9]+", x) is not None for x in tlist):
-                return _parseOneStorageLayoutMounted("efi-bcache-lvm", bootDev, rootDev)
+                return _parseOneStorageLayout("efi-bcache-lvm", bootDev, rootDev)
             else:
-                return _parseOneStorageLayoutMounted("efi-lvm", bootDev, rootDev)
+                return _parseOneStorageLayout("efi-lvm", bootDev, rootDev)
         else:
-            return _parseOneStorageLayoutMounted("efi-simple", bootDev, rootDev)
+            return _parseOneStorageLayout("efi-simple", bootDev, rootDev)
     else:
         if Util.getBlkDevLvmInfo(rootDev) is not None:
-            return _parseOneStorageLayoutMounted("bios-lvm", bootDev, rootDev)
+            return _parseOneStorageLayout("bios-lvm", bootDev, rootDev)
         else:
-            return _parseOneStorageLayoutMounted("bios-simple", bootDev, rootDev)
+            return _parseOneStorageLayout("bios-simple", bootDev, rootDev)
 
 
-def _parseOneStorageLayoutMounted(layoutName, bootDev, rootDev):
+def detect_and_mount_storage_layout():
+    ssdList, hddList = Util.getDevPathListForFixedSsdAndHdd()
+    if len(hddList) > 0:
+        if len(ssdList) > 0:
+            pass
+        else:
+            pass
+    elif len(ssdList) > 0:
+            pass
+    else:
+        raise errors.StorageLayoutParseError(errors.NO_VALID_LAYOUT)
+
+
+def _parseOneStorageLayout(layoutName, bootDev, rootDev):
     modname = Util.layoutName2modName(layoutName)
     try:
         exec("import strict_hdds.%s" % (modname))
-        f = eval("strict_hdds.%s.parse_layout_online" % (modname))
+        f = eval("strict_hdds.%s.parse" % (modname))
         return f(bootDev, rootDev)
     except ModuleNotFoundError:
         raise errors.StorageLayoutParseError("", "unknown storage layout")
 
 
-def _parseOneStorageLayoutNotMounted(layoutName, diskList):
+def _detectAndMountOneStorageLayout(layoutName, diskList):
     modname = Util.layoutName2modName(layoutName)
     try:
         exec("import strict_hdds.%s" % (modname))
-        f = eval("strict_hdds.%s.parse_layout_offline" % (modname))
+        f = eval("strict_hdds.%s.detect_and_mount" % (modname))
         return f(diskList)
     except ModuleNotFoundError:
         raise errors.StorageLayoutParseError("", "unknown storage layout")

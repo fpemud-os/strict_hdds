@@ -78,7 +78,7 @@ class StorageLayoutImpl(StorageLayout):
         assert devpath is not None
         assert devpath not in self._diskList
 
-        if devpath not in Util.getDevPathListForFixedHdd():
+        if devpath not in Util.getDevPathListForFixedDisk():
             raise errors.StorageLayoutAddDiskError(devpath, errors.NOT_DISK)
 
         # FIXME
@@ -119,9 +119,9 @@ class StorageLayoutImpl(StorageLayout):
         pass
 
 
-def create_layout(disk_list=None, dry_run=False):
+def create(disk_list=None, dry_run=False):
     if disk_list is None:
-        disk_list = Util.getDevPathListForFixedHdd()
+        disk_list = Util.getDevPathListForFixedDisk()
         if len(disk_list) == 0:
             raise errors.StorageLayoutCreateError(errors.NO_DISK)
     else:
@@ -148,7 +148,7 @@ def create_layout(disk_list=None, dry_run=False):
     return ret
 
 
-def parse_layout(booDev, rootDev):
+def parse(booDev, rootDev):
     ret = StorageLayoutImpl()
 
     # vg

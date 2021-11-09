@@ -39,7 +39,7 @@ class Util:
 
     bootDir = "/boot"
 
-    swapFilename = "/var/cache/swap.dat"
+    swapFilepath = "/var/cache/swap.dat"
 
     fsTypeExt4 = "ext4"
     fsTypeFat = "vfat"
@@ -560,7 +560,7 @@ class Util:
         return True
 
     @staticmethod
-    def getDevPathListForFixedHdd():
+    def getDevPathListForFixedDisk():
         ret = []
         for line in Util.cmdCall("/bin/lsblk", "-o", "NAME,TYPE", "-n").split("\n"):
             m = re.fullmatch("(\\S+)\\s+(\\S+)", line)
@@ -577,7 +577,7 @@ class Util:
     def getDevPathListForFixedSsdAndHdd():
         ssdList = []
         hddList = []
-        for devpath in Util.getDevPathListForFixedHdd():
+        for devpath in Util.getDevPathListForFixedDisk():
             if Util.isBlkDevSsdOrHdd(devpath):
                 ssdList.append(devpath)
             else:
@@ -1387,11 +1387,20 @@ class SwapLvmLv:
 class SwapFile:
 
     @staticmethod
-    def detect_and_new_swap_file_object():
-        if os.path.exists(Util.swapFilename) and Util.cmdCallTestSuccess("/sbin/swaplabel", Util.swapFilename):
+    def detect_and_new_swap_file_object_online():
+        if os.path.exists(Util.swapFilepath) and Util.cmdCallTestSuccess("/sbin/swaplabel", Util.swapFilepath):
             return SwapFile(True)
         else:
             return SwapFile(False)
+
+    @staticmethod
+    def detect_and_new_swap_file_object_offline(devpath):
+        with TmpMount(devpath) as mp:
+            swapFilePath = mp.mountpoint + Util.swapFilepath
+            if os.path.exists(swapFilePath) and Util.cmdCallTestSuccess("/sbin/swaplabel", swapFilePath):
+                return SwapFile(True)
+            else:
+                return SwapFile(False)
 
     @staticmethod
     def proxy(func):
@@ -1403,20 +1412,20 @@ class SwapFile:
         self._bSwapFile = bSwapFile
 
     def get_swap_devname(self):
-        return Util.swapFilename if self._bSwapFile else None
+        return Util.swapFilepath if self._bSwapFile else None
 
     def check_swap_size(self):
         assert self._bSwapFile
-        return os.path.getsize(Util.swapFilename) >= Util.getSwapSize()
+        return os.path.getsize(Util.swapFilepath) >= Util.getSwapSize()
 
     def create_swap_file(self):
         assert not self._bSwapFile
-        Util.createSwapFile(Util.swapFilename)
+        Util.createSwapFile(Util.swapFilepath)
         self._bSwapFile = True
 
     def remove_swap_file(self):
         assert self._bSwapFile
-        os.remove(Util.swapFilename)
+        os.remove(Util.swapFilepath)
         self._bSwapFile = False
 
 

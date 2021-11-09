@@ -85,7 +85,7 @@ class StorageLayoutImpl(StorageLayout):
     def add_disk(self, devpath):
         assert devpath is not None
 
-        if devpath not in Util.getDevPathListForFixedHdd():
+        if devpath not in Util.getDevPathListForFixedDisk():
             raise errors.StorageLayoutAddDiskError(devpath, errors.NOT_DISK)
 
         lastBootDisk = self._md.get_boot_disk()
@@ -116,9 +116,9 @@ class StorageLayoutImpl(StorageLayout):
         return lastBootHdd != self._md.get_boot_disk()     # boot disk may change
 
 
-def create_layout(disk_list=None, dry_run=False):
+def create(disk_list=None, dry_run=False):
     if disk_list is None:
-        disk_list = Util.getDevPathListForFixedHdd()
+        disk_list = Util.getDevPathListForFixedDisk()
         if len(disk_list) == 0:
             raise errors.StorageLayoutCreateError(errors.NO_DISK)
     else:
@@ -136,7 +136,7 @@ def create_layout(disk_list=None, dry_run=False):
     return ret
 
 
-def parse_layout(bootDev, rootDev):
+def parse(bootDev, rootDev):
     ret = StorageLayoutImpl()
 
     if not Util.gptIsEspPartition(bootDev):
