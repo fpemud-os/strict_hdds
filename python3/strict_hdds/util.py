@@ -43,6 +43,8 @@ class Util:
 
     fsTypeExt4 = "ext4"
     fsTypeFat = "vfat"
+    fsTypeBtrfs = "btrfs"
+    fsTypeBcachefs = "bcachefs"
     fsTypeSwap = "swap"
 
     @staticmethod
@@ -945,6 +947,13 @@ class BcachefsUtil:
     @staticmethod
     def addHddToBcachefs(hdd):
         pass
+
+
+class BtrfsUtil:
+
+    @staticmethod
+    def getSlaveDevPathList(devPath):
+        return []
 
 
 class LvmUtil:
