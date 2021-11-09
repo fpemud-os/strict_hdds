@@ -21,6 +21,7 @@
 # THE SOFTWARE.
 
 
+import os
 from .util import Util, SwapFile
 from . import errors
 from . import StorageLayout
@@ -96,6 +97,9 @@ def create(hdd=None, dry_run=False):
 def parse(bootDev, rootDev):
     ret = StorageLayoutImpl()
 
+    if bootDev is not None:
+        raise errors.StorageLayoutParseError(ret.name, errors.BOOT_DEV_SHOULD_NOT_EXIST)
+
     ret._hdd = Util.devPathPartitionToDisk(rootDev)
     if Util.getBlkDevPartitionTableType(ret._hdd) != "dos":
         raise errors.StorageLayoutParseError(ret.name, errors.PARTITION_TYPE_SHOULD_BE(ret._hdd, "dos"))
@@ -103,9 +107,9 @@ def parse(bootDev, rootDev):
     ret._hddRootParti = rootDev
     fs = Util.getBlkDevFsType(ret._hddRootParti)
     if fs != Util.fsTypeExt4:
-        raise errors.StorageLayoutParseError(ret.name, "root partition file system is \"%s\", not \"ext4\"" % (fs))
+        raise errors.StorageLayoutParseError(ret.name, errors.ROOT_PARTITION_FS_SHOULD_BE(fs, "ext4"))
 
-    ret._sf = SwapFile.detectAndNewSwapFileObjectMounted()
+    ret._sf = SwapFile.detectAndNewSwapFileObject()
 
     return ret
 
@@ -113,11 +117,11 @@ def parse(bootDev, rootDev):
 def detect_and_mount(diskList):
     ret = StorageLayoutImpl()
 
-    pendingRootPartitionList = []
+    rootPartitionList = []
     for disk in diskList:
         with open(disk, "rb") as f:
             if Util.isBufferAllZero(f.read(440)):
-                continue                                # no boot code (disk not bootable)
+                continue                                # no boot code, disk not bootable
 
         if Util.getBlkDevPartitionTableType(disk) != "dos":
             continue
@@ -128,17 +132,15 @@ def detect_and_mount(diskList):
             if not os.path.exists(parti):
                 break
             if Util.getBlkDevFsType(parti) == Util.fsTypeExt4:
-                pendingRootPartitionList.append(parti)
+                rootPartitionList.append(parti)
             i += 1
 
-    if len(pendingRootPartitionList) == 0:
-        return None
-    elif len(pendingRootPartitionList) > 1:
-        raise errors.StorageLayoutParseError(ret.name, errors.MULTIPLE_ROOT_PARTITIONS)
+    if len(rootPartitionList) == 0:
+        raise errors.StorageLayoutParseError(ret.name, errors.ROOT_PARTITION_NOT_FOUND)
+    elif len(rootPartitionList) > 1:
+        raise errors.StorageLayoutParseError(ret.name, errors.ROOT_PARTITIONS_TOO_MANY)
     else:
-        ret._hdd = Util.devPathPartitionToDisk(pendingRootPartitionList[0])
-        ret._hddRootParti = pendingRootPartitionList[0]
-        ret._sf = SwapFile.detectAndNewSwapFileObjectMounted()
-
-
-        return 
+        ret._hdd = Util.devPathPartitionToDisk(rootPartitionList[0])
+        ret._hddRootParti = rootPartitionList[0]
+        ret._sf = SwapFile.detectAndNewSwapFileObject()
+        return ret

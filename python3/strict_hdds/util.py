@@ -1387,20 +1387,11 @@ class SwapLvmLv:
 class SwapFile:
 
     @staticmethod
-    def detect_and_new_swap_file_object_online():
+    def detectAndNewSwapFileObject():
         if os.path.exists(Util.swapFilepath) and Util.cmdCallTestSuccess("/sbin/swaplabel", Util.swapFilepath):
             return SwapFile(True)
         else:
             return SwapFile(False)
-
-    @staticmethod
-    def detect_and_new_swap_file_object_offline(devpath):
-        with TmpMount(devpath) as mp:
-            swapFilePath = mp.mountpoint + Util.swapFilepath
-            if os.path.exists(swapFilePath) and Util.cmdCallTestSuccess("/sbin/swaplabel", swapFilePath):
-                return SwapFile(True)
-            else:
-                return SwapFile(False)
 
     @staticmethod
     def proxy(func):

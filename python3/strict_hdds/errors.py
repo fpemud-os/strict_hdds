@@ -63,12 +63,15 @@ SWAP_IS_IN_USE = "swap partition is in use"
 CAN_NOT_REMOVE_LAST_HDD = "can not remove the last physical volume"
 
 # common messages for StorageLayoutParseError
-NO_LAYOUT_FOUND = "no valid storage layout found"
-MULTIPLE_ROOT_PARTITIONS = "multiple partitions found while we need one and only one root partition"
+NO_VALID_LAYOUT = "no valid storage layout found"
+ROOT_PARTITION_NOT_FOUND = "no valid root partition"
+ROOT_PARTITIONS_TOO_MANY = "multiple valid root partitions found while we need one and only one root partition"
+ROOT_PARTITION_FS_SHOULD_BE = lambda expected_fs: f"file system of root partition is not \"{expected_fs!s}\""
 DISK_HAS_REDUNDANT_PARTITION = lambda devpath: f"redundant partition exists on {devpath!s}"
 DISK_SIZE_INVALID = lambda devpath: f"{devpath!s} has an invalid size"
 PARTITION_SIZE_INVALID = lambda devpath: f"{devpath!s} has an invalid size"
-PARTITION_TYPE_SHOULD_BE = lambda devpath, part_type: f"partition type of {devpath!s} is not \"{part_type!s}\""        # FIXME
+PARTITION_TYPE_SHOULD_BE = lambda devpath, expected_part_type: f"partition type of {devpath!s} is not \"{expected_part_type!s}\""
+BOOT_DEV_SHOULD_NOT_EXIST = "/boot should not be mounted"
 BOOT_DEV_IS_NOT_ESP = "boot device is not an ESP partitiion"
 SWAP_DEV_HAS_INVALID_FS_FLAG = lambda devpath: f"swap device {devpath!s} has an invalid file system"
 LVM_VG_NOT_FOUND = lambda vg_name: f"volume group \"{vg_name!s}\" does not exist"

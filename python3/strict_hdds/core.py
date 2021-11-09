@@ -25,7 +25,7 @@ import os
 import re
 import sys
 import pkgutil
-from .util import Util
+from .util import Util, LvmUtil
 from . import errors
 
 
@@ -83,7 +83,7 @@ def get_current_storage_layout():
     if bootDev is not None:
         lvmInfo = Util.getBlkDevLvmInfo(rootDev)
         if lvmInfo is not None:
-            tlist = Util.lvmGetSlaveDevPathList(lvmInfo[0])
+            tlist = LvmUtil.getSlaveDevPathList(lvmInfo[0])
             if any(re.fullmatch("/dev/bcache[0-9]+", x) is not None for x in tlist):
                 return _parseOneStorageLayout("efi-bcache-lvm", bootDev, rootDev)
             else:
