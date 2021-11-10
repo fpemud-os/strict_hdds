@@ -592,15 +592,6 @@ class Util:
         return (ssdList, hddList)
 
     @staticmethod
-    def getMountDeviceForPath(pathname):
-        buf = Util.cmdCall("/bin/mount")
-        for line in buf.split("\n"):
-            m = re.search("^(.*) on (.*) type ", line)
-            if m is not None and m.group(2) == pathname:
-                return m.group(1)
-        return None
-
-    @staticmethod
     def swapServiceName2Path(serviceName):
         serviceName = serviceName[:-5]                          # item[:-5] is to remove ".swap"
         path = Util.cmdCall("/bin/systemd-escape", "-u", serviceName)
