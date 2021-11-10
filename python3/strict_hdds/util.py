@@ -31,7 +31,6 @@ import crcmod
 import parted
 import struct
 import pathlib
-import pkgutil
 import tempfile
 import subprocess
 
@@ -49,6 +48,14 @@ class Util:
     fsTypeSwap = "swap"
 
     @staticmethod
+    def anyIn(list1, list2):
+        for i in list1:
+            if i in list2:
+                return True
+        return False
+
+
+    @staticmethod
     def modName2layoutName(modName):
         assert modName.startswith("layout_")
         return modName[len("layout_"):].replace("_", "-")
@@ -56,10 +63,6 @@ class Util:
     @staticmethod
     def layoutName2modName(layoutName):
         return "layout_" + layoutName.replace("-", "_")
-
-    @staticmethod
-    def hasModule(modName):
-        return modName in (name for loader, name, ispkg in pkgutil.iter_modules())
 
     @staticmethod
     def getPhysicalMemorySizeInGb():

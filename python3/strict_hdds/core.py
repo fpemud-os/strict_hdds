@@ -77,6 +77,8 @@ def create_storage_layout(layout_name, dry_run=False):
 
 
 def get_current_storage_layout():
+    allLayoutNames = get_supported_storage_layouts()
+
     rootDev = None
     rootDevFs = None
     bootDev = None
@@ -90,12 +92,12 @@ def get_current_storage_layout():
 
     if bootDev is not None:
         # bcachefs related
-        if _hasAnyStorageLayoutModule(["efi-bcachefs"]):
+        if Util.anyIn(["efi-bcachefs"], allLayoutNames):
             if rootDevFs == Util.fsTypeBcachefs:
                 return _parseOneStorageLayout("efi-bcachefs", bootDev, rootDev)
 
         # btrfs related
-        if _hasAnyStorageLayoutModule(["efi-bcache-btrfs", "efi-btrfs"]):
+        if Util.anyIn(["efi-bcache-btrfs", "efi-btrfs"], allLayoutNames):
             if rootDevFs == Util.fsTypeBtrfs:
                 tlist = BtrfsUtil.getSlaveDevPathList(rootDev)          # only call btrfs related procedure when corresponding storage layout exists
                 if any(re.fullmatch("/dev/bcache[0-9]+", x) is not None for x in tlist):
@@ -104,7 +106,7 @@ def get_current_storage_layout():
                     return _parseOneStorageLayout("efi-btrfs", bootDev, rootDev)
 
         # lvm related
-        if _hasAnyStorageLayoutModule(["efi-bcache-lvm-ext4", "efi-lvm-ext4"]):
+        if Util.anyIn(["efi-bcache-lvm-ext4", "efi-lvm-ext4"], allLayoutNames):
             lvmInfo = Util.getBlkDevLvmInfo(rootDev)                    # only call lvm related procedure when corresponding storage layout exists
             if lvmInfo is not None:
                 tlist = LvmUtil.getSlaveDevPathList(lvmInfo[0])
@@ -114,16 +116,16 @@ def get_current_storage_layout():
                     return _parseOneStorageLayout("efi-lvm-ext4", bootDev, rootDev)
 
         # simplest layout
-        if _hasAnyStorageLayoutModule(["efi-ext4"]):
+        if Util.anyIn(["efi-ext4"], allLayoutNames):
             return _parseOneStorageLayout("efi-ext4", bootDev, rootDev)
     else:
         # lvm related
-        if _hasAnyStorageLayoutModule(["bios-lvm-ext4"]):
+        if Util.anyIn(["bios-lvm-ext4"], allLayoutNames):
             if Util.getBlkDevLvmInfo(rootDev) is not None:              # only call lvm related procedure when corresponding storage layout exists
                 return _parseOneStorageLayout("bios-lvm-ext4", bootDev, rootDev)
 
         # simplest layout
-        if _hasAnyStorageLayoutModule(["bios-ext4"]):
+        if Util.anyIn(["bios-ext4"], allLayoutNames):
             return _parseOneStorageLayout("bios-ext4", bootDev, rootDev)
 
     raise errors.StorageLayoutParseError("", "unknown storage layout")
@@ -140,13 +142,6 @@ def detect_and_mount_storage_layout(mount_dir, mount_read_only=False):
             pass
     else:
         raise errors.StorageLayoutParseError(errors.NO_VALID_LAYOUT)
-
-
-def _hasAnyStorageLayoutModule(layoutNameList):
-    for layoutName in layoutNameList:
-        if Util.hasModule(Util.layoutName2modName(layoutName)):
-            return True
-    return False
 
 
 def _parseOneStorageLayout(layoutName, bootDev, rootDev):
