@@ -54,7 +54,6 @@ class Util:
                 return True
         return False
 
-
     @staticmethod
     def modName2layoutName(modName):
         assert modName.startswith("layout_")

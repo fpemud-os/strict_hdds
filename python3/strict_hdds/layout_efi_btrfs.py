@@ -120,7 +120,7 @@ def create(disk_list=None, dry_run=False):
     if disk_list is None:
         disk_list = Util.getDevPathListForFixedDisk()
         if len(disk_list) == 0:
-            raise errors.StorageLayoutCreateError(errors.NO_DISK)
+            raise errors.StorageLayoutCreateError(errors.NO_DISK_WHEN_CREATE)
     else:
         assert len(disk_list) > 0
 

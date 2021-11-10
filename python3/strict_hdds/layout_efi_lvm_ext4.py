@@ -142,7 +142,7 @@ def create(hddList=None, dry_run=False):
     if hddList is None:
         hddList = Util.getDevPathListForFixedDisk()
         if len(hddList) == 0:
-            raise errors.StorageLayoutCreateError(errors.NO_DISK)
+            raise errors.StorageLayoutCreateError(errors.NO_DISK_WHEN_CREATE)
     else:
         assert len(hddList) > 0
 

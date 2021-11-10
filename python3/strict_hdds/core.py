@@ -132,16 +132,53 @@ def get_current_storage_layout():
 
 
 def detect_and_mount_storage_layout(mount_dir, mount_read_only=False):
-    ssdList, hddList = Util.getDevPathListForFixedSsdAndHdd()
-    if len(hddList) > 0:
+    allLayoutNames = get_supported_storage_layouts()
+
+    diskList = Util.getDevPathListForFixedDisk()
+    if len(diskList) == 0:
+        raise errors.StorageLayoutParseError(errors.NO_DISK_WHEN_PARSE)
+
+    espPartitionList = []
+    for disk in diskList:
+        parti = Util.devPathDiskToPartition(disk, 1)
+        if 
+
+
+        with open(disk, "rb") as f:
+            if not Util.isBufferAllZero(f.read(440)):
+                mbrBootDiskList.append(disk)
+
+    if len(mbrBootDiskList) == 0
+
+
+
+
+    if Util.anyIn(["efi-bcachefs"], allLayoutNames):
+        pass
+
+    if Util.anyIn(["efi-bcache-btrfs", "efi-bcache-lvm-ext4"], allLayoutNames):
+        if any(re.fullmatch("bcache[0-9]+", x) is not None for x in os.listdir("/dev")):
+            pass
+
+    if Util.anyIn(["efi-btrfs"], allLayoutNames):
+
+
+    if len(diskList) > 0:
         if len(ssdList) > 0:
+
+
+
+            if Util.anyIn(["efi-bcache-btrfs", "efi-bcache-lvm-ext4"], allLayoutNames):
+                pass
+
+            _detectAndMountOneStorageLayout()
+
+
             pass
         else:
             pass
     elif len(ssdList) > 0:
-            pass
-    else:
-        raise errors.StorageLayoutParseError(errors.NO_VALID_LAYOUT)
+        pass
 
 
 def _parseOneStorageLayout(layoutName, bootDev, rootDev):

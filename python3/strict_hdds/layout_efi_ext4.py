@@ -80,7 +80,7 @@ def create(hdd=None, dry_run=False):
     if hdd is None:
         hddList = Util.getDevPathListForFixedDisk()
         if len(hddList) == 0:
-            raise errors.StorageLayoutCreateError(errors.NO_DISK)
+            raise errors.StorageLayoutCreateError(errors.NO_DISK_WHEN_CREATE)
         if len(hddList) > 1:
             raise errors.StorageLayoutCreateError(errors.MULTIPLE_DISKS)
         hdd = hddList[0]
@@ -118,6 +118,6 @@ def parse(bootDev, rootDev):
         if fs != Util.fsTypeExt4:
             raise errors.StorageLayoutParseError(ret.name, "root partition file system is \"%s\", not \"ext4\"" % (fs))
 
-    ret._sf = SwapFile.detectAndNewSwapFileObjectMounted()
+    ret._sf = SwapFile.detectAndNewSwapFileObject()
 
     return ret

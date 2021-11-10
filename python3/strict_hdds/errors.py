@@ -51,7 +51,7 @@ class StorageLayoutParseError(StorageLayoutError):
 
 
 # common messages for StorageLayoutCreateError
-NO_DISK = "no fixed harddisk"
+NO_DISK_WHEN_CREATE = "no fixed harddisk"
 MULTIPLE_DISKS = "multiple fixed harddisks found while we need one and only one harddisk"
 MULTIPLE_SSD = "multiple SSD harddisks"
 
@@ -63,6 +63,7 @@ SWAP_IS_IN_USE = "swap partition is in use"
 CAN_NOT_REMOVE_LAST_HDD = "can not remove the last physical volume"
 
 # common messages for StorageLayoutParseError
+NO_DISK_WHEN_PARSE = "no fixed harddisk"
 NO_VALID_LAYOUT = "no valid storage layout found"
 ROOT_PARTITION_NOT_FOUND = "no valid root partition"
 ROOT_PARTITIONS_TOO_MANY = "multiple valid root partitions found while we need one and only one root partition"
