@@ -94,17 +94,17 @@ def create(hdd=None, dry_run=False):
     return ret
 
 
-def parse(bootDev, rootDev):
+def parse(boot_dev, root_dev):
     ret = StorageLayoutImpl()
 
-    if bootDev is not None:
+    if boot_dev is not None:
         raise errors.StorageLayoutParseError(ret.name, errors.BOOT_DEV_SHOULD_NOT_EXIST)
 
-    ret._hdd = Util.devPathPartitionToDisk(rootDev)
+    ret._hdd = Util.devPathPartitionToDisk(root_dev)
     if Util.getBlkDevPartitionTableType(ret._hdd) != "dos":
         raise errors.StorageLayoutParseError(ret.name, errors.PARTITION_TYPE_SHOULD_BE(ret._hdd, "dos"))
 
-    ret._hddRootParti = rootDev
+    ret._hddRootParti = root_dev
     fs = Util.getBlkDevFsType(ret._hddRootParti)
     if fs != Util.fsTypeExt4:
         raise errors.StorageLayoutParseError(ret.name, errors.ROOT_PARTITION_FS_SHOULD_BE(fs, "ext4"))
@@ -114,17 +114,17 @@ def parse(bootDev, rootDev):
     return ret
 
 
-def detect_and_mount(diskList):
+def detect_and_mount(disk_list, mount_dir, mount_options):
     ret = StorageLayoutImpl()
 
     rootPartitionList = []
-    for disk in diskList:
+    for disk in disk_list:
         with open(disk, "rb") as f:
             if Util.isBufferAllZero(f.read(440)):
-                continue                                # no boot code, disk not bootable
+                continue                        # no boot code, ignore unbootable disk
 
         if Util.getBlkDevPartitionTableType(disk) != "dos":
-            continue
+            continue                            # only accept disk with MBR partition table
 
         i = 1
         while True:
@@ -140,6 +140,9 @@ def detect_and_mount(diskList):
     elif len(rootPartitionList) > 1:
         raise errors.StorageLayoutParseError(ret.name, errors.ROOT_PARTITIONS_TOO_MANY)
     else:
+
+
+
         ret._hdd = Util.devPathPartitionToDisk(rootPartitionList[0])
         ret._hddRootParti = rootPartitionList[0]
         ret._sf = SwapFile.detectAndNewSwapFileObject()

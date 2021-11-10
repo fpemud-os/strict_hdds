@@ -80,37 +80,45 @@ def get_current_storage_layout():
     bootDev = Util.getMountDeviceForPath("/boot")
 
     assert rootDev is not None
+    fs = Util.getBlkDevFsType(rootDev)
     if bootDev is not None:
-        if ":" in rootDev:
-            return _parseOneStorageLayout("efi-bcachefs", bootDev, rootDev)
+        if _hasAnyStorageLayoutModule(["efi-bcachefs"]):
+            if fs == Util.fsTypeBcachefs:
+                return _parseOneStorageLayout("efi-bcachefs", bootDev, rootDev)
 
-        fs = Util.getBlkDevFsType(rootDev)
-        if fs == Util.fsTypeBtrfs:
-            tlist = BtrfsUtil.getSlaveDevPathList(rootDev)
-            if any(re.fullmatch("/dev/bcache[0-9]+", x) is not None for x in tlist):
-                return _parseOneStorageLayout("efi-bcache-btrfs", bootDev, rootDev)
-            else:
-                return _parseOneStorageLayout("efi-btrfs", bootDev, rootDev)
-        elif fs == Util.fsTypeBcachefs:
-            lvmInfo = Util.getBlkDevLvmInfo(rootDev)
+        if _hasAnyStorageLayoutModule(["efi-bcache-btrfs", "efi-btrfs"]):
+            if fs == Util.fsTypeBtrfs:
+                tlist = BtrfsUtil.getSlaveDevPathList(rootDev)          # only call btrfs related procedure when corresponding storage layout exists
+                if any(re.fullmatch("/dev/bcache[0-9]+", x) is not None for x in tlist):
+                    return _parseOneStorageLayout("efi-bcache-btrfs", bootDev, rootDev)
+                else:
+                    return _parseOneStorageLayout("efi-btrfs", bootDev, rootDev)
+
+        if _hasAnyStorageLayoutModule(["efi-bcache-lvm-ext4", "efi-lvm-ext4"]):
+            lvmInfo = Util.getBlkDevLvmInfo(rootDev)                    # only call lvm related procedure when corresponding storage layout exists
             if lvmInfo is not None:
                 tlist = LvmUtil.getSlaveDevPathList(lvmInfo[0])
                 if any(re.fullmatch("/dev/bcache[0-9]+", x) is not None for x in tlist):
                     return _parseOneStorageLayout("efi-bcache-lvm-ext4", bootDev, rootDev)
                 else:
                     return _parseOneStorageLayout("efi-lvm-ext4", bootDev, rootDev)
-            else:
+
+        if _hasAnyStorageLayoutModule(["efi-ext4"]):
+            if fs == Util.fsTypeExt4:
                 return _parseOneStorageLayout("efi-ext4", bootDev, rootDev)
-        else:
-            raise errors.StorageLayoutParseError("", "unknown storage layout")
     else:
-        if Util.getBlkDevLvmInfo(rootDev) is not None:
-            return _parseOneStorageLayout("bios-lvm-ext4", bootDev, rootDev)
-        else:
-            return _parseOneStorageLayout("bios-ext4", bootDev, rootDev)
+        if _hasAnyStorageLayoutModule(["bios-lvm-ext4"]):
+            if Util.getBlkDevLvmInfo(rootDev) is not None:              # only call lvm related procedure when corresponding storage layout exists
+                return _parseOneStorageLayout("bios-lvm-ext4", bootDev, rootDev)
+
+        if _hasAnyStorageLayoutModule(["bios-ext4"]):
+            if fs == Util.fsTypeExt4:
+                return _parseOneStorageLayout("bios-ext4", bootDev, rootDev)
+
+    raise errors.StorageLayoutParseError("", "unknown storage layout")
 
 
-def detect_and_mount_storage_layout(dirpath):
+def detect_and_mount_storage_layout(mount_dir, mount_read_only=False):
     ssdList, hddList = Util.getDevPathListForFixedSsdAndHdd()
     if len(hddList) > 0:
         if len(ssdList) > 0:
@@ -123,6 +131,13 @@ def detect_and_mount_storage_layout(dirpath):
         raise errors.StorageLayoutParseError(errors.NO_VALID_LAYOUT)
 
 
+def _hasAnyStorageLayoutModule(layoutNameList):
+    for layoutName in layoutNameList:
+        if Util.hasModule(Util.layoutName2modName(layoutName)):
+            return True
+    return False
+
+
 def _parseOneStorageLayout(layoutName, bootDev, rootDev):
     modname = Util.layoutName2modName(layoutName)
     try:
@@ -133,11 +148,11 @@ def _parseOneStorageLayout(layoutName, bootDev, rootDev):
         raise errors.StorageLayoutParseError("", "unknown storage layout")
 
 
-def _detectAndMountOneStorageLayout(layoutName, diskList, dstDir):
+def _detectAndMountOneStorageLayout(layoutName, diskList, mountDir, mountOptions):
     modname = Util.layoutName2modName(layoutName)
     try:
         exec("import strict_hdds.%s" % (modname))
         f = eval("strict_hdds.%s.detect_and_mount" % (modname))
-        return f(diskList)
+        return f(diskList, mountDir, mountOptions)
     except ModuleNotFoundError:
         raise errors.StorageLayoutParseError("", "unknown storage layout")
