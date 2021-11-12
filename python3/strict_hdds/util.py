@@ -51,6 +51,13 @@ class Util:
     fsTypeSwap = "swap"
 
     @staticmethod
+    def list_remove_without_error(tlist, value):
+        try:
+            tlist.remove(value)
+        except ValueError:
+            pass
+
+    @staticmethod
     def anyIn(list1, list2):
         for i in list1:
             if i in list2:
@@ -510,8 +517,8 @@ class MbrUtil:
 
     @staticmethod
     def wipeBootCode(devPath):
-        with open(devPath, "rw") as f:
-            f.write(b'\0' * 440)
+        with open(devPath, "wb") as f:
+            f.write(bytearray(440))
 
 
 class GptUtil:
@@ -989,7 +996,7 @@ class LvmUtil:
         out = Util.cmdCall("/sbin/lvm", "pvdisplay", "-c")
         for m in re.finditer("^\\s*(\\S+):%s:.*" % (vgName), out, re.M):
             if m.group(1) == "[unknown]":
-                raise Exception("volume group %s not fully loaded" % (vgName))
+                raise LvmUtilException("volume group %s not fully loaded" % (vgName))
             ret.append(m.group(1))
         return ret
 
@@ -1000,6 +1007,15 @@ class LvmUtil:
             Util.cmdCall("/sbin/lvm", "vgcreate", vgName, pvDevPath)
         else:
             Util.cmdCall("/sbin/lvm", "vgextend", vgName, pvDevPath)
+
+    @staticmethod
+    def removePvFromVg(pvDevPath, vgName):
+        rc, out = Util.cmdCallWithRetCode("/sbin/lvm", "pvmove", pvDevPath)
+        if rc != 5:
+            raise LvmUtilException("failed")
+
+        if pvDevPath in LvmUtil.getSlaveDevPathList(vgName):
+            Util.cmdCall("/sbin/lvm", "vgreduce", vgName, pvDevPath)
 
     @staticmethod
     def createLvWithDefaultSize(vgName, lvName):
@@ -1024,6 +1040,10 @@ class LvmUtil:
         added = int(used / 0.7) - total
         added = (added // 1024 + 1) * 1024      # change unit from MB to GB
         Util.cmdCall("/sbin/lvm", "lvextend", "-L+%dG" % (added), lvDevPath)
+
+
+class LvmUtilException(Exception):
+    pass
 
 
 class MultiDisk:

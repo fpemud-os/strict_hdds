@@ -82,25 +82,25 @@ class StorageLayoutImpl(StorageLayout):
     def get_disk_list(self):
         pass
 
-    def add_disk(self, devpath):
-        assert devpath is not None
+    def add_disk(self, disk):
+        assert disk is not None
 
-        if devpath not in Util.getDevPathListForFixedDisk():
-            raise errors.StorageLayoutAddDiskError(devpath, errors.NOT_DISK)
+        if disk not in Util.getDevPathListForFixedDisk():
+            raise errors.StorageLayoutAddDiskError(disk, errors.NOT_DISK)
 
         lastBootDisk = self._md.get_boot_disk()
 
         # add
-        self._md.add_disk(devpath)
+        self._md.add_disk(disk)
 
         # hdd partition 2: make it as backing device and add it to btrfs filesystem
-        Util.cmdCall("/sbin/btrfs", "device", "add", self._md.get_disk_data_partition(devpath), "/")
+        Util.cmdCall("/sbin/btrfs", "device", "add", self._md.get_disk_data_partition(disk), "/")
 
         return lastBootDisk != self._md.get_boot_disk()     # boot disk may change
 
-    def remove_disk(self, devpath):
-        assert devpath is not None
-        assert devpath in self._md.get_disk_list()
+    def remove_disk(self, disk):
+        assert disk is not None
+        assert disk in self._md.get_disk_list()
 
         if self._md.get_disk_count() <= 1:
             raise errors.StorageLayoutRemoveDiskError(errors.CAN_NOT_REMOVE_LAST_HDD)
@@ -108,10 +108,10 @@ class StorageLayoutImpl(StorageLayout):
         lastBootHdd = self._md.get_boot_disk()
 
         # hdd partition 2: remove from btrfs and bcache
-        Util.cmdCall("/sbin/btrfs", "device", "delete", self._md.get_disk_data_partition(devpath), "/")
+        Util.cmdCall("/sbin/btrfs", "device", "delete", self._md.get_disk_data_partition(disk), "/")
 
         # remove
-        self._md.remove_disk(devpath)
+        self._md.remove_disk(disk)
 
         return lastBootHdd != self._md.get_boot_disk()     # boot disk may change
 

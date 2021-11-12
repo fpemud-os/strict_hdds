@@ -77,23 +77,33 @@ class StorageLayoutImpl(StorageLayout):
     def add_disk(self, disk):
         assert disk is not None
         assert disk not in self._diskList
+        assert len(self._diskList) >= 1         # we don't support operate
 
         # check
         if disk not in Util.getDevPathListForFixedDisk():
             raise errors.StorageLayoutAddDiskError(disk, errors.NOT_DISK)
 
-        # create partitions
-        Util.initializeDisk(disk, Util.diskPartTableMbr, [
-            ("*", "lvm"),
-        ])
-
-        # add to volume group
         parti = Util.devPathDiskToParti(disk, 1)
-        LvmUtil.addPvToVg(parti, LvmUtil.vgName)
-        self._diskList.append(disk)
+        originalBootHdd = self._bootHdd
+        try:
+            # create partitions
+            Util.initializeDisk(disk, Util.diskPartTableMbr, [
+                ("*", "lvm"),
+            ])
 
-        # try to switch boot disk
-        return self._selectNewBootDiskForAdd(disk)
+            # add to volume group
+            LvmUtil.addPvToVg(parti, LvmUtil.vgName)
+            self._diskList.append(disk)
+
+            # switch boot disk
+            return self._selectNewBootDiskForAdd(disk)
+        except BaseException:
+            # no exception is allowed here
+            self._bootHdd = originalBootHdd
+            Util.listRemoveNoValueError(self._diskList, disk)
+            LvmUtil.removePvFromVg(parti, LvmUtil.vgName)
+            Util.wipeHarddisk(disk)
+            raise
 
     def release_disk(self, disk):
         assert disk is not None
@@ -104,8 +114,7 @@ class StorageLayoutImpl(StorageLayout):
             raise errors.StorageLayoutReleaseDiskError(disk, errors.CAN_NOT_REMOVE_LAST_HDD)
 
         # move data
-        parti = Util.devPathDiskToParti(disk, 1)
-        rc, out = Util.cmdCallWithRetCode("/sbin/lvm", "pvmove", parti)
+        rc, out = Util.cmdCallWithRetCode("/sbin/lvm", "pvmove", Util.devPathDiskToParti(disk, 1))
         if rc != 5:
             raise errors.StorageLayoutRemoveDiskError(disk, "failed")
 
@@ -113,28 +122,30 @@ class StorageLayoutImpl(StorageLayout):
         assert disk is not None
         assert disk in self._diskList
 
+        # check
         if len(self._diskList) <= 1:
             raise errors.StorageLayoutRemoveDiskError(disk, errors.CAN_NOT_REMOVE_LAST_HDD)
 
-        # change boot device if needed
+        # do remove, no exception is allowed
         ret = self._selectNewBootDiskForRemove(disk)
-
-        # remove and wipe disk
-        parti = Util.devPathDiskToParti(disk, 1)
-        Util.cmdCall("/sbin/lvm", "vgreduce", LvmUtil.vgName, parti)
-        Util.wipeHarddisk(disk)
         self._diskList.remove(disk)
+        LvmUtil.removePvFromVg(Util.devPathDiskToParti(disk, 1), LvmUtil.vgName)
+        Util.wipeHarddisk(disk)
 
         return ret
 
     def boot_code_written(self, disk):
         assert disk is not None
         assert disk in self._diskList
+
+        # no exception is allowed
         return self._selectNewBootDiskForAdd(disk)
 
     def boot_code_cleared(self, disk):
         assert disk is not None
         assert disk in self._diskList
+
+        # no exception is allowed
         return self._selectNewBootDiskForRemove(disk)
 
     @SwapLvmLv.proxy
@@ -156,13 +167,11 @@ class StorageLayoutImpl(StorageLayout):
         if self._bootHdd == disk_removed:
             self._bootHdd = None
             for d in self._diskList:
-                if d == disk_removed:
-                    continue
-                if not MbrUtil.hasBootCode(d):
+                if d != disk_removed and MbrUtil.hasBootCode(d):
                     self._bootHdd = d
+                    break
             return True
-        else:
-            return False
+        return False
 
 
 def create(disk_list, dry_run=False):
