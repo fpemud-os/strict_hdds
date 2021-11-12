@@ -175,30 +175,6 @@ class StorageLayoutImpl(StorageLayout):
             return False
 
 
-def create_and_mount(disk_list):
-    if len(disk_list) == 0:
-        raise errors.StorageLayoutCreateError(errors.NO_DISK_WHEN_CREATE)
-
-    for devpath in disk_list:
-        # create partitions
-        Util.initializeDisk(devpath, Util.diskPartTableMbr, [
-            ("*", "lvm"),
-        ])
-
-        # create lvm physical volume on partition1 and add it to volume group
-        LvmUtil.addPvToVg(Util.devPathDiskToParti(devpath, 1), LvmUtil.vgName, mayCreate=True)
-
-    # create root lv
-    LvmUtil.createLvWithDefaultSize(LvmUtil.vgName, LvmUtil.rootLvName)
-
-    # return value
-    ret = StorageLayoutImpl()
-    ret._diskList = disk_list
-    ret._slv = SwapLvmLv()
-    ret._bootHdd = None
-    return ret
-
-
 def parse(booDev, rootDev):
     ret = StorageLayoutImpl()
 
@@ -210,8 +186,8 @@ def parse(booDev, rootDev):
     out = Util.cmdCall("/sbin/lvm", "pvdisplay", "-c")
     for m in re.finditer("(/dev/\\S+):%s:.*" % (LvmUtil.vgName), out, re.M):
         hdd = Util.devPathPartiToDisk(m.group(1))
-        if Util.getBlkDevPartitionTableType(hdd) != "dos":
-            raise errors.StorageLayoutParseError(ret.name, errors.PARTITION_TYPE_SHOULD_BE(hdd, "dos"))
+        if Util.getBlkDevPartitionTableType(hdd) != Util.diskPartTableMbr:
+            raise errors.StorageLayoutParseError(ret.name, errors.PARTITION_TYPE_SHOULD_BE(hdd, Util.diskPartTableMbr))
         if os.path.exists(Util.devPathDiskToParti(hdd, 2)):
             raise errors.StorageLayoutParseError(ret.name, errors.DISK_HAS_REDUNDANT_PARTITION(hdd))
         ret._diskList.append(hdd)
@@ -246,7 +222,7 @@ def parse(booDev, rootDev):
     return ret
 
 
-def detect_and_mount(disk_list, mount_dir, mount_options):
+def detect_and_mount(disk_list, mount_dir, read_only):
     LvmUtil.activateAll()
 
     # it is interesting that we can reuse parse function
@@ -255,3 +231,28 @@ def detect_and_mount(disk_list, mount_dir, mount_options):
     Util.cmdCall("/bin/mount", LvmUtil.rootLvName, mount_dir)
 
     return ret
+
+
+def create_and_mount(disk_list, mount_dir, read_only):
+    if len(disk_list) == 0:
+        raise errors.StorageLayoutCreateError(errors.NO_DISK_WHEN_CREATE)
+
+    for devpath in disk_list:
+        # create partitions
+        Util.initializeDisk(devpath, Util.diskPartTableMbr, [
+            ("*", "lvm"),
+        ])
+
+        # create lvm physical volume on partition1 and add it to volume group
+        LvmUtil.addPvToVg(Util.devPathDiskToParti(devpath, 1), LvmUtil.vgName, mayCreate=True)
+
+    # create root lv
+    LvmUtil.createLvWithDefaultSize(LvmUtil.vgName, LvmUtil.rootLvName)
+
+    # return value
+    ret = StorageLayoutImpl()
+    ret._diskList = disk_list
+    ret._slv = SwapLvmLv()
+    ret._bootHdd = None
+    return ret
+

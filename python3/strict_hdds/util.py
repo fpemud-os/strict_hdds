@@ -51,7 +51,7 @@ class Util:
     fsTypeSwap = "swap"
 
     @staticmethod
-    def list_remove_without_error(tlist, value):
+    def listRemoveNoValueError(tlist, value):
         try:
             tlist.remove(value)
         except ValueError:
@@ -237,7 +237,12 @@ class Util:
         ret = Util.cmdCall("/sbin/blkid", "-o", "export", devPath)
         m = re.search("^PTTYPE=(\\S+)$", ret, re.M)
         if m is not None:
-            return m.group(1)
+            if m.group(1) == "gpt":
+                return Util.diskPartTableGpt
+            elif m.group(1) == "dos":
+                return Util.diskPartTableMbr
+            else:
+                return m.group(1)
         else:
             return ""
 

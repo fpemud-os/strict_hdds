@@ -120,7 +120,7 @@ def get_current_storage_layout():
         return _parseOneStorageLayout("bios-ext4", bootDev, rootDev)
 
 
-def detect_and_mount_storage_layout(mount_dir, mount_read_only=False):
+def detect_and_mount_storage_layout(mount_dir, read_only=False, no_exec=False):
     allLayoutNames = get_supported_storage_layouts()
 
     diskList = Util.getDevPathListForFixedDisk()
@@ -142,46 +142,46 @@ def detect_and_mount_storage_layout(mount_dir, mount_read_only=False):
         # bcachefs related
         if Util.anyIn(["efi-bcachefs"], allLayoutNames):
             if any(Util.getBlkDevFsType(x) == Util.fsTypeBcachefs for x in normalPartiList):
-                return _detectAndMountOneStorageLayout("efi-bcachefs", diskList, mount_dir, mount_read_only)
+                return _detectAndMountOneStorageLayout("efi-bcachefs", diskList, mount_dir, read_only)
 
         # btrfs related
         if Util.anyIn(["efi-btrfs"], allLayoutNames):
             if any(Util.getBlkDevFsType(x) == Util.fsTypeBtrfs for x in normalPartiList):
-                return _detectAndMountOneStorageLayout("efi-btrfs", diskList, mount_dir, mount_read_only)
+                return _detectAndMountOneStorageLayout("efi-btrfs", diskList, mount_dir, read_only)
 
         # bcache related
         if Util.anyIn(["efi-bcache-btrfs", "efi-bcache-lvm-ext4"], allLayoutNames):
             bcacheDevPathList = BcacheUtil.scanAndRegisterAll()         # only call bcache related procedure when corresponding storage layout exists
             if len(bcacheDevPathList) > 0:
                 if any(Util.getBlkDevFsType(x) == Util.fsTypeBtrfs for x in bcacheDevPathList):
-                    return _detectAndMountOneStorageLayout("efi-bcache-btrfs", diskList, mount_dir, mount_read_only)
+                    return _detectAndMountOneStorageLayout("efi-bcache-btrfs", diskList, mount_dir, read_only)
                 else:
-                    return _detectAndMountOneStorageLayout("efi-bcache-lvm-ext4", diskList, mount_dir, mount_read_only)
+                    return _detectAndMountOneStorageLayout("efi-bcache-lvm-ext4", diskList, mount_dir, read_only)
 
         # lvm related
         if Util.anyIn(["efi-lvm-ext4"], allLayoutNames):
             LvmUtil.activateAll()                                       # only call lvm related procedure when corresponding storage layout exists
             if LvmUtil.vgName in LvmUtil.getVgList():
-                return _detectAndMountOneStorageLayout("efi-lvm-ext4", diskList, mount_dir, mount_read_only)
+                return _detectAndMountOneStorageLayout("efi-lvm-ext4", diskList, mount_dir, read_only)
 
         # simplest layout
-        return _detectAndMountOneStorageLayout("efi-ext4", diskList, mount_dir, mount_read_only)
+        return _detectAndMountOneStorageLayout("efi-ext4", diskList, mount_dir, read_only)
     else:
         # lvm related
         if Util.anyIn(["bios-lvm-ext4"], allLayoutNames):
             LvmUtil.activateAll()                                       # only call lvm related procedure when corresponding storage layout exists
             if LvmUtil.vgName in LvmUtil.getVgList():
-                return _detectAndMountOneStorageLayout("bios-lvm-ext4", diskList, mount_dir, mount_read_only)
+                return _detectAndMountOneStorageLayout("bios-lvm-ext4", diskList, mount_dir, read_only)
 
         # simplest layout
-        return _detectAndMountOneStorageLayout("bios-ext4", diskList, mount_dir, mount_read_only)
+        return _detectAndMountOneStorageLayout("bios-ext4", diskList, mount_dir, read_only)
 
 
-def create_and_mount_storage_layout(layout_name, mount_dir, mount_read_only=False):
+def create_and_mount_storage_layout(layout_name, mount_dir, read_only=False, no_exec=False):
     for mod in pkgutil.iter_modules(["."]):
         if mod.name.startswith("layout_"):
             if layout_name == Util.modName2layoutName(mod.name):
-                return mod.create_and_mount(Util.getDevPathListForFixedDisk(), mount_dir, mount_read_only)
+                return mod.create_and_mount(Util.getDevPathListForFixedDisk(), mount_dir, read_only)
     raise errors.StorageLayoutCreateError("layout \"%s\" not supported" % (layout_name))
 
 

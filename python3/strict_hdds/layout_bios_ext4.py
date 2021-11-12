@@ -78,8 +78,8 @@ def parse(boot_dev, root_dev):
         raise errors.StorageLayoutParseError(ret.name, errors.BOOT_DEV_SHOULD_NOT_EXIST)
 
     ret._hdd = Util.devPathPartiToDisk(root_dev)
-    if Util.getBlkDevPartitionTableType(ret._hdd) != "dos":
-        raise errors.StorageLayoutParseError(ret.name, errors.PARTITION_TYPE_SHOULD_BE(ret._hdd, "dos"))
+    if Util.getBlkDevPartitionTableType(ret._hdd) != Util.diskPartTableMbr:
+        raise errors.StorageLayoutParseError(ret.name, errors.PARTITION_TYPE_SHOULD_BE(ret._hdd, Util.diskPartTableMbr))
 
     ret._hddRootParti = root_dev
     fs = Util.getBlkDevFsType(ret._hddRootParti)
@@ -91,18 +91,16 @@ def parse(boot_dev, root_dev):
     return ret
 
 
-def detect_and_mount(disk_list, mount_dir, mount_options):
+def detect_and_mount(disk_list, mount_dir, read_only):
     ret = StorageLayoutImpl()
 
     # scan for root partition
     rootPartitionList = []
     for disk in disk_list:
-        if not MbrUtil.hasBootCode(disk):
-            continue                            # no boot code, ignore unbootable disk
-
-        if Util.getBlkDevPartitionTableType(disk) != "dos":
-            continue                            # only accept disk with MBR partition table
-
+        if not MbrUtil.hasBootCode(disk):                                       # no boot code, ignore unbootable disk
+            continue
+        if Util.getBlkDevPartitionTableType(disk) != Util.diskPartTableMbr:     # only accept disk with MBR partition table
+            continue
         i = 1
         while True:
             parti = Util.devPathDiskToParti(disk, i)
