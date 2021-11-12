@@ -157,11 +157,12 @@ class StorageLayoutImpl(StorageLayout):
         pass
 
     def _selectNewBootDiskForAdd(self, disk_added):
-        if self._bootHdd is None:
-            if not MbrUtil.hasBootCode(disk_added):
-                self._bootHdd = disk_added
-                return True
-        return False
+        if self._bootHdd is not None:
+            return False
+        if MbrUtil.hasBootCode(disk_added):
+            return False
+        self._bootHdd = disk_added
+        return True
 
     def _selectNewBootDiskForRemove(self, disk_removed):
         if self._bootHdd == disk_removed:
@@ -171,7 +172,8 @@ class StorageLayoutImpl(StorageLayout):
                     self._bootHdd = d
                     break
             return True
-        return False
+        else:
+            return False
 
 
 def create(disk_list, dry_run=False):
