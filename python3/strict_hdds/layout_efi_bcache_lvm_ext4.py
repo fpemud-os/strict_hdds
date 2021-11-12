@@ -185,7 +185,7 @@ class StorageLayoutImpl(StorageLayout):
             return lastBootHdd != self._cg.get_boot_hdd()     # boot disk may change
 
 
-def create(ssd=None, hdd_list=None, dry_run=False):
+def create_and_mount(ssd=None, hdd_list=None):
     if ssd is None and hdd_list is None:
         # discover all fixed harddisks
         ssdList, hdd_list = Util.getDevPathListForFixedSsdAndHdd()
@@ -201,41 +201,33 @@ def create(ssd=None, hdd_list=None, dry_run=False):
         assert hdd_list is not None and len(hdd_list) > 0
 
     ret = StorageLayoutImpl()
-    if not dry_run:
-        ret._cg = CacheGroup()
 
-        # add disks, process ssd first so that minimal boot disk change is need
-        if ssd is not None:
-            ret._cg.add_ssd(ssd)
-        for hdd in hdd_list:
-            ret._cg.add_hdd(hdd)
+    ret._cg = CacheGroup()
 
-        # hdd partition 2: make them as backing device
-        for hdd in hdd_list:
-            parti = ret._cg.get_hdd_data_partition(hdd)
-            BcacheUtil.makeDevice(parti, True)
-            BcacheUtil.registerBackingDevice(parti)
-            ret._hddDict[hdd] = BcacheUtil.findByBackingDevice(parti)
+    # add disks, process ssd first so that minimal boot disk change is need
+    if ssd is not None:
+        ret._cg.add_ssd(ssd)
+    for hdd in hdd_list:
+        ret._cg.add_hdd(hdd)
 
-        # ssd partition 3: make it as cache device
-        BcacheUtil.makeDevice(ret._cg.get_ssd_cache_partition(), False)
-        BcacheUtil.registerCacheDevice(ret._cg.get_ssd_cache_partition())
-        BcacheUtil.attachCacheDevice(ret._cg.get_hdd_list(), ret._cg.get_ssd_cache_partition())
+    # hdd partition 2: make them as backing device
+    for hdd in hdd_list:
+        parti = ret._cg.get_hdd_data_partition(hdd)
+        BcacheUtil.makeDevice(parti, True)
+        BcacheUtil.registerBackingDevice(parti)
+        ret._hddDict[hdd] = BcacheUtil.findByBackingDevice(parti)
 
-        # create lvm physical volume on bcache device and add it to volume group
-        for bcacheDev in ret._hddDict.values():
-            LvmUtil.addPvToVg(bcacheDev, LvmUtil.vgName, mayCreate=True)
+    # ssd partition 3: make it as cache device
+    BcacheUtil.makeDevice(ret._cg.get_ssd_cache_partition(), False)
+    BcacheUtil.registerCacheDevice(ret._cg.get_ssd_cache_partition())
+    BcacheUtil.attachCacheDevice(ret._cg.get_hdd_list(), ret._cg.get_ssd_cache_partition())
 
-        # create root lv
-        LvmUtil.createLvWithDefaultSize(LvmUtil.vgName, LvmUtil.rootLvName)
-    else:
-        ret._cg = CacheGroup(ssd=ssd,
-                             ssdEspParti=Util.devPathDiskToParti(ssd, 1),
-                             ssdSwapParti=Util.devPathDiskToParti(ssd, 2),
-                             ssdCacheParti=Util.devPathDiskToParti(ssd, 3),
-                             hddList=hdd_list)
-        for i in range(0, len(hdd_list)):
-            ret._hddDict[hdd_list[i]] = "/dev/bcache%d" % (i)
+    # create lvm physical volume on bcache device and add it to volume group
+    for bcacheDev in ret._hddDict.values():
+        LvmUtil.addPvToVg(bcacheDev, LvmUtil.vgName, mayCreate=True)
+
+    # create root lv
+    LvmUtil.createLvWithDefaultSize(LvmUtil.vgName, LvmUtil.rootLvName)
 
     return ret
 

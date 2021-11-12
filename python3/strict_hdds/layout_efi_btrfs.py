@@ -116,7 +116,7 @@ class StorageLayoutImpl(StorageLayout):
         return lastBootHdd != self._md.get_boot_disk()     # boot disk may change
 
 
-def create(disk_list=None, dry_run=False):
+def create_and_mount(disk_list=None):
     if disk_list is None:
         disk_list = Util.getDevPathListForFixedDisk()
         if len(disk_list) == 0:
@@ -126,12 +126,9 @@ def create(disk_list=None, dry_run=False):
 
     ret = StorageLayoutImpl()
 
-    if not dry_run:
-        ret._md = MultiDisk()
-        for devpath in disk_list:
-            ret._md.add_disk(devpath)
-    else:
-        ret._md = MultiDisk(disk_list)
+    ret._md = MultiDisk()
+    for devpath in disk_list:
+        ret._md.add_disk(devpath)
 
     return ret
 

@@ -51,7 +51,6 @@ class StorageLayoutImpl(StorageLayout):
 
     def __init__(self):
         super().__init__()
-
         self._cg = None         # CacheGroup
 
     @property
@@ -106,14 +105,14 @@ class StorageLayoutImpl(StorageLayout):
     def get_disk_list(self):
         pass
 
-    def add_disk(self, devpath):
-        assert devpath is not None
+    def add_disk(self, disk):
+        assert disk is not None
 
-        if devpath not in Util.getDevPathListForFixedDisk():
-            raise errors.StorageLayoutAddDiskError(devpath, errors.NOT_DISK)
+        if disk not in Util.getDevPathListForFixedDisk():
+            raise errors.StorageLayoutAddDiskError(disk, errors.NOT_DISK)
 
-        if Util.isBlkDevSsdOrHdd(devpath):
-            self._cg.add_ssd(devpath)
+        if Util.isBlkDevSsdOrHdd(disk):
+            self._cg.add_ssd(disk)
 
             # ssd partition 3: make it as cache device and add it to bcachefs
             parti = self._cg.get_ssd_cache_partition()
@@ -123,10 +122,10 @@ class StorageLayoutImpl(StorageLayout):
         else:
             lastBootHdd = self._cg.get_boot_hdd()
 
-            self._cg.add_hdd(devpath)
+            self._cg.add_hdd(disk)
 
             # hdd partition 2: make it as backing device and add it to bcachefs
-            parti = self._cg.get_hdd_data_partition(devpath)
+            parti = self._cg.get_hdd_data_partition(disk)
             BcachefsUtil.makeDevice(parti)
             Util.cmdCall("/sbin/bcachefs", "device", "add", parti, "/")
 
@@ -164,7 +163,7 @@ class StorageLayoutImpl(StorageLayout):
             return lastBootHdd != self._cg.get_boot_hdd()     # boot disk may change
 
 
-def create(ssd=None, hdd_list=None, dry_run=False):
+def create_and_mount(ssd=None, hdd_list=None):
     if ssd is None and hdd_list is None:
         ssd_list, hdd_list = Util.getDevPathListForFixedSsdAndHdd()
         if len(ssd_list) == 0:
@@ -180,28 +179,21 @@ def create(ssd=None, hdd_list=None, dry_run=False):
 
     ret = StorageLayoutImpl()
 
-    if not dry_run:
-        ret._cg = CacheGroup()
+    ret._cg = CacheGroup()
 
-        # add disks, process ssd first so that minimal boot disk change is need
-        if ssd is not None:
-            ret._cg.add_ssd(ssd)
-        for hdd in hdd_list:
-            ret._cg.add_hdd(hdd)
+    # add disks, process ssd first so that minimal boot disk change is need
+    if ssd is not None:
+        ret._cg.add_ssd(ssd)
+    for hdd in hdd_list:
+        ret._cg.add_hdd(hdd)
 
-        # create bcachefs
-        if ret._cg.get_ssd() is not None:
-            ssd_list2 = [ret._cg.get_ssd_cache_partition()]
-        else:
-            ssd_list2 = []
-        hdd_list2 = [ret._cg.get_hdd_data_partition(x) for x in hdd_list]
-        BcachefsUtil.createBcachefs(ssd_list2, hdd_list2, 1, 1)
+    # create bcachefs
+    if ret._cg.get_ssd() is not None:
+        ssd_list2 = [ret._cg.get_ssd_cache_partition()]
     else:
-        ret._cg = CacheGroup(ssd=ssd,
-                             ssdEspParti=Util.devPathDiskToParti(ssd, 1),
-                             ssdSwapParti=Util.devPathDiskToParti(ssd, 2),
-                             ssdCacheParti=Util.devPathDiskToParti(ssd, 3),
-                             hddList=hdd_list)
+        ssd_list2 = []
+    hdd_list2 = [ret._cg.get_hdd_data_partition(x) for x in hdd_list]
+    BcachefsUtil.createBcachefs(ssd_list2, hdd_list2, 1, 1)
 
     return ret
 

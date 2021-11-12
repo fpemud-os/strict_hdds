@@ -37,9 +37,9 @@ __version__ = "0.0.1"
 
 from .core import StorageLayout
 from .core import get_supported_storage_layouts
-from .core import create_storage_layout
 from .core import get_current_storage_layout
 from .core import detect_and_mount_storage_layout
+from .core import create_and_mount_storage_layout
 
 from .errors import StorageLayoutError
 from .errors import StorageLayoutCreateError

@@ -43,7 +43,6 @@ class StorageLayoutImpl(StorageLayout):
 
     def __init__(self):
         super().__init__()
-
         self._diskList = []         # harddisk list
         self._slv = None            # SwapLvmLv
         self._bootHdd = None        # boot harddisk name
@@ -176,22 +175,21 @@ class StorageLayoutImpl(StorageLayout):
             return False
 
 
-def create(disk_list, dry_run=False):
+def create_and_mount(disk_list):
     if len(disk_list) == 0:
         raise errors.StorageLayoutCreateError(errors.NO_DISK_WHEN_CREATE)
 
-    if not dry_run:
-        for devpath in disk_list:
-            # create partitions
-            Util.initializeDisk(devpath, Util.diskPartTableMbr, [
-                ("*", "lvm"),
-            ])
+    for devpath in disk_list:
+        # create partitions
+        Util.initializeDisk(devpath, Util.diskPartTableMbr, [
+            ("*", "lvm"),
+        ])
 
-            # create lvm physical volume on partition1 and add it to volume group
-            LvmUtil.addPvToVg(Util.devPathDiskToParti(devpath, 1), LvmUtil.vgName, mayCreate=True)
+        # create lvm physical volume on partition1 and add it to volume group
+        LvmUtil.addPvToVg(Util.devPathDiskToParti(devpath, 1), LvmUtil.vgName, mayCreate=True)
 
-        # create root lv
-        LvmUtil.createLvWithDefaultSize(LvmUtil.vgName, LvmUtil.rootLvName)
+    # create root lv
+    LvmUtil.createLvWithDefaultSize(LvmUtil.vgName, LvmUtil.rootLvName)
 
     # return value
     ret = StorageLayoutImpl()
@@ -251,7 +249,7 @@ def parse(booDev, rootDev):
 def detect_and_mount(disk_list, mount_dir, mount_options):
     LvmUtil.activateAll()
 
-    # it is interesting that we can reuse all the parse code
+    # it is interesting that we can reuse parse function
     ret = parse(None, None)
 
     Util.cmdCall("/bin/mount", LvmUtil.rootLvName, mount_dir)

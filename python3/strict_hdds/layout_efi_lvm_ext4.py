@@ -138,7 +138,7 @@ class StorageLayoutImpl(StorageLayout):
         pass
 
 
-def create(hddList=None, dry_run=False):
+def create_and_mount(hddList=None):
     if hddList is None:
         hddList = Util.getDevPathListForFixedDisk()
         if len(hddList) == 0:
@@ -148,18 +148,15 @@ def create(hddList=None, dry_run=False):
 
     ret = StorageLayoutImpl()
 
-    if not dry_run:
-        ret._md = MultiDisk()
+    ret._md = MultiDisk()
 
-        # add disks
-        for devpath in hddList:
-            ret._md.add_disk(devpath)
-            LvmUtil.addPvToVg(ret._md.get_disk_data_partition(devpath), LvmUtil.vgName)
+    # add disks
+    for devpath in hddList:
+        ret._md.add_disk(devpath)
+        LvmUtil.addPvToVg(ret._md.get_disk_data_partition(devpath), LvmUtil.vgName)
 
-        # create root lv
-        LvmUtil.createLvWithDefaultSize(LvmUtil.vgName, LvmUtil.rootLvName)
-    else:
-        ret._md = MultiDisk(diskList=hddList)
+    # create root lv
+    LvmUtil.createLvWithDefaultSize(LvmUtil.vgName, LvmUtil.rootLvName)
 
     ret._slv = SwapLvmLv()
 

@@ -179,7 +179,7 @@ class StorageLayoutImpl(StorageLayout):
             return lastBootHdd != self._cg.get_boot_hdd()     # boot disk may change
 
 
-def create(ssd=None, hdd_list=None, dry_run=False):
+def create_and_mount(ssd=None, hdd_list=None):
     if ssd is None and hdd_list is None:
         # discover all fixed harddisks
         ssd_list, hdd_list = Util.getDevPathListForFixedSsdAndHdd()
@@ -196,37 +196,28 @@ def create(ssd=None, hdd_list=None, dry_run=False):
 
     ret = StorageLayoutImpl()
 
-    if not dry_run:
-        ret._cg = CacheGroup()
+    ret._cg = CacheGroup()
 
-        # add disks, process ssd first so that minimal boot disk change is need
-        if ssd is not None:
-            ret._cg.add_ssd(ssd)
-        for hdd in hdd_list:
-            ret._cg.add_hdd(hdd)
+    # add disks, process ssd first so that minimal boot disk change is need
+    if ssd is not None:
+        ret._cg.add_ssd(ssd)
+    for hdd in hdd_list:
+        ret._cg.add_hdd(hdd)
 
-        # hdd partition 2: make them as backing device
-        for hdd in hdd_list:
-            parti = ret._cg.get_hdd_data_partition(hdd)
-            BcacheUtil.makeDevice(parti, True)
-            BcacheUtil.registerBackingDevice(parti)
-            ret._hddDict[hdd] = BcacheUtil.findByBackingDevice(parti)
+    # hdd partition 2: make them as backing device
+    for hdd in hdd_list:
+        parti = ret._cg.get_hdd_data_partition(hdd)
+        BcacheUtil.makeDevice(parti, True)
+        BcacheUtil.registerBackingDevice(parti)
+        ret._hddDict[hdd] = BcacheUtil.findByBackingDevice(parti)
 
-        # ssd partition 3: make it as cache device
-        BcacheUtil.makeDevice(ret._cg.get_ssd_cache_partition(), False)
-        BcacheUtil.registerCacheDevice(ret._cg.get_ssd_cache_partition())
-        BcacheUtil.attachCacheDevice(ret._cg.get_hdd_list(), ret._cg.get_ssd_cache_partition())
+    # ssd partition 3: make it as cache device
+    BcacheUtil.makeDevice(ret._cg.get_ssd_cache_partition(), False)
+    BcacheUtil.registerCacheDevice(ret._cg.get_ssd_cache_partition())
+    BcacheUtil.attachCacheDevice(ret._cg.get_hdd_list(), ret._cg.get_ssd_cache_partition())
 
-        # create btrfs filesystem
-        Util.cmdCall("/usr/sbin/mkfs.btrfs", "-d", "single", "-m", "single", *ret._hddDict.values())
-    else:
-        ret._cg = CacheGroup(ssd=ssd,
-                             ssdEspParti=Util.devPathDiskToParti(ssd, 1),
-                             ssdSwapParti=Util.devPathDiskToParti(ssd, 2),
-                             ssdCacheParti=Util.devPathDiskToParti(ssd, 3),
-                             hddList=hdd_list)
-        for i in range(0, len(hdd_list)):
-            ret._hddDict[hdd_list[i]] = "/dev/bcache%d" % (i)
+    # create btrfs filesystem
+    Util.cmdCall("/usr/sbin/mkfs.btrfs", "-d", "single", "-m", "single", *ret._hddDict.values())
 
     return ret
 

@@ -39,7 +39,6 @@ class StorageLayoutImpl(StorageLayout):
 
     def __init__(self):
         super().__init__()
-
         self._hdd = None              # boot harddisk name
         self._hddRootParti = False    # root partition name
         self._sf = None               # SwapFile
@@ -72,27 +71,6 @@ class StorageLayoutImpl(StorageLayout):
         pass
 
 
-def create(disk_list, dry_run=False):
-    if len(disk_list) == 0:
-        raise errors.StorageLayoutCreateError(errors.NO_DISK_WHEN_CREATE)
-    if len(disk_list) > 1:
-        raise errors.StorageLayoutCreateError(errors.MULTIPLE_DISKS_WHEN_CREATE)
-
-    hdd = disk_list[0]
-
-    if not dry_run:
-        # create partitions
-        Util.initializeDisk(hdd, Util.diskPartTableMbr, [
-            ("*", Util.fsTypeExt4),
-        ])
-
-    ret = StorageLayoutImpl()
-    ret._hdd = hdd
-    ret._hddRootParti = Util.devPathDiskToParti(hdd, 1)
-    ret._sf = SwapFile(False)
-    return ret
-
-
 def parse(boot_dev, root_dev):
     ret = StorageLayoutImpl()
 
@@ -116,6 +94,7 @@ def parse(boot_dev, root_dev):
 def detect_and_mount(disk_list, mount_dir, mount_options):
     ret = StorageLayoutImpl()
 
+    # scan for root partition
     rootPartitionList = []
     for disk in disk_list:
         if not MbrUtil.hasBootCode(disk):
@@ -132,16 +111,39 @@ def detect_and_mount(disk_list, mount_dir, mount_options):
             if Util.getBlkDevFsType(parti) == Util.fsTypeExt4:
                 rootPartitionList.append(parti)
             i += 1
-
     if len(rootPartitionList) == 0:
         raise errors.StorageLayoutParseError(ret.name, errors.ROOT_PARTITION_NOT_FOUND)
     if len(rootPartitionList) > 1:
         raise errors.StorageLayoutParseError(ret.name, errors.ROOT_PARTITIONS_TOO_MANY)
 
+    # mount
     Util.cmdCall("/bin/mount", rootPartitionList[0], mount_dir)
 
+    # return
     ret._hdd = Util.devPathPartiToDisk(rootPartitionList[0])
     ret._hddRootParti = rootPartitionList[0]
     ret._sf = SwapFile.detectAndNewSwapFileObject(mount_dir)
+    return ret
 
+
+def create_and_mount(disk_list, mount_dir, mount_options):
+    if len(disk_list) == 0:
+        raise errors.StorageLayoutCreateError(errors.NO_DISK_WHEN_CREATE)
+    if len(disk_list) > 1:
+        raise errors.StorageLayoutCreateError(errors.MULTIPLE_DISKS_WHEN_CREATE)
+
+    # create partitions
+    hdd = disk_list[0]
+    Util.initializeDisk(hdd, Util.diskPartTableMbr, [
+        ("*", Util.fsTypeExt4),
+    ])
+
+    # mount
+    Util.cmdCall("/bin/mount", Util.devPathDiskToParti(hdd, 1), mount_dir)
+
+    # return
+    ret = StorageLayoutImpl()
+    ret._hdd = hdd
+    ret._hddRootParti = Util.devPathDiskToParti(hdd, 1)
+    ret._sf = SwapFile(False)
     return ret

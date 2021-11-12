@@ -69,14 +69,6 @@ def get_supported_storage_layouts():
     return ret
 
 
-def create_storage_layout(layout_name, dry_run=False):
-    for mod in pkgutil.iter_modules(["."]):
-        if mod.name.startswith("layout_"):
-            if layout_name == Util.modName2layoutName(mod.name):
-                return mod.create(Util.getDevPathListForFixedDisk(), dry_run=dry_run)
-    raise errors.StorageLayoutCreateError("layout \"%s\" not supported" % (layout_name))
-
-
 def get_current_storage_layout():
     allLayoutNames = get_supported_storage_layouts()
 
@@ -183,6 +175,14 @@ def detect_and_mount_storage_layout(mount_dir, mount_read_only=False):
 
         # simplest layout
         return _detectAndMountOneStorageLayout("bios-ext4", diskList, mount_dir, mount_read_only)
+
+
+def create_and_mount_storage_layout(layout_name, mount_dir, mount_read_only=False):
+    for mod in pkgutil.iter_modules(["."]):
+        if mod.name.startswith("layout_"):
+            if layout_name == Util.modName2layoutName(mod.name):
+                return mod.create_and_mount(Util.getDevPathListForFixedDisk(), mount_dir, mount_read_only)
+    raise errors.StorageLayoutCreateError("layout \"%s\" not supported" % (layout_name))
 
 
 def _parseOneStorageLayout(layoutName, bootDev, rootDev):
