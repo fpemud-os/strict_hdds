@@ -230,9 +230,9 @@ def create(ssd=None, hdd_list=None, dry_run=False):
         LvmUtil.createLvWithDefaultSize(LvmUtil.vgName, LvmUtil.rootLvName)
     else:
         ret._cg = CacheGroup(ssd=ssd,
-                             ssdEspParti=Util.devPathDiskToPartition(ssd, 1),
-                             ssdSwapParti=Util.devPathDiskToPartition(ssd, 2),
-                             ssdCacheParti=Util.devPathDiskToPartition(ssd, 3),
+                             ssdEspParti=Util.devPathDiskToParti(ssd, 1),
+                             ssdSwapParti=Util.devPathDiskToParti(ssd, 2),
+                             ssdCacheParti=Util.devPathDiskToParti(ssd, 3),
                              hddList=hdd_list)
         for i in range(0, len(hdd_list)):
             ret._hddDict[hdd_list[i]] = "/dev/bcache%d" % (i)
@@ -257,10 +257,10 @@ def parse(bootDev, rootDev):
             raise errors.StorageLayoutParseError(ret.name, "volume group \"%s\" has non-bcache physical volume" % (LvmUtil.vgName))
         bcacheDev = m.group(1)
         tlist = BcacheUtil.getSlaveDevPathList(bcacheDev)
-        hddDev, partId = Util.devPathPartitionToDiskAndPartitionId(tlist[-1])
+        hddDev, partId = Util.devPathPartiToDiskAndPartiId(tlist[-1])
         if partId != 2:
-            raise errors.StorageLayoutParseError(ret.name, "physical volume partition of %s is not %s" % (hddDev, Util.devPathDiskToPartition(hddDev, 2)))
-        if os.path.exists(Util.devPathDiskToPartition(hddDev, 3)):
+            raise errors.StorageLayoutParseError(ret.name, "physical volume partition of %s is not %s" % (hddDev, Util.devPathDiskToParti(hddDev, 2)))
+        if os.path.exists(Util.devPathDiskToParti(hddDev, 3)):
             raise errors.StorageLayoutParseError(ret.name, errors.DISK_HAS_REDUNDANT_PARTITION(hddDev))
         ret._hddDict[hddDev] = bcacheDev
 
@@ -274,16 +274,16 @@ def parse(bootDev, rootDev):
         raise errors.StorageLayoutParseError(ret.name, errors.LVM_LV_NOT_FOUND(LvmUtil.rootLvDevPath))
 
     # ssd
-    ssd = Util.devPathPartitionToDisk(bootDev)
+    ssd = Util.devPathPartiToDisk(bootDev)
     if ssd not in ret._hddDict:
-        ssdEspParti = Util.devPathDiskToPartition(ssd, 1)
-        if os.path.exists(Util.devPathDiskToPartition(ssd, 3)):
-            ssdSwapParti = Util.devPathDiskToPartition(ssd, 2)
-            ssdCacheParti = Util.devPathDiskToPartition(ssd, 3)
-            if os.path.exists(Util.devPathDiskToPartition(ssd, 4)):
+        ssdEspParti = Util.devPathDiskToParti(ssd, 1)
+        if os.path.exists(Util.devPathDiskToParti(ssd, 3)):
+            ssdSwapParti = Util.devPathDiskToParti(ssd, 2)
+            ssdCacheParti = Util.devPathDiskToParti(ssd, 3)
+            if os.path.exists(Util.devPathDiskToParti(ssd, 4)):
                 raise errors.StorageLayoutParseError(ret.name, errors.DISK_HAS_REDUNDANT_PARTITION(ssd))
         else:
-            ssdCacheParti = Util.devPathDiskToPartition(ssd, 2)
+            ssdCacheParti = Util.devPathDiskToParti(ssd, 2)
 
         # ssdEspParti
         if ssdEspParti != bootDev:
@@ -311,8 +311,8 @@ def parse(bootDev, rootDev):
             if tlist[0] != ssdCacheParti:
                 raise errors.StorageLayoutParseError(ret.name, "%s(%s) has invalid cache device" % (pvHdd, bcacheDev))
         if True:
-            partName, partId = Util.devPathPartitionToDiskAndPartitionId(ssdCacheParti)
-            nextPartName = Util.devPathDiskToPartition(partName, partId + 1)
+            partName, partId = Util.devPathPartiToDiskAndPartiId(ssdCacheParti)
+            nextPartName = Util.devPathDiskToParti(partName, partId + 1)
             if os.path.exists(nextPartName):
                 raise errors.StorageLayoutParseError(ret.name, errors.DISK_HAS_REDUNDANT_PARTITION(ssd))
     else:
@@ -323,7 +323,7 @@ def parse(bootDev, rootDev):
 
     # boot harddisk
     if ssd is None:
-        bootHdd = Util.devPathPartitionToDisk(bootDev)
+        bootHdd = Util.devPathPartiToDisk(bootDev)
 
     # CacheGroup object
     ret._cg = CacheGroup(ssd=ssd, ssdEspParti=ssdEspParti, ssdSwapParti=ssdSwapParti, ssdCacheParti=ssdCacheParti,

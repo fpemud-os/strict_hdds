@@ -76,19 +76,19 @@ def create(disk_list, dry_run=False):
     if len(disk_list) == 0:
         raise errors.StorageLayoutCreateError(errors.NO_DISK_WHEN_CREATE)
     if len(disk_list) > 1:
-        raise errors.StorageLayoutCreateError(errors.MULTIPLE_DISKS)
+        raise errors.StorageLayoutCreateError(errors.MULTIPLE_DISKS_WHEN_CREATE)
 
     hdd = disk_list[0]
 
     if not dry_run:
         # create partitions
-        Util.initializeDisk(hdd, "mbr", [
+        Util.initializeDisk(hdd, Util.fsPartTableMbr, [
             ("*", Util.fsTypeExt4),
         ])
 
     ret = StorageLayoutImpl()
     ret._hdd = hdd
-    ret._hddRootParti = Util.devPathDiskToPartition(hdd, 1)
+    ret._hddRootParti = Util.devPathDiskToParti(hdd, 1)
     ret._sf = SwapFile(False)
     return ret
 
@@ -99,7 +99,7 @@ def parse(boot_dev, root_dev):
     if boot_dev is not None:
         raise errors.StorageLayoutParseError(ret.name, errors.BOOT_DEV_SHOULD_NOT_EXIST)
 
-    ret._hdd = Util.devPathPartitionToDisk(root_dev)
+    ret._hdd = Util.devPathPartiToDisk(root_dev)
     if Util.getBlkDevPartitionTableType(ret._hdd) != "dos":
         raise errors.StorageLayoutParseError(ret.name, errors.PARTITION_TYPE_SHOULD_BE(ret._hdd, "dos"))
 
@@ -127,7 +127,7 @@ def detect_and_mount(disk_list, mount_dir, mount_options):
 
         i = 1
         while True:
-            parti = Util.devPathDiskToPartition(disk, i)
+            parti = Util.devPathDiskToParti(disk, i)
             if not os.path.exists(parti):
                 break
             if Util.getBlkDevFsType(parti) == Util.fsTypeExt4:
@@ -139,7 +139,7 @@ def detect_and_mount(disk_list, mount_dir, mount_options):
     elif len(rootPartitionList) > 1:
         raise errors.StorageLayoutParseError(ret.name, errors.ROOT_PARTITIONS_TOO_MANY)
     else:
-        ret._hdd = Util.devPathPartitionToDisk(rootPartitionList[0])
+        ret._hdd = Util.devPathPartiToDisk(rootPartitionList[0])
         ret._hddRootParti = rootPartitionList[0]
         ret._sf = SwapFile.detectAndNewSwapFileObject()
         return ret

@@ -173,7 +173,7 @@ def parse(bootDev, rootDev):
         raise errors.StorageLayoutParseError(ret.name, errors.BOOT_DEV_IS_NOT_ESP)
 
     # boot harddisk
-    bootHdd = Util.devPathPartitionToDisk(bootDev)
+    bootHdd = Util.devPathPartiToDisk(bootDev)
 
     # vg
     if not Util.cmdCallTestSuccess("/sbin/lvm", "vgdisplay", LvmUtil.vgName):
@@ -183,14 +183,14 @@ def parse(bootDev, rootDev):
     diskList = []
     out = Util.cmdCall("/sbin/lvm", "pvdisplay", "-c")
     for m in re.finditer("(/dev/\\S+):%s:.*" % (LvmUtil.vgName), out, re.M):
-        hdd, partId = Util.devPathPartitionToDiskAndPartitionId(m.group(1))
+        hdd, partId = Util.devPathPartiToDiskAndPartiId(m.group(1))
         if Util.getBlkDevPartitionTableType(hdd) != "gpt":
             raise errors.StorageLayoutParseError(ret.name, errors.PARTITION_TYPE_SHOULD_BE(hdd, "gpt"))
         if partId != 2:
-            raise errors.StorageLayoutParseError(ret.name, "physical volume partition of %s is not %s" % (hdd, Util.devPathDiskToPartition(hdd, 2)))
-        if Util.getBlkDevSize(Util.devPathDiskToPartition(hdd, 1)) != Util.getEspSize():
-            raise errors.StorageLayoutParseError(ret.name, errors.PARTITION_SIZE_INVALID(Util.devPathDiskToPartition(hdd, 1)))
-        if os.path.exists(Util.devPathDiskToPartition(hdd, 3)):
+            raise errors.StorageLayoutParseError(ret.name, "physical volume partition of %s is not %s" % (hdd, Util.devPathDiskToParti(hdd, 2)))
+        if Util.getBlkDevSize(Util.devPathDiskToParti(hdd, 1)) != Util.getEspSize():
+            raise errors.StorageLayoutParseError(ret.name, errors.PARTITION_SIZE_INVALID(Util.devPathDiskToParti(hdd, 1)))
+        if os.path.exists(Util.devPathDiskToParti(hdd, 3)):
             raise errors.StorageLayoutParseError(ret.name, errors.DISK_HAS_REDUNDANT_PARTITION(hdd))
         diskList.append(hdd)
 

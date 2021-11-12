@@ -82,7 +82,7 @@ def create(hdd=None, dry_run=False):
         if len(hddList) == 0:
             raise errors.StorageLayoutCreateError(errors.NO_DISK_WHEN_CREATE)
         if len(hddList) > 1:
-            raise errors.StorageLayoutCreateError(errors.MULTIPLE_DISKS)
+            raise errors.StorageLayoutCreateError(errors.MULTIPLE_DISKS_WHEN_CREATE)
         hdd = hddList[0]
 
     if not dry_run:
@@ -94,8 +94,8 @@ def create(hdd=None, dry_run=False):
 
     ret = StorageLayoutImpl()
     ret._hdd = hdd
-    ret._hddEspParti = Util.devPathDiskToPartition(hdd, 1)
-    ret._hddRootParti = Util.devPathDiskToPartition(hdd, 2)
+    ret._hddEspParti = Util.devPathDiskToParti(hdd, 1)
+    ret._hddRootParti = Util.devPathDiskToParti(hdd, 2)
     ret._sf = SwapFile(False)
     return ret
 
@@ -106,8 +106,8 @@ def parse(bootDev, rootDev):
     if not GptUtil.isEspPartition(bootDev):
         raise errors.StorageLayoutParseError(ret.name, errors.BOOT_DEV_IS_NOT_ESP)
 
-    ret._hdd = Util.devPathPartitionToDisk(bootDev)
-    if ret._hdd != Util.devPathPartitionToDisk(rootDev):
+    ret._hdd = Util.devPathPartiToDisk(bootDev)
+    if ret._hdd != Util.devPathPartiToDisk(rootDev):
         raise errors.StorageLayoutParseError(ret.name, "boot device and root device is not the same")
 
     ret._hddEspParti = bootDev

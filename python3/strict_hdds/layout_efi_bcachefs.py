@@ -198,9 +198,9 @@ def create(ssd=None, hdd_list=None, dry_run=False):
         BcachefsUtil.createBcachefs(ssd_list2, hdd_list2, 1, 1)
     else:
         ret._cg = CacheGroup(ssd=ssd,
-                             ssdEspParti=Util.devPathDiskToPartition(ssd, 1),
-                             ssdSwapParti=Util.devPathDiskToPartition(ssd, 2),
-                             ssdCacheParti=Util.devPathDiskToPartition(ssd, 3),
+                             ssdEspParti=Util.devPathDiskToParti(ssd, 1),
+                             ssdSwapParti=Util.devPathDiskToParti(ssd, 2),
+                             ssdCacheParti=Util.devPathDiskToParti(ssd, 3),
                              hddList=hdd_list)
 
     return ret
@@ -213,16 +213,16 @@ def parse(bootDev, rootDev):
         raise errors.StorageLayoutParseError(ret.name, errors.BOOT_DEV_IS_NOT_ESP)
 
     # ssd
-    ret._ssd = Util.devPathPartitionToDisk(bootDev)
+    ret._ssd = Util.devPathPartiToDisk(bootDev)
     if ret._ssd not in ret._hddDict:
-        ret._ssdEspParti = Util.devPathDiskToPartition(ret._ssd, 1)
-        if os.path.exists(Util.devPathDiskToPartition(ret._ssd, 3)):
-            ret._ssdSwapParti = Util.devPathDiskToPartition(ret._ssd, 2)
-            ret._ssdCacheParti = Util.devPathDiskToPartition(ret._ssd, 3)
-            if os.path.exists(Util.devPathDiskToPartition(ret._ssd, 4)):
+        ret._ssdEspParti = Util.devPathDiskToParti(ret._ssd, 1)
+        if os.path.exists(Util.devPathDiskToParti(ret._ssd, 3)):
+            ret._ssdSwapParti = Util.devPathDiskToParti(ret._ssd, 2)
+            ret._ssdCacheParti = Util.devPathDiskToParti(ret._ssd, 3)
+            if os.path.exists(Util.devPathDiskToParti(ret._ssd, 4)):
                 raise errors.StorageLayoutParseError(ret.name, errors.DISK_HAS_REDUNDANT_PARTITION(ret._ssd))
         else:
-            ret._ssdCacheParti = Util.devPathDiskToPartition(ret._ssd, 2)
+            ret._ssdCacheParti = Util.devPathDiskToParti(ret._ssd, 2)
 
         # ret._ssdEspParti
         if ret._ssdEspParti != bootDev:
@@ -254,6 +254,6 @@ def parse(bootDev, rootDev):
 
     # boot harddisk
     if ret._ssd is None:
-        ret._bootHdd = Util.devPathPartitionToDisk(bootDev)
+        ret._bootHdd = Util.devPathPartiToDisk(bootDev)
 
     return ret

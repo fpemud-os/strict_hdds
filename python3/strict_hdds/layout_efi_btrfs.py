@@ -144,6 +144,6 @@ def parse(bootDev, rootDev):
 
     # boot harddisk
     ret._md = MultiDisk()
-    ret._md = Util.devPathPartitionToDisk(bootDev)
+    ret._md = Util.devPathPartiToDisk(bootDev)
 
     return ret

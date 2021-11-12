@@ -221,9 +221,9 @@ def create(ssd=None, hdd_list=None, dry_run=False):
         Util.cmdCall("/usr/sbin/mkfs.btrfs", "-d", "single", "-m", "single", *ret._hddDict.values())
     else:
         ret._cg = CacheGroup(ssd=ssd,
-                             ssdEspParti=Util.devPathDiskToPartition(ssd, 1),
-                             ssdSwapParti=Util.devPathDiskToPartition(ssd, 2),
-                             ssdCacheParti=Util.devPathDiskToPartition(ssd, 3),
+                             ssdEspParti=Util.devPathDiskToParti(ssd, 1),
+                             ssdSwapParti=Util.devPathDiskToParti(ssd, 2),
+                             ssdCacheParti=Util.devPathDiskToParti(ssd, 3),
                              hddList=hdd_list)
         for i in range(0, len(hdd_list)):
             ret._hddDict[hdd_list[i]] = "/dev/bcache%d" % (i)

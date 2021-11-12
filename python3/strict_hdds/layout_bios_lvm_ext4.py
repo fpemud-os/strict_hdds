@@ -89,7 +89,7 @@ class StorageLayoutImpl(StorageLayout):
         assert devpath in self._diskList
         assert len(self._diskList) > 1
 
-        parti = Util.devPathDiskToPartition(devpath, 1)
+        parti = Util.devPathDiskToParti(devpath, 1)
 
         # move data
         rc, out = Util.cmdCallWithRetCode("/sbin/lvm", "pvmove", parti)
@@ -135,7 +135,7 @@ def create(disk_list=None, dry_run=False):
             ])
 
             # create lvm physical volume on partition1 and add it to volume group
-            LvmUtil.addPvToVg(Util.devPathDiskToPartition(devpath, 1), LvmUtil.vgName, mayCreate=True)
+            LvmUtil.addPvToVg(Util.devPathDiskToParti(devpath, 1), LvmUtil.vgName, mayCreate=True)
 
         # create root lv
         LvmUtil.createLvWithDefaultSize(LvmUtil.vgName, LvmUtil.rootLvName)
@@ -158,10 +158,10 @@ def parse(booDev, rootDev):
     # pv list
     out = Util.cmdCall("/sbin/lvm", "pvdisplay", "-c")
     for m in re.finditer("(/dev/\\S+):%s:.*" % (LvmUtil.vgName), out, re.M):
-        hdd = Util.devPathPartitionToDisk(m.group(1))
+        hdd = Util.devPathPartiToDisk(m.group(1))
         if Util.getBlkDevPartitionTableType(hdd) != "dos":
             raise errors.StorageLayoutParseError(ret.name, errors.PARTITION_TYPE_SHOULD_BE(hdd, "dos"))
-        if os.path.exists(Util.devPathDiskToPartition(hdd, 2)):
+        if os.path.exists(Util.devPathDiskToParti(hdd, 2)):
             raise errors.StorageLayoutParseError(ret.name, errors.DISK_HAS_REDUNDANT_PARTITION(hdd))
         ret._diskList.append(hdd)
 
