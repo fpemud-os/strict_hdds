@@ -135,10 +135,13 @@ def detect_and_mount(disk_list, mount_dir, mount_options):
 
     if len(rootPartitionList) == 0:
         raise errors.StorageLayoutParseError(ret.name, errors.ROOT_PARTITION_NOT_FOUND)
-    elif len(rootPartitionList) > 1:
+    if len(rootPartitionList) > 1:
         raise errors.StorageLayoutParseError(ret.name, errors.ROOT_PARTITIONS_TOO_MANY)
-    else:
-        ret._hdd = Util.devPathPartiToDisk(rootPartitionList[0])
-        ret._hddRootParti = rootPartitionList[0]
-        ret._sf = SwapFile.detectAndNewSwapFileObject()
-        return ret
+
+    Util.cmdCall("/bin/mount", rootPartitionList[0], mount_dir)
+
+    ret._hdd = Util.devPathPartiToDisk(rootPartitionList[0])
+    ret._hddRootParti = rootPartitionList[0]
+    ret._sf = SwapFile.detectAndNewSwapFileObject(mount_dir)
+
+    return ret

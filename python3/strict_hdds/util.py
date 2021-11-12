@@ -1422,8 +1422,13 @@ class SwapLvmLv:
 class SwapFile:
 
     @staticmethod
-    def detectAndNewSwapFileObject():
-        if os.path.exists(Util.swapFilepath) and Util.cmdCallTestSuccess("/sbin/swaplabel", Util.swapFilepath):
+    def detectAndNewSwapFileObject(basedir=None):
+        if basedir is not None:
+            fullfn = basedir.rstrip("/") + Util.swapFilepath
+        else:
+            fullfn = Util.swapFilepath
+
+        if os.path.exists(fullfn) and Util.cmdCallTestSuccess("/sbin/swaplabel", fullfn):
             return SwapFile(True)
         else:
             return SwapFile(False)
