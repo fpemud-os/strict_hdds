@@ -72,14 +72,13 @@ class StorageLayoutImpl(StorageLayout):
         pass
 
 
-def create(hdd=None, dry_run=False):
-    if hdd is None:
-        hddList = Util.getDevPathListForFixedDisk()
-        if len(hddList) == 0:
-            raise errors.StorageLayoutCreateError(errors.NO_DISK_WHEN_CREATE)
-        if len(hddList) > 1:
-            raise errors.StorageLayoutCreateError(errors.MULTIPLE_DISKS)
-        hdd = hddList[0]
+def create(disk_list, dry_run=False):
+    if len(disk_list) == 0:
+        raise errors.StorageLayoutCreateError(errors.NO_DISK_WHEN_CREATE)
+    if len(disk_list) > 1:
+        raise errors.StorageLayoutCreateError(errors.MULTIPLE_DISKS)
+
+    hdd = disk_list[0]
 
     if not dry_run:
         # create partitions

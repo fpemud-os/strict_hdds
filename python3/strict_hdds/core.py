@@ -73,7 +73,7 @@ def create_storage_layout(layout_name, dry_run=False):
     for mod in pkgutil.iter_modules(["."]):
         if mod.name.startswith("layout_"):
             if layout_name == Util.modName2layoutName(mod.name):
-                return mod.create(dry_run=dry_run)
+                return mod.create(Util.getDevPathListForFixedDisk(), dry_run=dry_run)
     raise errors.StorageLayoutCreateError("layout \"%s\" not supported" % (layout_name))
 
 
