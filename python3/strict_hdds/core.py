@@ -152,23 +152,23 @@ def detect_and_mount_storage_layout(mount_dir, mount_read_only=False):
             if any(Util.getBlkDevFsType(x) == Util.fsTypeBcachefs for x in normalPartiList):
                 return _detectAndMountOneStorageLayout("efi-bcachefs", diskList, mount_dir, mount_read_only)
 
+        # btrfs related
+        if Util.anyIn(["efi-btrfs"], allLayoutNames):
+            if any(Util.getBlkDevFsType(x) == Util.fsTypeBtrfs for x in normalPartiList):
+                return _detectAndMountOneStorageLayout("efi-btrfs", diskList, mount_dir, mount_read_only)
+
         # bcache related
         if Util.anyIn(["efi-bcache-btrfs", "efi-bcache-lvm-ext4"], allLayoutNames):
-            bcacheDevPathList = BcacheUtil.scanAndRegisterAll()
+            bcacheDevPathList = BcacheUtil.scanAndRegisterAll()         # only call bcache related procedure when corresponding storage layout exists
             if len(bcacheDevPathList) > 0:
                 if any(Util.getBlkDevFsType(x) == Util.fsTypeBtrfs for x in bcacheDevPathList):
                     return _detectAndMountOneStorageLayout("efi-bcache-btrfs", diskList, mount_dir, mount_read_only)
                 else:
                     return _detectAndMountOneStorageLayout("efi-bcache-lvm-ext4", diskList, mount_dir, mount_read_only)
 
-        # btrfs related
-        if Util.anyIn(["efi-btrfs"], allLayoutNames):
-            if any(Util.getBlkDevFsType(x) == Util.fsTypeBtrfs for x in normalPartiList):
-                return _detectAndMountOneStorageLayout("efi-btrfs", diskList, mount_dir, mount_read_only)
-
         # lvm related
         if Util.anyIn(["efi-lvm-ext4"], allLayoutNames):
-            LvmUtil.activateAll()
+            LvmUtil.activateAll()                                       # only call lvm related procedure when corresponding storage layout exists
             if LvmUtil.vgName in LvmUtil.getVgList():
                 return _detectAndMountOneStorageLayout("efi-lvm-ext4", diskList, mount_dir, mount_read_only)
 
@@ -177,7 +177,7 @@ def detect_and_mount_storage_layout(mount_dir, mount_read_only=False):
     else:
         # lvm related
         if Util.anyIn(["bios-lvm-ext4"], allLayoutNames):
-            LvmUtil.activateAll()
+            LvmUtil.activateAll()                                       # only call lvm related procedure when corresponding storage layout exists
             if LvmUtil.vgName in LvmUtil.getVgList():
                 return _detectAndMountOneStorageLayout("bios-lvm-ext4", diskList, mount_dir, mount_read_only)
 
