@@ -309,126 +309,6 @@ class Util:
         return Util.getEspSizeInMb() * 1024 * 1024
 
     @staticmethod
-    def gptNewGuid(guidStr):
-        assert len(guidStr) == 36
-        assert guidStr[8] == "-" and guidStr[13] == "-" and guidStr[18] == "-" and guidStr[23] == "-"
-
-        # struct gpt_guid {
-        #     uint32_t   time_low;
-        #     uint16_t   time_mid;
-        #     uint16_t   time_hi_and_version;
-        #     uint8_t    clock_seq_hi;
-        #     uint8_t    clock_seq_low;
-        #     uint8_t    node[6];
-        # };
-        gptGuidFmt = "IHHBB6s"
-        assert struct.calcsize(gptGuidFmt) == 16
-
-        guidStr = guidStr.replace("-", "")
-
-        # really obscure behavior of python3
-        # see http://stackoverflow.com/questions/1463306/how-does-exec-work-with-locals
-        ldict = {}
-        exec("n1 = 0x" + guidStr[0:8], globals(), ldict)
-        exec("n2 = 0x" + guidStr[8:12], globals(), ldict)
-        exec("n3 = 0x" + guidStr[12:16], globals(), ldict)
-        exec("n4 = 0x" + guidStr[16:18], globals(), ldict)
-        exec("n5 = 0x" + guidStr[18:20], globals(), ldict)
-        exec("n6 = bytearray()", globals(), ldict)
-        for i in range(0, 6):
-            exec("n6.append(0x" + guidStr[20 + i * 2:20 + (i + 1) * 2] + ")", globals(), ldict)
-
-        return struct.pack(gptGuidFmt, ldict["n1"], ldict["n2"], ldict["n3"], ldict["n4"], ldict["n5"], ldict["n6"])
-
-    @staticmethod
-    def gptIsEspPartition(devPath):
-        # struct mbr_partition_record {
-        #     uint8_t  boot_indicator;
-        #     uint8_t  start_head;
-        #     uint8_t  start_sector;
-        #     uint8_t  start_track;
-        #     uint8_t  os_type;
-        #     uint8_t  end_head;
-        #     uint8_t  end_sector;
-        #     uint8_t  end_track;
-        #     uint32_t starting_lba;
-        #     uint32_t size_in_lba;
-        # };
-        mbrPartitionRecordFmt = "8BII"
-        assert struct.calcsize(mbrPartitionRecordFmt) == 16
-
-        # struct mbr_header {
-        #     uint8_t                     boot_code[440];
-        #     uint32_t                    unique_mbr_signature;
-        #     uint16_t                    unknown;
-        #     struct mbr_partition_record partition_record[4];
-        #     uint16_t                    signature;
-        # };
-        mbrHeaderFmt = "440sIH%dsH" % (struct.calcsize(mbrPartitionRecordFmt) * 4)
-        assert struct.calcsize(mbrHeaderFmt) == 512
-
-        # struct gpt_entry {
-        #     struct gpt_guid type;
-        #     struct gpt_guid partition_guid;
-        #     uint64_t        lba_start;
-        #     uint64_t        lba_end;
-        #     uint64_t        attrs;
-        #     uint16_t        name[GPT_PART_NAME_LEN];
-        # };
-        gptEntryFmt = "16s16sQQQ36H"
-        assert struct.calcsize(gptEntryFmt) == 128
-
-        # struct gpt_header {
-        #     uint64_t            signature;
-        #     uint32_t            revision;
-        #     uint32_t            size;
-        #     uint32_t            crc32;
-        #     uint32_t            reserved1;
-        #     uint64_t            my_lba;
-        #     uint64_t            alternative_lba;
-        #     uint64_t            first_usable_lba;
-        #     uint64_t            last_usable_lba;
-        #     struct gpt_guid     disk_guid;
-        #     uint64_t            partition_entry_lba;
-        #     uint32_t            npartition_entries;
-        #     uint32_t            sizeof_partition_entry;
-        #     uint32_t            partition_entry_array_crc32;
-        #     uint8_t             reserved2[512 - 92];
-        # };
-        gptHeaderFmt = "QIIIIQQQQ16sQIII420s"
-        assert struct.calcsize(gptHeaderFmt) == 512
-
-        # do checking
-        diskDevPath, partId = Util.devPathPartitionToDiskAndPartitionId(devPath)
-        with open(diskDevPath, "rb") as f:
-            # get protective MBR
-            mbrHeader = struct.unpack(mbrHeaderFmt, f.read(struct.calcsize(mbrHeaderFmt)))
-
-            # check protective MBR header
-            if mbrHeader[4] != 0xAA55:
-                return False
-
-            # check protective MBR partition entry
-            found = False
-            for i in range(0, 4):
-                pRec = struct.unpack_from(mbrPartitionRecordFmt, mbrHeader[3], struct.calcsize(mbrPartitionRecordFmt) * i)
-                if pRec[4] == 0xEE:
-                    found = True
-            if not found:
-                return False
-
-            # get the specified GPT partition entry
-            gptHeader = struct.unpack(gptHeaderFmt, f.read(struct.calcsize(gptHeaderFmt)))
-            f.seek(gptHeader[10] * 512 + struct.calcsize(gptEntryFmt) * (partId - 1))
-            partEntry = struct.unpack(gptEntryFmt, f.read(struct.calcsize(gptEntryFmt)))
-
-            # check partition GUID
-            if partEntry[0] != Util.gptNewGuid("C12A7328-F81F-11D2-BA4B-00A0C93EC93B"):
-                return False
-
-        return True
-
-    @staticmethod
     def initializeDisk(devPath, partitionTableType, partitionInfoList):
         assert partitionTableType in ["mbr", "gpt"]
         assert len(partitionInfoList) >= 1
@@ -548,7 +428,7 @@ class Util:
         Util.cmdCall("/sbin/partprobe")
 
     @staticmethod
-    def gptToggleEspPartition(devPath, espOrRegular):
+    def toggleEspPartition(devPath, espOrRegular):
         assert isinstance(espOrRegular, bool)
 
         diskDevPath, partId = Util.devPathPartitionToDiskAndPartitionId(devPath)
@@ -616,6 +496,129 @@ class Util:
             if line.startswith(path + " "):
                 return True
         return False
+
+
+class GptUtil:
+
+    @staticmethod
+    def newGuid(guidStr):
+        assert len(guidStr) == 36
+        assert guidStr[8] == "-" and guidStr[13] == "-" and guidStr[18] == "-" and guidStr[23] == "-"
+
+        # struct gpt_guid {
+        #     uint32_t   time_low;
+        #     uint16_t   time_mid;
+        #     uint16_t   time_hi_and_version;
+        #     uint8_t    clock_seq_hi;
+        #     uint8_t    clock_seq_low;
+        #     uint8_t    node[6];
+        # };
+        gptGuidFmt = "IHHBB6s"
+        assert struct.calcsize(gptGuidFmt) == 16
+
+        guidStr = guidStr.replace("-", "")
+
+        # really obscure behavior of python3
+        # see http://stackoverflow.com/questions/1463306/how-does-exec-work-with-locals
+        ldict = {}
+        exec("n1 = 0x" + guidStr[0:8], globals(), ldict)
+        exec("n2 = 0x" + guidStr[8:12], globals(), ldict)
+        exec("n3 = 0x" + guidStr[12:16], globals(), ldict)
+        exec("n4 = 0x" + guidStr[16:18], globals(), ldict)
+        exec("n5 = 0x" + guidStr[18:20], globals(), ldict)
+        exec("n6 = bytearray()", globals(), ldict)
+        for i in range(0, 6):
+            exec("n6.append(0x" + guidStr[20 + i * 2:20 + (i + 1) * 2] + ")", globals(), ldict)
+
+        return struct.pack(gptGuidFmt, ldict["n1"], ldict["n2"], ldict["n3"], ldict["n4"], ldict["n5"], ldict["n6"])
+
+    @staticmethod
+    def isEspPartition(devPath):
+        # struct mbr_partition_record {
+        #     uint8_t  boot_indicator;
+        #     uint8_t  start_head;
+        #     uint8_t  start_sector;
+        #     uint8_t  start_track;
+        #     uint8_t  os_type;
+        #     uint8_t  end_head;
+        #     uint8_t  end_sector;
+        #     uint8_t  end_track;
+        #     uint32_t starting_lba;
+        #     uint32_t size_in_lba;
+        # };
+        mbrPartitionRecordFmt = "8BII"
+        assert struct.calcsize(mbrPartitionRecordFmt) == 16
+
+        # struct mbr_header {
+        #     uint8_t                     boot_code[440];
+        #     uint32_t                    unique_mbr_signature;
+        #     uint16_t                    unknown;
+        #     struct mbr_partition_record partition_record[4];
+        #     uint16_t                    signature;
+        # };
+        mbrHeaderFmt = "440sIH%dsH" % (struct.calcsize(mbrPartitionRecordFmt) * 4)
+        assert struct.calcsize(mbrHeaderFmt) == 512
+
+        # struct gpt_entry {
+        #     struct gpt_guid type;
+        #     struct gpt_guid partition_guid;
+        #     uint64_t        lba_start;
+        #     uint64_t        lba_end;
+        #     uint64_t        attrs;
+        #     uint16_t        name[GPT_PART_NAME_LEN];
+        # };
+        gptEntryFmt = "16s16sQQQ36H"
+        assert struct.calcsize(gptEntryFmt) == 128
+
+        # struct gpt_header {
+        #     uint64_t            signature;
+        #     uint32_t            revision;
+        #     uint32_t            size;
+        #     uint32_t            crc32;
+        #     uint32_t            reserved1;
+        #     uint64_t            my_lba;
+        #     uint64_t            alternative_lba;
+        #     uint64_t            first_usable_lba;
+        #     uint64_t            last_usable_lba;
+        #     struct gpt_guid     disk_guid;
+        #     uint64_t            partition_entry_lba;
+        #     uint32_t            npartition_entries;
+        #     uint32_t            sizeof_partition_entry;
+        #     uint32_t            partition_entry_array_crc32;
+        #     uint8_t             reserved2[512 - 92];
+        # };
+        gptHeaderFmt = "QIIIIQQQQ16sQIII420s"
+        assert struct.calcsize(gptHeaderFmt) == 512
+
+        # do checking
+        diskDevPath, partId = Util.devPathPartitionToDiskAndPartitionId(devPath)
+        with open(diskDevPath, "rb") as f:
+            # get protective MBR
+            mbrHeader = struct.unpack(mbrHeaderFmt, f.read(struct.calcsize(mbrHeaderFmt)))
+
+            # check protective MBR header
+            if mbrHeader[4] != 0xAA55:
+                return False
+
+            # check protective MBR partition entry
+            found = False
+            for i in range(0, 4):
+                pRec = struct.unpack_from(mbrPartitionRecordFmt, mbrHeader[3], struct.calcsize(mbrPartitionRecordFmt) * i)
+                if pRec[4] == 0xEE:
+                    found = True
+            if not found:
+                return False
+
+            # get the specified GPT partition entry
+            gptHeader = struct.unpack(gptHeaderFmt, f.read(struct.calcsize(gptHeaderFmt)))
+            f.seek(gptHeader[10] * 512 + struct.calcsize(gptEntryFmt) * (partId - 1))
+            partEntry = struct.unpack(gptEntryFmt, f.read(struct.calcsize(gptEntryFmt)))
+
+            # check partition GUID
+            if partEntry[0] != GptUtil.newGuid("C12A7328-F81F-11D2-BA4B-00A0C93EC93B"):
+                return False
+
+        return True
 
 
 class BcacheUtil:
@@ -876,6 +879,10 @@ class BcacheUtil:
         return None
 
     @staticmethod
+    def scanAndRegisterAll():
+        return False
+
+    @staticmethod
     def _isBackingDeviceOrCachDevice(devPath, backingDeviceOrCacheDevice):
         # see C struct definition in makeDevice()
         bcacheSbMagicPreFmt = "QQQ"
@@ -936,11 +943,7 @@ class BcachefsUtil:
     @staticmethod
     def addSsdToBcachefs(ssd):
         Util.cmdCall("")
-
-
         cmdList = ["/sbin/bcachefs", "device", "add", "--group=ssd", "/mnt", ssd]
-
-        pass
 
     @staticmethod
     def addHddToBcachefs(hdd):
@@ -987,6 +990,15 @@ class LvmUtil:
         out = Util.cmdCall("/sbin/lvm", "vgdisplay", "-c", vgName)
         freePe = int(out.split(":")[15])
         Util.cmdCall("/sbin/lvm", "lvcreate", "-l", "%d" % (freePe // 2), "-n", lvName, vgName)
+
+    @staticmethod
+    def activateAll():
+        Util.cmdCall("/sbin/lvm", "vgchange", "-ay")
+
+    @staticmethod
+    def getVgList():
+        out = Util.cmdCall("/sbin/lvm", "vgdisplay", "-s")
+        return [x for x in out.split("\n") if x != ""]
 
     @staticmethod
     def autoExtendLv(lvDevPath):
@@ -1110,12 +1122,12 @@ class MultiDisk:
 
     def _mountFirstHddAsBootHdd(self):
         self._bootHdd = self._hddList[0]
-        Util.gptToggleEspPartition(Util.devPathDiskToPartition(self._bootHdd, 1), True)
+        Util.toggleEspPartition(Util.devPathDiskToPartition(self._bootHdd, 1), True)
         Util.cmdCall("/bin/mount", Util.devPathDiskToPartition(self._bootHdd, 1), Util.bootDir, "-o", "ro")
 
     def _unmountCurrentBootHdd(self):
         Util.cmdCall("/bin/umount", Util.bootDir)
-        Util.gptToggleEspPartition(Util.devPathDiskToPartition(self._bootHdd, 1), False)
+        Util.toggleEspPartition(Util.devPathDiskToPartition(self._bootHdd, 1), False)
         self._bootHdd = None
 
 
@@ -1339,12 +1351,12 @@ class CacheGroup:
 
     def _mountFirstHddAsBootHdd(self):
         self._bootHdd = self._hddList[0]
-        Util.gptToggleEspPartition(Util.devPathDiskToPartition(self._bootHdd, 1), True)
+        Util.toggleEspPartition(Util.devPathDiskToPartition(self._bootHdd, 1), True)
         Util.cmdCall("/bin/mount", Util.devPathDiskToPartition(self._bootHdd, 1), Util.bootDir, "-o", "ro")
 
     def _unmountCurrentBootHdd(self):
         Util.cmdCall("/bin/umount", Util.bootDir)
-        Util.gptToggleEspPartition(Util.devPathDiskToPartition(self._bootHdd, 1), False)
+        Util.toggleEspPartition(Util.devPathDiskToPartition(self._bootHdd, 1), False)
         self._bootHdd = None
 
 

@@ -140,9 +140,6 @@ def detect_and_mount(disk_list, mount_dir, mount_options):
     elif len(rootPartitionList) > 1:
         raise errors.StorageLayoutParseError(ret.name, errors.ROOT_PARTITIONS_TOO_MANY)
     else:
-
-
-
         ret._hdd = Util.devPathPartitionToDisk(rootPartitionList[0])
         ret._hddRootParti = rootPartitionList[0]
         ret._sf = SwapFile.detectAndNewSwapFileObject()

@@ -24,9 +24,10 @@
 import os
 import re
 import sys
+import glob
 import psutil
 import pkgutil
-from .util import Util, BtrfsUtil, LvmUtil
+from .util import BcacheUtil, Util, GptUtil, BtrfsUtil, LvmUtil
 from . import errors
 
 
@@ -116,8 +117,7 @@ def get_current_storage_layout():
                     return _parseOneStorageLayout("efi-lvm-ext4", bootDev, rootDev)
 
         # simplest layout
-        if Util.anyIn(["efi-ext4"], allLayoutNames):
-            return _parseOneStorageLayout("efi-ext4", bootDev, rootDev)
+        return _parseOneStorageLayout("efi-ext4", bootDev, rootDev)
     else:
         # lvm related
         if Util.anyIn(["bios-lvm-ext4"], allLayoutNames):
@@ -125,10 +125,7 @@ def get_current_storage_layout():
                 return _parseOneStorageLayout("bios-lvm-ext4", bootDev, rootDev)
 
         # simplest layout
-        if Util.anyIn(["bios-ext4"], allLayoutNames):
-            return _parseOneStorageLayout("bios-ext4", bootDev, rootDev)
-
-    raise errors.StorageLayoutParseError("", "unknown storage layout")
+        return _parseOneStorageLayout("bios-ext4", bootDev, rootDev)
 
 
 def detect_and_mount_storage_layout(mount_dir, mount_read_only=False):
@@ -138,47 +135,54 @@ def detect_and_mount_storage_layout(mount_dir, mount_read_only=False):
     if len(diskList) == 0:
         raise errors.StorageLayoutParseError(errors.NO_DISK_WHEN_PARSE)
 
-    espPartitionList = []
+    espPartiList = []
+    normalPartiList = []
     for disk in diskList:
-        parti = Util.devPathDiskToPartition(disk, 1)
-        if 
+        for devPath in glob.glob(disk + "*"):
+            if devPath == disk:
+                continue
+            if GptUtil.isEspPartition(devPath):
+                espPartiList.append(devPath)
+            else:
+                normalPartiList.append(devPath)
 
+    if len(espPartiList) > 0:
+        # bcachefs related
+        if Util.anyIn(["efi-bcachefs"], allLayoutNames):
+            if any(Util.getBlkDevFsType(x) == Util.fsTypeBcachefs for x in normalPartiList):
+                return _detectAndMountOneStorageLayout("efi-bcachefs", diskList, mount_dir, mount_read_only)
 
-        with open(disk, "rb") as f:
-            if not Util.isBufferAllZero(f.read(440)):
-                mbrBootDiskList.append(disk)
+        # bcache related
+        if Util.anyIn(["efi-bcache-btrfs", "efi-bcache-lvm-ext4"], allLayoutNames):
+            bcacheDevPathList = BcacheUtil.scanAndRegisterAll()
+            if len(bcacheDevPathList) > 0:
+                if any(Util.getBlkDevFsType(x) == Util.fsTypeBtrfs for x in bcacheDevPathList):
+                    return _detectAndMountOneStorageLayout("efi-bcache-btrfs", diskList, mount_dir, mount_read_only)
+                else:
+                    return _detectAndMountOneStorageLayout("efi-bcache-lvm-ext4", diskList, mount_dir, mount_read_only)
 
-    if len(mbrBootDiskList) == 0
+        # btrfs related
+        if Util.anyIn(["efi-btrfs"], allLayoutNames):
+            if any(Util.getBlkDevFsType(x) == Util.fsTypeBtrfs for x in normalPartiList):
+                return _detectAndMountOneStorageLayout("efi-btrfs", diskList, mount_dir, mount_read_only)
 
+        # lvm related
+        if Util.anyIn(["efi-lvm-ext4"], allLayoutNames):
+            LvmUtil.activateAll()
+            if LvmUtil.vgName in LvmUtil.getVgList():
+                return _detectAndMountOneStorageLayout("efi-lvm-ext4", diskList, mount_dir, mount_read_only)
 
+        # simplest layout
+        return _detectAndMountOneStorageLayout("efi-ext4", diskList, mount_dir, mount_read_only)
+    else:
+        # lvm related
+        if Util.anyIn(["bios-lvm-ext4"], allLayoutNames):
+            LvmUtil.activateAll()
+            if LvmUtil.vgName in LvmUtil.getVgList():
+                return _detectAndMountOneStorageLayout("bios-lvm-ext4", diskList, mount_dir, mount_read_only)
 
-
-    if Util.anyIn(["efi-bcachefs"], allLayoutNames):
-        pass
-
-    if Util.anyIn(["efi-bcache-btrfs", "efi-bcache-lvm-ext4"], allLayoutNames):
-        if any(re.fullmatch("bcache[0-9]+", x) is not None for x in os.listdir("/dev")):
-            pass
-
-    if Util.anyIn(["efi-btrfs"], allLayoutNames):
-
-
-    if len(diskList) > 0:
-        if len(ssdList) > 0:
-
-
-
-            if Util.anyIn(["efi-bcache-btrfs", "efi-bcache-lvm-ext4"], allLayoutNames):
-                pass
-
-            _detectAndMountOneStorageLayout()
-
-
-            pass
-        else:
-            pass
-    elif len(ssdList) > 0:
-        pass
+        # simplest layout
+        return _detectAndMountOneStorageLayout("bios-ext4", diskList, mount_dir, mount_read_only)
 
 
 def _parseOneStorageLayout(layoutName, bootDev, rootDev):

@@ -21,7 +21,7 @@
 # THE SOFTWARE.
 
 
-from .util import Util, BcacheUtil, CacheGroup, SwapParti
+from .util import Util, GptUtil, BcacheUtil, CacheGroup, SwapParti
 from . import errors
 from . import StorageLayout
 
@@ -234,7 +234,7 @@ def create(ssd=None, hdd_list=None, dry_run=False):
 def parse(bootDev, rootDev):
     ret = StorageLayoutImpl()
 
-    if not Util.gptIsEspPartition(bootDev):
+    if not GptUtil.isEspPartition(bootDev):
         raise errors.StorageLayoutParseError(ret.name, errors.BOOT_DEV_IS_NOT_ESP)
 
     return ret

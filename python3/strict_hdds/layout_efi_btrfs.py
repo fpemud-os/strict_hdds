@@ -21,7 +21,7 @@
 # THE SOFTWARE.
 
 
-from .util import Util, MultiDisk
+from .util import Util, GptUtil, MultiDisk
 
 from . import errors
 from . import StorageLayout
@@ -139,12 +139,11 @@ def create(disk_list=None, dry_run=False):
 def parse(bootDev, rootDev):
     ret = StorageLayoutImpl()
 
-    if not Util.gptIsEspPartition(bootDev):
+    if not GptUtil.isEspPartition(bootDev):
         raise errors.StorageLayoutParseError(ret.name, errors.BOOT_DEV_IS_NOT_ESP)
 
     # boot harddisk
     ret._md = MultiDisk()
-    
     ret._md = Util.devPathPartitionToDisk(bootDev)
 
     return ret
