@@ -41,8 +41,8 @@ class Util:
 
     swapFilepath = "/var/cache/swap.dat"
 
-    fsPartTableMbr = "mbr"
-    fsPartTableGpt = "gpt"
+    diskPartTableMbr = "mbr"
+    diskPartTableGpt = "gpt"
 
     fsTypeExt4 = "ext4"
     fsTypeFat = "vfat"
@@ -499,6 +499,19 @@ class Util:
             if line.startswith(path + " "):
                 return True
         return False
+
+
+class MbrUtil:
+
+    @staticmethod
+    def hasBootCode(devPath):
+        with open(devPath, "rb") as f:
+            return not Util.isBufferAllZero(f.read(440))
+
+    @staticmethod
+    def wipeBootCode(devPath):
+        with open(devPath, "rw") as f:
+            f.write(b'\0' * 440)
 
 
 class GptUtil:
@@ -1418,7 +1431,7 @@ class SwapFile:
     @staticmethod
     def proxy(func):
         def f(self, *args):
-            return getattr(self._sf, func.__name__)(*args)
+            return getattr(self._swapFile, func.__name__)(*args)
         return f
 
     def __init__(self, bSwapFile):

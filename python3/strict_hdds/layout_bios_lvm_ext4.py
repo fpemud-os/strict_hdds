@@ -23,7 +23,7 @@
 
 import os
 import re
-from .util import Util, LvmUtil, SwapLvmLv
+from .util import Util, MbrUtil, LvmUtil, SwapLvmLv
 from . import errors
 from . import StorageLayout
 
@@ -87,7 +87,9 @@ class StorageLayoutImpl(StorageLayout):
     def remove_disk(self, devpath):
         assert devpath is not None
         assert devpath in self._diskList
-        assert len(self._diskList) > 1
+
+        if len(self._diskList) <= 1:
+            raise errors.StorageLayoutRemoveDiskError(devpath, errors.CAN_NOT_REMOVE_LAST_HDD)
 
         parti = Util.devPathDiskToParti(devpath, 1)
 
@@ -96,19 +98,41 @@ class StorageLayoutImpl(StorageLayout):
         if rc != 5:
             raise errors.StorageLayoutRemoveDiskError(devpath, "failed")
 
+        # remove disk
+        self._diskList.remove(devpath)
+
         # change boot device if needed
-        ret = False
         if self._bootHdd == devpath:
-            self._diskList.remove(devpath)
-            self._bootHdd = self._diskList[0]
-            # FIXME: add Boot Code for self._bootHdd?
+            self._selectNewBootDisk()
             ret = True
+        else:
+            ret = False
 
         # remove harddisk
         Util.cmdCall("/sbin/lvm", "vgreduce", LvmUtil.vgName, parti)
         Util.wipeHarddisk(devpath)
 
         return ret
+
+    def disk_boot_code_written(self, devpath):
+        assert devpath is not None
+        assert devpath in self._diskList
+
+        if self._bootHdd is None:
+            self._bootHdd = devpath
+            return True
+        else:
+            return False
+
+    def disk_boot_code_cleared(self, devpath):
+        assert devpath is not None
+        assert devpath in self._diskList
+
+        if self._bootHdd == devpath:
+            self._selectNewBootDisk()
+            return True
+        else:
+            return False
 
     @SwapLvmLv.proxy
     def create_swap_lv(self):
@@ -118,19 +142,22 @@ class StorageLayoutImpl(StorageLayout):
     def remove_swap_lv(self):
         pass
 
+    def _selectNewBootDisk(self):
+        self._bootHdd = None
+        for d in self._diskList:
+            if not MbrUtil.hasBootCode(d):
+                self._bootHdd = d
+                break
 
-def create(disk_list=None, dry_run=False):
-    if disk_list is None:
-        disk_list = Util.getDevPathListForFixedDisk()
-        if len(disk_list) == 0:
-            raise errors.StorageLayoutCreateError(errors.NO_DISK_WHEN_CREATE)
-    else:
-        assert len(disk_list) > 0
+
+def create(disk_list, dry_run=False):
+    if len(disk_list) == 0:
+        raise errors.StorageLayoutCreateError(errors.NO_DISK_WHEN_CREATE)
 
     if not dry_run:
         for devpath in disk_list:
             # create partitions
-            Util.initializeDisk(devpath, "mbr", [
+            Util.initializeDisk(devpath, Util.diskPartTableMbr, [
                 ("*", "lvm"),
             ])
 
@@ -144,7 +171,7 @@ def create(disk_list=None, dry_run=False):
     ret = StorageLayoutImpl()
     ret._diskList = disk_list
     ret._slv = SwapLvmLv()
-    ret._bootHdd = ret._diskList[0]     # FIXME
+    ret._bootHdd = None
     return ret
 
 

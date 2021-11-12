@@ -60,7 +60,7 @@ NOT_DISK = "not a fixed harddisk"
 
 # common messages for StorageLayoutRemoveDiskError
 SWAP_IS_IN_USE = "swap partition is in use"
-CAN_NOT_REMOVE_LAST_HDD = "can not remove the last physical volume"
+CAN_NOT_REMOVE_LAST_HDD = "can not remove the last harddisk"
 
 # common messages for StorageLayoutParseError
 NO_DISK_WHEN_PARSE = "no fixed harddisk"

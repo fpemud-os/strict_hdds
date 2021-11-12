@@ -22,7 +22,7 @@
 
 
 import os
-from .util import Util, SwapFile
+from .util import Util, MbrUtil, SwapFile
 from . import errors
 from . import StorageLayout
 
@@ -82,7 +82,7 @@ def create(disk_list, dry_run=False):
 
     if not dry_run:
         # create partitions
-        Util.initializeDisk(hdd, Util.fsPartTableMbr, [
+        Util.initializeDisk(hdd, Util.diskPartTableMbr, [
             ("*", Util.fsTypeExt4),
         ])
 
@@ -118,9 +118,8 @@ def detect_and_mount(disk_list, mount_dir, mount_options):
 
     rootPartitionList = []
     for disk in disk_list:
-        with open(disk, "rb") as f:
-            if Util.isBufferAllZero(f.read(440)):
-                continue                        # no boot code, ignore unbootable disk
+        if not MbrUtil.hasBootCode(disk):
+            continue                            # no boot code, ignore unbootable disk
 
         if Util.getBlkDevPartitionTableType(disk) != "dos":
             continue                            # only accept disk with MBR partition table
