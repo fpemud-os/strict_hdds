@@ -74,7 +74,7 @@ class StorageLayout(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def unmount_and_dispose(self):
+    def umount_and_dispose(self):
         pass
 
     @abc.abstractmethod

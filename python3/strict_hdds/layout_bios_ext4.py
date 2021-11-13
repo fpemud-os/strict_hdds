@@ -66,8 +66,8 @@ class StorageLayoutImpl(StorageLayout):
     def get_boot_disk(self):
         return self._hdd
 
-    def unmount_and_dispose(self):
-        self._mnt.un_mount()
+    def umount_and_dispose(self):
+        self._mnt.umount()
         self._mnt = None
         self._swap = None
         self._hddRootParti = None

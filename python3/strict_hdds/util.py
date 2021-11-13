@@ -1498,7 +1498,7 @@ class MountBios:
     def mount_point(self):
         return self._mountDir
 
-    def un_mount(self):
+    def umount(self):
         Util.cmdCall("/bin/umount", self._mountDir)
 
 
@@ -1516,7 +1516,7 @@ class MountEfi:
     def mount_point(self):
         return self._mountDir
 
-    def un_mount(self):
+    def umount(self):
         Util.cmdCall("/bin/umount", os.path.join(self._mountDir, "boot"))
         Util.cmdCall("/bin/umount", self._mountDir)
 
