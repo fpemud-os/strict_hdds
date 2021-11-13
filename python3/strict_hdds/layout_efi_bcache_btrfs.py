@@ -50,10 +50,11 @@ class StorageLayoutImpl(StorageLayout):
            6. extra harddisk is allowed to exist
     """
 
-    def __init__(self, rootfs_mount_dir):
-        super().__init__(rootfs_mount_dir)
+    def __init__(self, mount_dir):
+        super().__init__(mount_dir)
 
         self._cg = None                     # CacheGroup
+        self._swap = None
         self._hddDict = dict()              # dict<hddDev,bcacheDev>
 
     @property
@@ -75,9 +76,8 @@ class StorageLayoutImpl(StorageLayout):
     def get_boot_disk(self):
         return self._cg.get_ssd() if self._cg.get_ssd() is not None else self._cg.get_boot_hdd()
 
-    @SwapParti.proxy
-    def check_swap_size(self):
-        pass
+    def check(self):
+        self._swap.check_swap_size()
 
     def optimize_rootdev(self):
         # FIXME: btrfs balance

@@ -41,10 +41,10 @@ class StorageLayoutImpl(StorageLayout):
            4. extra harddisk is allowed to exist
     """
 
-    def __init__(self, rootfs_mount_dir):
-        super().__init__(rootfs_mount_dir)
+    def __init__(self, mount_dir):
+        super().__init__(mount_dir)
         self._diskList = []         # harddisk list
-        self._slv = None            # SwapLvmLv
+        self._swap = None            # SwapLvmLv
         self._bootHdd = None        # boot harddisk name
 
     @property
@@ -61,14 +61,13 @@ class StorageLayoutImpl(StorageLayout):
 
     @property
     def dev_swap(self):
-        return self._slv.get_swap_devname()
+        return self._swap.dev_swap
 
     def get_boot_disk(self):
         return self._bootHdd
 
-    @SwapLvmLv.proxy
-    def check_swap_size(self):
-        pass
+    def check(self):
+        self._swap.check_swap_size()
 
     def optimize_rootdev(self):
         LvmUtil.autoExtendLv(LvmUtil.rootLvDevPath)
@@ -210,9 +209,9 @@ def parse(booDev, rootDev):
     if re.search("/dev/hdd/swap:%s:.*" % (LvmUtil.vgName), out, re.M) is not None:
         if Util.getBlkDevFsType(LvmUtil.swapLvDevPath) != Util.fsTypeSwap:
             raise errors.StorageLayoutParseError(ret.name, errors.SWAP_DEV_HAS_INVALID_FS_FLAG(LvmUtil.swapLvDevPath))
-        ret._slv = SwapLvmLv(True)
+        ret._swap = SwapLvmLv(True)
     else:
-        ret._slv = SwapLvmLv(False)
+        ret._swap = SwapLvmLv(False)
 
     # boot harddisk
     for hdd in ret._diskList:
@@ -226,7 +225,7 @@ def parse(booDev, rootDev):
     return ret
 
 
-def detect_and_mount(disk_list, mount_dir, read_only):
+def detect_and_mount(disk_list, mount_dir):
     LvmUtil.activateAll()
 
     # it is interesting that we can reuse parse function
@@ -237,7 +236,7 @@ def detect_and_mount(disk_list, mount_dir, read_only):
     return ret
 
 
-def create_and_mount(disk_list, mount_dir, read_only):
+def create_and_mount(disk_list, mount_dir):
     if len(disk_list) == 0:
         raise errors.StorageLayoutCreateError(errors.NO_DISK_WHEN_CREATE)
 
@@ -256,7 +255,7 @@ def create_and_mount(disk_list, mount_dir, read_only):
     # return value
     ret = StorageLayoutImpl()
     ret._diskList = disk_list
-    ret._slv = SwapLvmLv()
+    ret._swap = SwapLvmLv()
     ret._bootHdd = None
     return ret
 

@@ -24,6 +24,7 @@
 import os
 import re
 import sys
+import abc
 import glob
 import psutil
 import pkgutil
@@ -31,48 +32,54 @@ from .util import BcacheUtil, Util, GptUtil, BtrfsUtil, LvmUtil
 from . import errors
 
 
-class StorageLayout:
+class StorageLayout(abc.ABC):
 
     BOOT_MODE_BIOS = 1
     BOOT_MODE_EFI = 2
 
-    def __init__(self, mount_point):
-        self._rootFsDir = mount_point
-
     @property
-    def name(self):
-        fn = sys.modules.get(self.__module__).__file__
+    @classmethod
+    def name(cls):
+        fn = sys.modules.get(cls.__module__).__file__
         fn = os.path.basename(fn).replace(".py", "")
         return Util.modName2layoutName(fn)
 
     @property
-    def mount_point(self):
-        return self._rootFsDir
-
-    @property
+    @abc.abstractmethod
     def boot_mode(self):
-        raise NotImplementedError()
+        pass
 
     @property
+    @abc.abstractmethod
     def dev_rootfs(self):
-        raise NotImplementedError()
+        pass
 
     @property
+    @abc.abstractmethod
     def dev_boot(self):
-        raise NotImplementedError()
+        pass
 
     @property
+    @abc.abstractmethod
     def dev_swap(self):
-        raise NotImplementedError()
+        pass
 
+    @property
+    @abc.abstractmethod
+    def mount_point(self):
+        pass
+
+    @abc.abstractmethod
     def get_boot_disk(self):
-        raise NotImplementedError()
+        pass
 
-    def check_swap_size(self):
-        raise NotImplementedError()
-
+    @abc.abstractmethod
     def unmount_and_dispose(self):
-        raise NotImplementedError()
+        pass
+
+    @abc.abstractmethod
+    def check(self):
+        pass
 
 
 def get_supported_storage_layouts():

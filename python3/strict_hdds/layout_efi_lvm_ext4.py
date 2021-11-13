@@ -47,11 +47,11 @@ class StorageLayoutImpl(StorageLayout):
            6. extra harddisk is allowed to exist
     """
 
-    def __init__(self, rootfs_mount_dir):
-        super().__init__(rootfs_mount_dir)
+    def __init__(self, mount_dir):
+        super().__init__(mount_dir)
 
         self._md = None             # MultiDisk
-        self._slv = None            # SwapLvmLv
+        self._swap = None            # SwapLvmLv
 
     @property
     def boot_mode(self):
@@ -67,14 +67,14 @@ class StorageLayoutImpl(StorageLayout):
 
     @property
     def dev_swap(self):
-        return self._slv.get_swap_devname()
+        return self._swap.dev_swap
 
     @MultiDisk.proxy
     def get_boot_disk(self):
         pass
 
     @SwapLvmLv.proxy
-    def check_swap_size(self):
+    def check(self):
         pass
 
     def optimize_rootdev(self):
@@ -162,7 +162,7 @@ def create_and_mount(hddList=None):
     # create root lv
     LvmUtil.createLvWithDefaultSize(LvmUtil.vgName, LvmUtil.rootLvName)
 
-    ret._slv = SwapLvmLv()
+    ret._swap = SwapLvmLv()
 
     return ret
 
@@ -211,8 +211,8 @@ def parse(bootDev, rootDev):
     if re.search("/dev/hdd/swap:%s:.*" % (LvmUtil.vgName), out, re.M) is not None:
         if Util.getBlkDevFsType(LvmUtil.swapLvDevPath) != Util.fsTypeSwap:
             raise errors.StorageLayoutParseError(ret.name, errors.SWAP_DEV_HAS_INVALID_FS_FLAG(LvmUtil.swapLvDevPath))
-        ret._slv = SwapLvmLv(True)
+        ret._swap = SwapLvmLv(True)
     else:
-        ret._slv = SwapLvmLv(False)
+        ret._swap = SwapLvmLv(False)
 
     return ret

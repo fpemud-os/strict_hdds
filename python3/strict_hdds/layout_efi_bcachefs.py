@@ -49,8 +49,8 @@ class StorageLayoutImpl(StorageLayout):
            6. extra harddisk is allowed to exist
     """
 
-    def __init__(self, rootfs_mount_dir):
-        super().__init__(rootfs_mount_dir)
+    def __init__(self, mount_dir):
+        super().__init__(mount_dir)
         self._cg = None         # CacheGroup
 
     @property
@@ -74,7 +74,7 @@ class StorageLayoutImpl(StorageLayout):
         pass
 
     @SwapParti.proxy
-    def check_swap_size(self):
+    def check(self):
         pass
 
     @CacheGroup.proxy

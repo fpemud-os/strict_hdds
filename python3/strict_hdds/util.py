@@ -1406,13 +1406,15 @@ class SwapParti:
     @staticmethod
     def proxy(func):
         def f(self, *args):
-            return getattr(SwapParti, func.__name__)(self, *args)
+            return getattr(self._swap, func.__name__)(*args)
         return f
 
-    @staticmethod
-    def check_swap_size(parent):
-        assert parent.dev_swap is not None
-        return Util.getBlkDevSize(parent.dev_swap) >= Util.getSwapSize()
+    def __init__(self, parent):
+        self._parent = parent
+
+    def check_swap_size(self):
+        assert self._parent.dev_swap is not None
+        return Util.getBlkDevSize(self._parent.dev_swap) >= Util.getSwapSize()
 
 
 class SwapLvmLv:
@@ -1420,7 +1422,7 @@ class SwapLvmLv:
     @staticmethod
     def proxy(func):
         def f(self, *args):
-            return getattr(self._slv, func.__name__)(*args)
+            return getattr(self._swap, func.__name__)(*args)
         return f
 
     def __init__(self, bSwapLv):
@@ -1447,12 +1449,8 @@ class SwapLvmLv:
 class SwapFile:
 
     @staticmethod
-    def detectAndNewSwapFileObject(basedir=None):
-        if basedir is not None:
-            fullfn = basedir.rstrip("/") + Util.swapFilepath
-        else:
-            fullfn = Util.swapFilepath
-
+    def detectAndNewSwapFileObject(rootfs_mount_dir):
+        fullfn = rootfs_mount_dir.rstrip("/") + Util.swapFilepath
         if os.path.exists(fullfn) and Util.cmdCallTestSuccess("/sbin/swaplabel", fullfn):
             return SwapFile(True)
         else:
@@ -1461,13 +1459,14 @@ class SwapFile:
     @staticmethod
     def proxy(func):
         def f(self, *args):
-            return getattr(self._swapFile, func.__name__)(*args)
+            return getattr(self._swap, func.__name__)(*args)
         return f
 
     def __init__(self, bSwapFile):
         self._bSwapFile = bSwapFile
 
-    def get_swap_devname(self):
+    @property
+    def dev_swap(self):
         return Util.swapFilepath if self._bSwapFile else None
 
     def check_swap_size(self):
@@ -1483,6 +1482,43 @@ class SwapFile:
         assert self._bSwapFile
         os.remove(Util.swapFilepath)
         self._bSwapFile = False
+
+
+class MountBios:
+
+    @staticmethod
+    def proxy(func):
+        def f(self, *args):
+            return getattr(self._mnt, func.__name__)(*args)
+        return f
+
+    def __init__(self, mountDir):
+        self._mountDir = mountDir
+
+    def mount_point(self):
+        return self._mountDir
+
+    def un_mount(self):
+        Util.cmdCall("/bin/umount", self._mountDir)
+
+
+class MountEfi:
+
+    @staticmethod
+    def proxy(func):
+        def f(self, *args):
+            return getattr(self._mnt, func.__name__)(*args)
+        return f
+
+    def __init__(self, mountDir):
+        self._mountDir = mountDir
+
+    def mount_point(self):
+        return self._mountDir
+
+    def un_mount(self):
+        Util.cmdCall("/bin/umount", os.path.join(self._mountDir, "boot"))
+        Util.cmdCall("/bin/umount", self._mountDir)
 
 
 class TmpMount:

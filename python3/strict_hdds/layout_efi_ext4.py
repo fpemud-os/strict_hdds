@@ -37,13 +37,13 @@ class StorageLayoutImpl(StorageLayout):
            3. extra partition is allowed to exist
     """
 
-    def __init__(self, rootfs_mount_dir):
-        super().__init__(rootfs_mount_dir)
+    def __init__(self, mount_dir):
+        super().__init__(mount_dir)
 
         self._hdd = None              # boot harddisk name
         self._hddEspParti = None      # ESP partition name
         self._hddRootParti = False    # root partition name
-        self._sf = None               # SwapFile
+        self._swap = None               # SwapFile
 
     @property
     def boot_mode(self):
@@ -59,13 +59,13 @@ class StorageLayoutImpl(StorageLayout):
 
     @property
     def dev_swap(self):
-        return self._sf.get_swap_devname()
+        return self._swap.dev_swap
 
     def get_boot_disk(self):
         return self._hdd
 
     @SwapFile.proxy
-    def check_swap_size(self):
+    def check(self):
         pass
 
     def get_esp(self):
@@ -99,7 +99,7 @@ def create_and_mount(hdd=None):
     ret._hdd = hdd
     ret._hddEspParti = Util.devPathDiskToParti(hdd, 1)
     ret._hddRootParti = Util.devPathDiskToParti(hdd, 2)
-    ret._sf = SwapFile(False)
+    ret._swap = SwapFile(False)
     return ret
 
 
@@ -121,6 +121,6 @@ def parse(bootDev, rootDev):
         if fs != Util.fsTypeExt4:
             raise errors.StorageLayoutParseError(ret.name, "root partition file system is \"%s\", not \"ext4\"" % (fs))
 
-    ret._sf = SwapFile.detectAndNewSwapFileObject()
+    ret._swap = SwapFile.detectAndNewSwapFileObject()
 
     return ret

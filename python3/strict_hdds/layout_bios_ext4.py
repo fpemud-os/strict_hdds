@@ -22,7 +22,7 @@
 
 
 import os
-from .util import Util, MbrUtil, SwapFile
+from .util import Util, MbrUtil, SwapFile, MountBios
 from . import errors
 from . import StorageLayout
 
@@ -37,11 +37,11 @@ class StorageLayoutImpl(StorageLayout):
            3. extra partition is allowed to exist
     """
 
-    def __init__(self, rootfs_mount_dir):
-        super().__init__(rootfs_mount_dir)
+    def __init__(self):
         self._hdd = None              # boot harddisk name
         self._hddRootParti = False    # root partition name
-        self._sf = None               # SwapFile
+        self._swap = None             # SwapFile
+        self._mnt = None              # MountBios
 
     @property
     def boot_mode(self):
@@ -55,16 +55,26 @@ class StorageLayoutImpl(StorageLayout):
     def dev_boot(self):
         assert False
 
-    @property
+    @SwapFile.proxy
     def dev_swap(self):
-        return self._sf.get_swap_devname()
+        return self._swap.dev_swap
+
+    @MountBios.proxy
+    def mount_point(self):
+        pass
 
     def get_boot_disk(self):
         return self._hdd
 
-    @SwapFile.proxy
-    def check_swap_size(self):
-        pass
+    def unmount_and_dispose(self):
+        self._mnt.un_mount()
+        self._mnt = None
+        self._swap = None
+        self._hddRootParti = None
+        self._hdd = None
+
+    def check(self):
+        self._swap.check_swap_size()
 
     @SwapFile.proxy
     def create_swap_file(self):
@@ -76,28 +86,27 @@ class StorageLayoutImpl(StorageLayout):
 
 
 def parse(boot_dev, root_dev):
-    ret = StorageLayoutImpl()
-
     if boot_dev is not None:
-        raise errors.StorageLayoutParseError(ret.name, errors.BOOT_DEV_SHOULD_NOT_EXIST)
+        raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.BOOT_DEV_SHOULD_NOT_EXIST)
 
-    ret._hdd = Util.devPathPartiToDisk(root_dev)
-    if Util.getBlkDevPartitionTableType(ret._hdd) != Util.diskPartTableMbr:
-        raise errors.StorageLayoutParseError(ret.name, errors.PARTITION_TYPE_SHOULD_BE(ret._hdd, Util.diskPartTableMbr))
+    hdd = Util.devPathPartiToDisk(root_dev)
+    if Util.getBlkDevPartitionTableType(hdd) != Util.diskPartTableMbr:
+        raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.PARTITION_TYPE_SHOULD_BE(hdd, Util.diskPartTableMbr))
 
-    ret._hddRootParti = root_dev
-    fs = Util.getBlkDevFsType(ret._hddRootParti)
+    fs = Util.getBlkDevFsType(root_dev)
     if fs != Util.fsTypeExt4:
-        raise errors.StorageLayoutParseError(ret.name, errors.ROOT_PARTITION_FS_SHOULD_BE(fs, "ext4"))
+        raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.ROOT_PARTITION_FS_SHOULD_BE(fs, Util.fsTypeExt4))
 
-    ret._sf = SwapFile.detectAndNewSwapFileObject()
-
+    # return
+    ret = StorageLayoutImpl()
+    ret._hdd = hdd
+    ret._hddRootParti = root_dev
+    ret._swap = SwapFile.detectAndNewSwapFileObject("/")
+    ret._mnt = MountBios("/")
     return ret
 
 
-def detect_and_mount(disk_list, mount_dir, read_only):
-    ret = StorageLayoutImpl()
-
+def detect_and_mount(disk_list, mount_dir):
     # scan for root partition
     rootPartitionList = []
     for disk in disk_list:
@@ -122,13 +131,15 @@ def detect_and_mount(disk_list, mount_dir, read_only):
     Util.cmdCall("/bin/mount", rootPartitionList[0], mount_dir)
 
     # return
+    ret = StorageLayoutImpl()
     ret._hdd = Util.devPathPartiToDisk(rootPartitionList[0])
     ret._hddRootParti = rootPartitionList[0]
-    ret._sf = SwapFile.detectAndNewSwapFileObject(mount_dir)
+    ret._swap = SwapFile.detectAndNewSwapFileObject(mount_dir)
+    ret._mnt = MountBios(mount_dir)
     return ret
 
 
-def create_and_mount(disk_list, mount_dir, mount_options):
+def create_and_mount(disk_list, mount_dir):
     if len(disk_list) == 0:
         raise errors.StorageLayoutCreateError(errors.NO_DISK_WHEN_CREATE)
     if len(disk_list) > 1:
@@ -144,8 +155,9 @@ def create_and_mount(disk_list, mount_dir, mount_options):
     Util.cmdCall("/bin/mount", Util.devPathDiskToParti(hdd, 1), mount_dir)
 
     # return
-    ret = StorageLayoutImpl()
+    ret = StorageLayoutImpl(mount_dir)
     ret._hdd = hdd
     ret._hddRootParti = Util.devPathDiskToParti(hdd, 1)
-    ret._sf = SwapFile(False)
+    ret._swap = SwapFile(False)
+    ret._mnt = MountBios(mount_dir)
     return ret
