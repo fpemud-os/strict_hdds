@@ -23,7 +23,7 @@
 
 import os
 import re
-from .util import Util, GptUtil, LvmUtil, MultiDisk, SwapLvmLv
+from .util import Util, GptUtil, LvmUtil, EfiMultiDisk, SwapLvmLv
 from . import errors
 from . import StorageLayout
 
@@ -69,7 +69,7 @@ class StorageLayoutImpl(StorageLayout):
     def dev_swap(self):
         return self._swap.dev_swap
 
-    @MultiDisk.proxy
+    @EfiMultiDisk.proxy
     def boot_disk(self):
         pass
 
@@ -81,19 +81,19 @@ class StorageLayoutImpl(StorageLayout):
         LvmUtil.autoExtendLv(LvmUtil.rootLvDevPath)
         Util.cmdExec("/sbin/resize2fs", LvmUtil.rootLvDevPath)
 
-    @MultiDisk.proxy
+    @EfiMultiDisk.proxy
     def get_esp(self):
         pass
 
-    @MultiDisk.proxy
-    def get_esp_sync_info(self):
+    @EfiMultiDisk.proxy
+    def get_pending_esp_list(self):
         pass
 
-    @MultiDisk.proxy
+    @EfiMultiDisk.proxy
     def sync_esp(self, dst):
         pass
 
-    @MultiDisk.proxy
+    @EfiMultiDisk.proxy
     def get_disk_list(self):
         pass
 
@@ -152,7 +152,7 @@ def create_and_mount(hddList=None):
 
     ret = StorageLayoutImpl()
 
-    ret._md = MultiDisk()
+    ret._md = EfiMultiDisk()
 
     # add disks
     for devpath in hddList:
@@ -195,7 +195,7 @@ def parse(bootDev, rootDev):
             raise errors.StorageLayoutParseError(ret.name, errors.DISK_HAS_REDUNDANT_PARTITION(hdd))
         diskList.append(hdd)
 
-    ret._md = MultiDisk(diskList=diskList, bootHdd=bootHdd)
+    ret._md = EfiMultiDisk(diskList=diskList, bootHdd=bootHdd)
 
     out = Util.cmdCall("/sbin/lvm", "lvdisplay", "-c")
 

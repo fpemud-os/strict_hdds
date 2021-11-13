@@ -22,7 +22,7 @@
 
 
 import os
-from .util import Util, GptUtil, BcachefsUtil, CacheGroup, SwapParti
+from .util import Util, GptUtil, BcachefsUtil, EfiCacheGroup, SwapParti
 from . import errors
 from . import StorageLayout
 
@@ -51,7 +51,7 @@ class StorageLayoutImpl(StorageLayout):
 
     def __init__(self, mount_dir):
         super().__init__(mount_dir)
-        self._cg = None         # CacheGroup
+        self._cg = None         # EfiCacheGroup
 
     @property
     def boot_mode(self):
@@ -77,35 +77,35 @@ class StorageLayoutImpl(StorageLayout):
     def check(self):
         pass
 
-    @CacheGroup.proxy
+    @EfiCacheGroup.proxy
     def get_esp(self):
         pass
 
-    @CacheGroup.proxy
-    def get_esp_sync_info(self):
+    @EfiCacheGroup.proxy
+    def get_pending_esp_list(self):
         pass
 
-    @CacheGroup.proxy
+    @EfiCacheGroup.proxy
     def sync_esp(self, dst):
         pass
 
-    @CacheGroup.proxy
+    @EfiCacheGroup.proxy
     def get_ssd(self):
         pass
 
-    @CacheGroup.proxy
+    @EfiCacheGroup.proxy
     def get_ssd_esp_partition(self):
         pass
 
-    @CacheGroup.proxy
+    @EfiCacheGroup.proxy
     def get_ssd_swap_partition(self):
         pass
 
-    @CacheGroup.proxy
+    @EfiCacheGroup.proxy
     def get_ssd_cache_partition(self):
         pass
 
-    @CacheGroup.proxy
+    @EfiCacheGroup.proxy
     def get_disk_list(self):
         pass
 
@@ -183,7 +183,7 @@ def create_and_mount(ssd=None, hdd_list=None):
 
     ret = StorageLayoutImpl()
 
-    ret._cg = CacheGroup()
+    ret._cg = EfiCacheGroup()
 
     # add disks, process ssd first so that minimal boot disk change is need
     if ssd is not None:

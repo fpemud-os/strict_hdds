@@ -1051,7 +1051,7 @@ class LvmUtilException(Exception):
     pass
 
 
-class MultiDisk:
+class EfiMultiDisk:
 
     @staticmethod
     def proxy(func):
@@ -1079,22 +1079,22 @@ class MultiDisk:
         return self._bootHdd
 
     def get_esp(self):
-        curEsp = self._getCurEsp()
-        assert curEsp is not None
-        return curEsp
+        if self._bootHdd is not None:
+            return Util.devPathDiskToParti(self._bootHdd, 1)
+        else:
+            return None
 
-    def get_esp_sync_info(self):
-        curEsp = self._getCurEsp()
-        assert curEsp is not None
-        return (curEsp, self._getOtherEspList())
+    def get_pending_esp_list(self):
+        ret = []
+        for hdd in self._hddList:
+            if self._bootHdd is None or hdd != self._bootHdd:
+                ret.append(Util.devPathDiskToParti(hdd, 1))
+        return ret
 
     def sync_esp(self, dst):
-        assert self._getCurEsp() is not None
-        assert dst is not None and dst in self._getOtherEspList()
-        Util.syncBlkDev(self._getCurEsp(), dst, mountPoint1=Util.bootDir)
-
-    def get_disk_count(self):
-        return len(self._hddList)
+        assert self.get_esp() is not None
+        assert dst is not None and dst in self.get_pending_esp_list()
+        Util.syncBlkDev(self.get_esp(), dst, mountPoint1=Util.bootDir)
 
     def get_disk_list(self):
         return self._hddList
@@ -1149,19 +1149,6 @@ class MultiDisk:
         # wipe disk
         Util.wipeHarddisk(hdd)
 
-    def _getCurEsp(self):
-        if self._bootHdd is not None:
-            return Util.devPathDiskToParti(self._bootHdd, 1)
-        else:
-            return None
-
-    def _getOtherEspList(self):
-        ret = []
-        for hdd in self._hddList:
-            if self._bootHdd is None or hdd != self._bootHdd:
-                ret.append(Util.devPathDiskToParti(hdd, 1))
-        return ret
-
     def _mountFirstHddAsBootHdd(self):
         self._bootHdd = self._hddList[0]
         Util.toggleEspPartition(Util.devPathDiskToParti(self._bootHdd, 1), True)
@@ -1173,7 +1160,7 @@ class MultiDisk:
         self._bootHdd = None
 
 
-class CacheGroup:
+class EfiCacheGroup:
 
     @staticmethod
     def proxy(func):
@@ -1218,19 +1205,24 @@ class CacheGroup:
         self._bootHdd = bootHdd
 
     def get_esp(self):
-        curEsp = self._getCurEsp()
-        assert curEsp is not None
-        return curEsp
+        if self._ssd is not None:
+            return self._ssdEspParti
+        elif self._bootHdd is not None:
+            return Util.devPathDiskToParti(self._bootHdd, 1)
+        else:
+            return None
 
-    def get_esp_sync_info(self):
-        curEsp = self._getCurEsp()
-        assert curEsp is not None
-        return (curEsp, self._getOtherEspList())
+    def get_pending_esp_list(self):
+        ret = []
+        for hdd in self._hddList:
+            if self._bootHdd is None or hdd != self._bootHdd:
+                ret.append(Util.devPathDiskToParti(hdd, 1))
+        return ret
 
     def sync_esp(self, dst):
-        assert self._getCurEsp() is not None
-        assert dst is not None and dst in self._getOtherEspList()
-        Util.syncBlkDev(self._getCurEsp(), dst, mountPoint1=Util.bootDir)
+        assert self.get_esp() is not None
+        assert dst is not None and dst in self.get_pending_esp_list()
+        Util.syncBlkDev(self.get_esp(), dst, mountPoint1=Util.bootDir)
 
     def get_ssd(self):
         return self._ssd
@@ -1375,21 +1367,6 @@ class CacheGroup:
 
         # wipe disk
         Util.wipeHarddisk(hdd)
-
-    def _getCurEsp(self):
-        if self._ssd is not None:
-            return self._ssdEspParti
-        elif self._bootHdd is not None:
-            return Util.devPathDiskToParti(self._bootHdd, 1)
-        else:
-            return None
-
-    def _getOtherEspList(self):
-        ret = []
-        for hdd in self._hddList:
-            if self._bootHdd is None or hdd != self._bootHdd:
-                ret.append(Util.devPathDiskToParti(hdd, 1))
-        return ret
 
     def _mountFirstHddAsBootHdd(self):
         self._bootHdd = self._hddList[0]

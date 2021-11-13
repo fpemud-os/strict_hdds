@@ -21,7 +21,7 @@
 # THE SOFTWARE.
 
 
-from .util import Util, GptUtil, MultiDisk
+from .util import Util, GptUtil, EfiMultiDisk
 
 from . import errors
 from . import StorageLayout
@@ -64,26 +64,26 @@ class StorageLayoutImpl(StorageLayout):
     def dev_swap(self):
         assert False
 
-    @MultiDisk.proxy
+    @EfiMultiDisk.proxy
     def boot_disk(self):
         pass
 
     def check(self):
         assert False
 
-    @MultiDisk.proxy
+    @EfiMultiDisk.proxy
     def get_esp(self):
         pass
 
-    @MultiDisk.proxy
-    def get_esp_sync_info(self):
+    @EfiMultiDisk.proxy
+    def get_pending_esp_list(self):
         pass
 
-    @MultiDisk.proxy
+    @EfiMultiDisk.proxy
     def sync_esp(self, dst):
         pass
 
-    @MultiDisk.proxy
+    @EfiMultiDisk.proxy
     def get_disk_list(self):
         pass
 
@@ -107,7 +107,7 @@ class StorageLayoutImpl(StorageLayout):
         assert disk is not None
         assert disk in self._md.get_disk_list()
 
-        if self._md.get_disk_count() <= 1:
+        if len(self._md.get_disk_list()) <= 1:
             raise errors.StorageLayoutRemoveDiskError(errors.CAN_NOT_REMOVE_LAST_HDD)
 
         lastBootHdd = self._md.boot_disk
@@ -131,7 +131,7 @@ def create_and_mount(disk_list=None):
 
     ret = StorageLayoutImpl()
 
-    ret._md = MultiDisk()
+    ret._md = EfiMultiDisk()
     for devpath in disk_list:
         ret._md.add_disk(devpath)
 
@@ -145,7 +145,7 @@ def parse(bootDev, rootDev):
         raise errors.StorageLayoutParseError(ret.name, errors.BOOT_DEV_IS_NOT_ESP)
 
     # boot harddisk
-    ret._md = MultiDisk()
+    ret._md = EfiMultiDisk()
     ret._md = Util.devPathPartiToDisk(bootDev)
 
     return ret
