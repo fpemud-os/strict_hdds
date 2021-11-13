@@ -83,7 +83,7 @@ class StorageLayout(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def remount_bootdir_for_write(self):
+    def get_bootdir_rw_controller(self):
         pass
 
     @abc.abstractmethod
@@ -91,10 +91,19 @@ class StorageLayout(abc.ABC):
         pass
 
 
-class BootDirWriteHandler(abc.ABC):
+class BootDirRwController(abc.ABC):
+
+    @property
+    @abc.abstractmethod
+    def is_writable(self):
+        pass
 
     @abc.abstractmethod
-    def resume(self):
+    def to_read_write(self):
+        pass
+
+    @abc.abstractmethod
+    def to_read_only(self):
         pass
 
 

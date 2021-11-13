@@ -22,7 +22,8 @@
 
 
 import os
-from .util import Util, MbrUtil, SwapFile, MountBios
+from .util import Util, MbrUtil, SwapFile
+from .mount import MountBios
 from . import errors
 from . import StorageLayout
 
@@ -51,7 +52,6 @@ class StorageLayoutImpl(StorageLayout):
     def dev_rootfs(self):
         return self._hddRootParti
 
-    @property
     def dev_boot(self):
         assert False
 
@@ -79,8 +79,9 @@ class StorageLayoutImpl(StorageLayout):
     def remount_rootfs(self, mount_options):
         pass
 
-    def remount_bootdir_for_write(self):
-        assert False
+    @MountBios.proxy
+    def get_bootdir_rw_controller(self):
+        pass
 
     def check(self):
         self._swap.check_swap_size()

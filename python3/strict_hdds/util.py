@@ -1462,46 +1462,6 @@ class SwapFile:
         self._bSwapFile = False
 
 
-class MountBios:
-
-    @staticmethod
-    def proxy(func):
-        def f(self, *args):
-            return getattr(self._mnt, func.__name__)(*args)
-        return f
-
-    def __init__(self, mountDir):
-        self._mountDir = mountDir
-
-    def mount_point(self):
-        return self._mountDir
-
-    def umount(self):
-        Util.cmdCall("/bin/umount", self._mountDir)
-
-    def remount_rootfs(self, mount_options):
-        Util.cmdCall("/bin/mount", "--remount", ",".join(mount_options))
-
-
-class MountEfi:
-
-    @staticmethod
-    def proxy(func):
-        def f(self, *args):
-            return getattr(self._mnt, func.__name__)(*args)
-        return f
-
-    def __init__(self, mountDir):
-        self._mountDir = mountDir
-
-    def mount_point(self):
-        return self._mountDir
-
-    def umount(self):
-        Util.cmdCall("/bin/umount", os.path.join(self._mountDir, "boot"))
-        Util.cmdCall("/bin/umount", self._mountDir)
-
-
 class TmpMount:
 
     def __init__(self, path, options=None):

@@ -21,7 +21,7 @@
 # THE SOFTWARE.
 
 
-from .util import Util, GptUtil, BcacheUtil, EfiCacheGroup, SwapParti
+from .util import Util, GptUtil, BcacheUtil, EfiCacheGroup, SwapParti, MountEfi
 from . import errors
 from . import StorageLayout
 
@@ -52,8 +52,9 @@ class StorageLayoutImpl(StorageLayout):
 
     def __init__(self):
         self._cg = None                     # EfiCacheGroup
-        self._swap = None                   # SwapParti
         self._hddDict = dict()              # dict<hddDev,bcacheDev>
+        self._swap = None                   # SwapParti
+        self._mnt = None                    # MountEfi
 
     @property
     def boot_mode(self):
@@ -63,17 +64,38 @@ class StorageLayoutImpl(StorageLayout):
     def dev_rootfs(self):
         return sorted(self._cg.get_hdd_list())[0]
 
-    @property
+    @EfiCacheGroup.proxy
     def dev_boot(self):
         raise self._cg.get_esp()
 
-    @property
+    @EfiCacheGroup.proxy
     def dev_swap(self):
         return self._cg.get_ssd_swap_partition()
 
-    @property
+    @MountEfi.proxy
+    def mount_point(self):
+        pass
+
+    @EfiCacheGroup.proxy
     def boot_disk(self):
         return self._cg.get_ssd() if self._cg.get_ssd() is not None else self._cg.get_boot_hdd()
+
+    def umount_and_dispose(self):
+        if True:
+            self._mnt.umount()
+            del self._mnt
+        del self._swap
+        if True:
+            # FIXME: stop and unregister bcache
+            del self._hddDict
+            del self._cg
+
+    def remount_rootfs(self, mount_options):
+        pass
+
+    @EfiCacheGroup.proxy
+    def remount_bootdir_for_write(self):
+        assert False
 
     def check(self):
         self._swap.check_swap_size()
