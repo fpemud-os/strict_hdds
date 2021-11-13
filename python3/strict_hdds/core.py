@@ -69,8 +69,9 @@ class StorageLayout(abc.ABC):
     def mount_point(self):
         pass
 
+    @property
     @abc.abstractmethod
-    def get_boot_disk(self):
+    def boot_disk(self):
         pass
 
     @abc.abstractmethod
@@ -78,7 +79,22 @@ class StorageLayout(abc.ABC):
         pass
 
     @abc.abstractmethod
+    def remount_rootfs(self, mount_options):
+        pass
+
+    @abc.abstractmethod
+    def remount_bootdir_for_write(self):
+        pass
+
+    @abc.abstractmethod
     def check(self):
+        pass
+
+
+class BootDirWriteHandler(abc.ABC):
+
+    @abc.abstractmethod
+    def resume(self):
         pass
 
 

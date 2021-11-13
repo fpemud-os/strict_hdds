@@ -63,7 +63,8 @@ class StorageLayoutImpl(StorageLayout):
     def dev_swap(self):
         return self._swap.dev_swap
 
-    def get_boot_disk(self):
+    @property
+    def boot_disk(self):
         return self._bootHdd
 
     def check(self):

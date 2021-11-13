@@ -69,8 +69,8 @@ class StorageLayoutImpl(StorageLayout):
     def dev_swap(self):
         return self._cg.get_ssd_swap_partition()
 
-    @SwapParti.proxy
-    def get_boot_disk(self):
+    @property
+    def boot_disk(self):
         pass
 
     @SwapParti.proxy

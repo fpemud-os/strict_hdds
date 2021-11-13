@@ -62,10 +62,10 @@ class StorageLayoutImpl(StorageLayout):
 
     @property
     def dev_swap(self):
-        return None
+        assert False
 
     @MultiDisk.proxy
-    def get_boot_disk(self):
+    def boot_disk(self):
         pass
 
     def check(self):
@@ -93,7 +93,7 @@ class StorageLayoutImpl(StorageLayout):
         if disk not in Util.getDevPathListForFixedDisk():
             raise errors.StorageLayoutAddDiskError(disk, errors.NOT_DISK)
 
-        lastBootDisk = self._md.get_boot_disk()
+        lastBootDisk = self._md.boot_disk
 
         # add
         self._md.add_disk(disk)
@@ -101,7 +101,7 @@ class StorageLayoutImpl(StorageLayout):
         # hdd partition 2: make it as backing device and add it to btrfs filesystem
         Util.cmdCall("/sbin/btrfs", "device", "add", self._md.get_disk_data_partition(disk), "/")
 
-        return lastBootDisk != self._md.get_boot_disk()     # boot disk may change
+        return lastBootDisk != self._md.boot_disk     # boot disk may change
 
     def remove_disk(self, disk):
         assert disk is not None
@@ -110,7 +110,7 @@ class StorageLayoutImpl(StorageLayout):
         if self._md.get_disk_count() <= 1:
             raise errors.StorageLayoutRemoveDiskError(errors.CAN_NOT_REMOVE_LAST_HDD)
 
-        lastBootHdd = self._md.get_boot_disk()
+        lastBootHdd = self._md.boot_disk
 
         # hdd partition 2: remove from btrfs and bcache
         Util.cmdCall("/sbin/btrfs", "device", "delete", self._md.get_disk_data_partition(disk), "/")
@@ -118,7 +118,7 @@ class StorageLayoutImpl(StorageLayout):
         # remove
         self._md.remove_disk(disk)
 
-        return lastBootHdd != self._md.get_boot_disk()     # boot disk may change
+        return lastBootHdd != self._md.boot_disk     # boot disk may change
 
 
 def create_and_mount(disk_list=None):

@@ -70,7 +70,7 @@ class StorageLayoutImpl(StorageLayout):
         return self._swap.dev_swap
 
     @MultiDisk.proxy
-    def get_boot_disk(self):
+    def boot_disk(self):
         pass
 
     @SwapLvmLv.proxy

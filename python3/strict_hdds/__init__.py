@@ -36,6 +36,7 @@ __version__ = "0.0.1"
 
 
 from .core import StorageLayout
+from .core import BootDirWriteHandler
 from .core import get_supported_storage_layouts
 from .core import get_current_storage_layout
 from .core import detect_and_mount_storage_layout

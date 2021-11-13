@@ -73,7 +73,8 @@ class StorageLayoutImpl(StorageLayout):
     def dev_swap(self):
         return self._cg.get_ssd_swap_partition()
 
-    def get_boot_disk(self):
+    @property
+    def boot_disk(self):
         return self._cg.get_ssd() if self._cg.get_ssd() is not None else self._cg.get_boot_hdd()
 
     def check(self):

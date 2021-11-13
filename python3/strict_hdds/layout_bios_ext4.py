@@ -57,21 +57,30 @@ class StorageLayoutImpl(StorageLayout):
 
     @SwapFile.proxy
     def dev_swap(self):
-        return self._swap.dev_swap
+        pass
 
     @MountBios.proxy
     def mount_point(self):
         pass
 
-    def get_boot_disk(self):
+    @property
+    def boot_disk(self):
         return self._hdd
 
     def umount_and_dispose(self):
-        self._mnt.umount()
-        self._mnt = None
-        self._swap = None
-        self._hddRootParti = None
-        self._hdd = None
+        if True:
+            self._mnt.umount()
+            del self._mnt
+        del self._swap
+        del self._hddRootParti
+        del self._hdd
+
+    @MountBios.proxy
+    def remount_rootfs(self, mount_options):
+        pass
+
+    def remount_bootdir_for_write(self):
+        assert False
 
     def check(self):
         self._swap.check_swap_size()
@@ -123,9 +132,9 @@ def detect_and_mount(disk_list, mount_dir):
                 rootPartitionList.append(parti)
             i += 1
     if len(rootPartitionList) == 0:
-        raise errors.StorageLayoutParseError(ret.name, errors.ROOT_PARTITION_NOT_FOUND)
+        raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.ROOT_PARTITION_NOT_FOUND)
     if len(rootPartitionList) > 1:
-        raise errors.StorageLayoutParseError(ret.name, errors.ROOT_PARTITIONS_TOO_MANY)
+        raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.ROOT_PARTITIONS_TOO_MANY)
 
     # mount
     Util.cmdCall("/bin/mount", rootPartitionList[0], mount_dir)

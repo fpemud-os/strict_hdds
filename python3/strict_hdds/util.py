@@ -1074,7 +1074,8 @@ class MultiDisk:
             assert bootHdd is None
         self._bootHdd = bootHdd
 
-    def get_boot_disk(self):
+    @property
+    def boot_disk(self):
         return self._bootHdd
 
     def get_esp(self):
@@ -1500,6 +1501,9 @@ class MountBios:
 
     def umount(self):
         Util.cmdCall("/bin/umount", self._mountDir)
+
+    def remount_rootfs(self, mount_options):
+        Util.cmdCall("/bin/mount", "--remount", ",".join(mount_options))
 
 
 class MountEfi:
