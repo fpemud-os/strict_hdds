@@ -37,8 +37,8 @@ class StorageLayoutImpl(StorageLayout):
            3. extra partition is allowed to exist
     """
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, rootfs_mount_dir):
+        super().__init__(rootfs_mount_dir)
         self._hdd = None              # boot harddisk name
         self._hddRootParti = False    # root partition name
         self._sf = None               # SwapFile
@@ -50,6 +50,10 @@ class StorageLayoutImpl(StorageLayout):
     @property
     def dev_rootfs(self):
         return self._hddRootParti
+
+    @property
+    def dev_boot(self):
+        assert False
 
     @property
     def dev_swap(self):

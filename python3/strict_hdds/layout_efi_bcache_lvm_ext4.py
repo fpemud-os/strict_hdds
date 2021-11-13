@@ -53,8 +53,8 @@ class StorageLayoutImpl(StorageLayout):
            7. extra harddisk is allowed to exist
     """
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, rootfs_mount_dir):
+        super().__init__(rootfs_mount_dir)
 
         self._cg = None                  # CacheGroup
         self._hddDict = dict()           # dict<hddDev,bcacheDev>
@@ -66,6 +66,10 @@ class StorageLayoutImpl(StorageLayout):
     @property
     def dev_rootfs(self):
         return LvmUtil.rootLvDevPath
+
+    @property
+    def dev_boot(self):
+        raise self._cg.get_esp()
 
     @property
     def dev_swap(self):
@@ -91,7 +95,7 @@ class StorageLayoutImpl(StorageLayout):
         pass
 
     @CacheGroup.proxy
-    def sync_esp(self, src, dst):
+    def sync_esp(self, dst):
         pass
 
     @CacheGroup.proxy

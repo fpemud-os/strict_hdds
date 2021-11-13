@@ -41,8 +41,8 @@ class StorageLayoutImpl(StorageLayout):
            4. extra harddisk is allowed to exist
     """
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, rootfs_mount_dir):
+        super().__init__(rootfs_mount_dir)
         self._diskList = []         # harddisk list
         self._slv = None            # SwapLvmLv
         self._bootHdd = None        # boot harddisk name
@@ -54,6 +54,10 @@ class StorageLayoutImpl(StorageLayout):
     @property
     def dev_rootfs(self):
         return LvmUtil.rootLvDevPath
+
+    @property
+    def dev_boot(self):
+        assert False
 
     @property
     def dev_swap(self):

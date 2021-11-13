@@ -44,8 +44,9 @@ class StorageLayoutImpl(StorageLayout):
            5. extra harddisk is allowed to exist
     """
 
-    def __init__(self):
-        self._md = None         # MultiDisk
+    def __init__(self, rootfs_mount_dir):
+        super().__init__(rootfs_mount_dir)
+        self._md = None                         # MultiDisk
 
     @property
     def boot_mode(self):
@@ -54,6 +55,10 @@ class StorageLayoutImpl(StorageLayout):
     @property
     def dev_rootfs(self):
         return self._md.get_disk_list()[0]
+
+    @property
+    def dev_boot(self):
+        raise self._md.get_esp()
 
     @property
     def dev_swap(self):
@@ -75,7 +80,7 @@ class StorageLayoutImpl(StorageLayout):
         pass
 
     @MultiDisk.proxy
-    def sync_esp(self, src, dst):
+    def sync_esp(self, dst):
         pass
 
     @MultiDisk.proxy

@@ -1087,10 +1087,10 @@ class MultiDisk:
         assert curEsp is not None
         return (curEsp, self._getOtherEspList())
 
-    def sync_esp(self, src, dst):
-        assert src is not None and dst is not None
-        assert src == self._getCurEsp() and dst in self._getOtherEspList()
-        Util.syncBlkDev(src, dst, mountPoint1=Util.bootDir)
+    def sync_esp(self, dst):
+        assert self._getCurEsp() is not None
+        assert dst is not None and dst in self._getOtherEspList()
+        Util.syncBlkDev(self._getCurEsp(), dst, mountPoint1=Util.bootDir)
 
     def get_disk_count(self):
         return len(self._hddList)
@@ -1226,10 +1226,10 @@ class CacheGroup:
         assert curEsp is not None
         return (curEsp, self._getOtherEspList())
 
-    def sync_esp(self, src, dst):
-        assert src is not None and dst is not None
-        assert src == self._getCurEsp() and dst in self._getOtherEspList()
-        Util.syncBlkDev(src, dst, mountPoint1=Util.bootDir)
+    def sync_esp(self, dst):
+        assert self._getCurEsp() is not None
+        assert dst is not None and dst in self._getOtherEspList()
+        Util.syncBlkDev(self._getCurEsp(), dst, mountPoint1=Util.bootDir)
 
     def get_ssd(self):
         return self._ssd
