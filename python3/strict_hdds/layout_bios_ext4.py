@@ -52,6 +52,7 @@ class StorageLayoutImpl(StorageLayout):
     def dev_rootfs(self):
         return self._hddRootParti
 
+    @property
     def dev_boot(self):
         assert False
 

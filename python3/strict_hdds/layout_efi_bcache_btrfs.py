@@ -21,7 +21,8 @@
 # THE SOFTWARE.
 
 
-from .util import Util, GptUtil, BcacheUtil, EfiCacheGroup, SwapParti, MountEfi
+from .util import Util, GptUtil, BcacheUtil, EfiCacheGroup, SwapParti
+from .mount import MountEfi
 from . import errors
 from . import StorageLayout
 
@@ -91,11 +92,13 @@ class StorageLayoutImpl(StorageLayout):
             del self._cg
 
     def remount_rootfs(self, mount_options):
+        if self._cg.
+
         pass
 
-    @EfiCacheGroup.proxy
-    def remount_bootdir_for_write(self):
-        assert False
+    @MountEfi.proxy
+    def get_bootdir_rw_controller(self):
+        pass
 
     def check(self):
         self._swap.check_swap_size()
