@@ -57,6 +57,13 @@ class StorageLayoutParseError(StorageLayoutError):
         self.message = message
 
 
+class StorageLayoutCheckError(StorageLayoutError):
+
+    def __init__(self, layout_name, message):
+        self.layout_name = layout_name
+        self.message = message
+
+
 # common messages for StorageLayoutCreateError
 NO_DISK_WHEN_CREATE = "no fixed harddisk"
 MULTIPLE_DISKS_WHEN_CREATE = "multiple fixed harddisks found while we need only one"
@@ -86,3 +93,6 @@ LVM_VG_NOT_FOUND = lambda vg_name: f"volume group \"{vg_name!s}\" does not exist
 LVM_LV_NOT_FOUND = lambda lv_name: f"logical volume \"{lv_name!s}\" does not exist"
 BOOT_CODE_NOT_FOUND = "no harddisk has boot-code"
 BOOT_CODE_ON_MULTIPLE_DISKS = "boot-code exists on multiple harddisks"
+
+# common messages for StorageLayoutCheckError
+SWAP_SIZE_TOO_SMALL = "swap size is too small"

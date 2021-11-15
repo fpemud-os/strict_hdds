@@ -21,7 +21,9 @@
 # THE SOFTWARE.
 
 
-from .util import Util, GptUtil, BcacheUtil, EfiCacheGroup, SwapParti
+import os
+import re
+from .util import Util, GptUtil, BcacheUtil, BtrfsUtil, EfiCacheGroup
 from .mount import MountEfi
 from . import errors
 from . import StorageLayout
@@ -54,7 +56,6 @@ class StorageLayoutImpl(StorageLayout):
     def __init__(self):
         self._cg = None                     # EfiCacheGroup
         self._hddDict = dict()              # dict<hddDev,bcacheDev>
-        self._swap = None                   # SwapParti
         self._mnt = None                    # MountEfi
 
     @property
@@ -89,7 +90,6 @@ class StorageLayoutImpl(StorageLayout):
         if True:
             self._mnt.umount()
             del self._mnt
-        del self._swap
         if True:
             # FIXME: stop and unregister bcache
             del self._hddDict
@@ -104,7 +104,9 @@ class StorageLayoutImpl(StorageLayout):
         pass
 
     def check(self):
-        self._swap.check_swap_size()
+        if self.dev_swap is not None:
+            if Util.getBlkDevSize(self.dev_swap) < Util.getSwapSize():
+                raise errors.StorageLayoutCheckError(self.name, errors.SWAP_SIZE_TOO_SMALL)
 
     def optimize_rootdev(self):
         # FIXME: btrfs balance
@@ -161,15 +163,18 @@ class StorageLayoutImpl(StorageLayout):
             raise errors.StorageLayoutAddDiskError(disk, errors.NOT_DISK)
 
         lastBootHdd = self._cg.boot_disk
-        self._cg.add_ssd(disk)
 
         if Util.isBlkDevSsdOrHdd(disk):
+            self._cg.add_ssd(disk)
+
             # ssd partition 3: make it as cache device
             parti = self._cg.get_ssd_cache_partition()
             BcacheUtil.makeDevice(parti, False)
             BcacheUtil.registerCacheDevice(parti)
             BcacheUtil.attachCacheDevice(self._cg.get_hdd_list(), parti)
         else:
+            self._cg.add_hdd(disk)
+
             # hdd partition 2: make it as backing device and add it to btrfs filesystem
             parti = self._cg.get_hdd_data_partition(disk)
             BcacheUtil.makeDevice(parti, True)
@@ -196,6 +201,9 @@ class StorageLayoutImpl(StorageLayout):
 
             # ssd partition 3: remove from cache
             BcacheUtil.unregisterCacheDevice(self._cg.get_ssd_cache_partition())
+
+            # remove
+            self._cg.remove_ssd(disk)
         elif disk in self._cg.get_hdd_list():
             # check for last hdd
             if len(self._cg.get_hdd_list()) <= 1:
@@ -206,11 +214,11 @@ class StorageLayoutImpl(StorageLayout):
             Util.cmdCall("/sbin/btrfs", "device", "delete", bcacheDev, self._mnt.mount_point)
             BcacheUtil.stopBackingDevice(bcacheDev)
             del self._hddDict[disk]
+
+            # remove
+            self._cg.remove_hdd(disk)
         else:
             assert False
-
-        # remove
-        self._cg.remove_hdd(disk)
 
         # return True means boot disk is changed
         return lastBootHdd != self._cg.boot_disk
@@ -220,20 +228,79 @@ def parse(boot_dev, root_dev):
     if not GptUtil.isEspPartition(boot_dev):
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.BOOT_DEV_IS_NOT_ESP)
 
-    cg = EfiCacheGroup()
     hddDict = dict()
 
-    tlist = BtrfsUtil.getSlaveDevPathList(root_dev)
+    # hdd list
+    for bcacheDevPath in BtrfsUtil.getSlaveDevPathList(root_dev):
+        if re.fullmatch("/dev/bcache[0-9]+", bcacheDevPath) is None:
+            raise errors.StorageLayoutParseError(StorageLayoutImpl.name, "btrfs has non-bcache physical volume")
+        bcacheDev = m.group(1)
+        tlist = BcacheUtil.getSlaveDevPathList(bcacheDev)
+        hddDev, partId = Util.devPathPartiToDiskAndPartiId(tlist[-1])
+        if partId != 2:
+            raise errors.StorageLayoutParseError(StorageLayoutImpl.name, "physical volume partition of %s is not %s" % (hddDev, Util.devPathDiskToParti(hddDev, 2)))
+        if os.path.exists(Util.devPathDiskToParti(hddDev, 3)):
+            raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.DISK_HAS_REDUNDANT_PARTITION(hddDev))
+        hddDict[hddDev] = bcacheDev
 
+    # ssd
+    ssd = Util.devPathPartiToDisk(boot_dev)
+    if ssd not in hddDict:
+        ssdEspParti = Util.devPathDiskToParti(ssd, 1)
+        if os.path.exists(Util.devPathDiskToParti(ssd, 3)):
+            ssdSwapParti = Util.devPathDiskToParti(ssd, 2)
+            ssdCacheParti = Util.devPathDiskToParti(ssd, 3)
+            if os.path.exists(Util.devPathDiskToParti(ssd, 4)):
+                raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.DISK_HAS_REDUNDANT_PARTITION(ssd))
+        else:
+            ssdCacheParti = Util.devPathDiskToParti(ssd, 2)
 
+        # ssdEspParti
+        if ssdEspParti != boot_dev:
+            raise errors.StorageLayoutParseError(StorageLayoutImpl.name, "SSD is not boot device")
+        if Util.getBlkDevSize(ssdEspParti) != Util.getEspSize():
+            raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.PARTITION_SIZE_INVALID(ssdEspParti))
 
-    # , ssd=None, ssdEspParti=None, ssdSwapParti=None, ssdCacheParti=None, hddList=[], bootHdd=None
+        # ssdSwapParti
+        if ssdSwapParti is not None:
+            if not os.path.exists(ssdSwapParti):
+                raise errors.StorageLayoutParseError(StorageLayoutImpl.name, "SSD has no swap partition")
+            if Util.getBlkDevFsType(ssdSwapParti) != Util.fsTypeSwap:
+                raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.SWAP_DEV_HAS_INVALID_FS_FLAG(ssdSwapParti))
+
+        # ssdCacheParti
+        if not os.path.exists(ssdCacheParti):
+            raise errors.StorageLayoutParseError(StorageLayoutImpl.name, "SSD has no cache partition")
+
+        for hdd, bcacheDev in hddDict.items():
+            tlist = BcacheUtil.getSlaveDevPathList(bcacheDev)
+            if len(tlist) < 2:
+                raise errors.StorageLayoutParseError(StorageLayoutImpl.name, "%s(%s) has no cache device" % (hdd, bcacheDev))
+            if len(tlist) > 2:
+                raise errors.StorageLayoutParseError(StorageLayoutImpl.name, "%s(%s) has multiple cache devices" % (hdd, bcacheDev))
+            if tlist[0] != ssdCacheParti:
+                raise errors.StorageLayoutParseError(StorageLayoutImpl.name, "%s(%s) has invalid cache device" % (hdd, bcacheDev))
+        if True:
+            partName, partId = Util.devPathPartiToDiskAndPartiId(ssdCacheParti)
+            nextPartName = Util.devPathDiskToParti(partName, partId + 1)
+            if os.path.exists(nextPartName):
+                raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.DISK_HAS_REDUNDANT_PARTITION(ssd))
+    else:
+        ssd = None
+        ssdEspParti = None
+        ssdSwapParti = None
+        ssdCacheParti = None
+
+    # boot harddisk
+    if ssd is not None:
+        bootHdd = ssdEspParti
+    else:
+        bootHdd = Util.devPathPartiToDisk(boot_dev)
 
     # return
     ret = StorageLayoutImpl()
-    ret._cg = EfiCacheGroup()
-    ret._hddDict = dict()              # dict<hddDev,bcacheDev>
-    ret._swap = SwapParti(ret)
+    ret._cg = EfiCacheGroup(ssd=ssd, ssdEspParti=ssdEspParti, ssdSwapParti=ssdSwapParti, ssdCacheParti=ssdCacheParti, hddList=hddDict.keys(), bootHdd=bootHdd)
+    ret._hddDict = hddDict
     ret._mnt = MountEfi("/")
     return ret
 
@@ -276,7 +343,6 @@ def create_and_mount(disk_list, mount_dir):
     ret = StorageLayoutImpl()
     ret._cg = cg
     ret._hddDict = hddDict
-    ret._swap = SwapParti(ret)
     ret._mnt = MountEfi(mount_dir)
     return ret
 

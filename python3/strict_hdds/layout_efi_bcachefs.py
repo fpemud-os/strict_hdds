@@ -22,7 +22,7 @@
 
 
 import os
-from .util import Util, GptUtil, BcachefsUtil, EfiCacheGroup, SwapParti
+from .util import Util, GptUtil, BcachefsUtil, EfiCacheGroup
 from . import errors
 from . import StorageLayout
 
@@ -73,7 +73,6 @@ class StorageLayoutImpl(StorageLayout):
     def boot_disk(self):
         pass
 
-    @SwapParti.proxy
     def check(self):
         pass
 
@@ -167,41 +166,6 @@ class StorageLayoutImpl(StorageLayout):
             return lastBootHdd != self._cg.boot_disk     # boot disk may change
 
 
-def create_and_mount(ssd=None, hdd_list=None):
-    if ssd is None and hdd_list is None:
-        ssd_list, hdd_list = Util.getDevPathListForFixedSsdAndHdd()
-        if len(ssd_list) == 0:
-            pass
-        elif len(ssd_list) == 1:
-            ssd = ssd_list[0]
-        else:
-            raise errors.StorageLayoutCreateError(errors.MULTIPLE_SSD)
-        if len(hdd_list) == 0:
-            raise errors.StorageLayoutCreateError(errors.NO_DISK_WHEN_CREATE)
-    else:
-        assert hdd_list is not None and len(hdd_list) > 0
-
-    ret = StorageLayoutImpl()
-
-    ret._cg = EfiCacheGroup()
-
-    # add disks, process ssd first so that minimal boot disk change is need
-    if ssd is not None:
-        ret._cg.add_ssd(ssd)
-    for hdd in hdd_list:
-        ret._cg.add_hdd(hdd)
-
-    # create bcachefs
-    if ret._cg.get_ssd() is not None:
-        ssd_list2 = [ret._cg.get_ssd_cache_partition()]
-    else:
-        ssd_list2 = []
-    hdd_list2 = [ret._cg.get_hdd_data_partition(x) for x in hdd_list]
-    BcachefsUtil.createBcachefs(ssd_list2, hdd_list2, 1, 1)
-
-    return ret
-
-
 def parse(bootDev, rootDev):
     ret = StorageLayoutImpl()
 
@@ -251,5 +215,40 @@ def parse(bootDev, rootDev):
     # boot harddisk
     if ret._ssd is None:
         ret._bootHdd = Util.devPathPartiToDisk(bootDev)
+
+    return ret
+
+
+def create_and_mount(ssd=None, hdd_list=None):
+    if ssd is None and hdd_list is None:
+        ssd_list, hdd_list = Util.getDevPathListForFixedSsdAndHdd()
+        if len(ssd_list) == 0:
+            pass
+        elif len(ssd_list) == 1:
+            ssd = ssd_list[0]
+        else:
+            raise errors.StorageLayoutCreateError(errors.MULTIPLE_SSD)
+        if len(hdd_list) == 0:
+            raise errors.StorageLayoutCreateError(errors.NO_DISK_WHEN_CREATE)
+    else:
+        assert hdd_list is not None and len(hdd_list) > 0
+
+    ret = StorageLayoutImpl()
+
+    ret._cg = EfiCacheGroup()
+
+    # add disks, process ssd first so that minimal boot disk change is need
+    if ssd is not None:
+        ret._cg.add_ssd(ssd)
+    for hdd in hdd_list:
+        ret._cg.add_hdd(hdd)
+
+    # create bcachefs
+    if ret._cg.get_ssd() is not None:
+        ssd_list2 = [ret._cg.get_ssd_cache_partition()]
+    else:
+        ssd_list2 = []
+    hdd_list2 = [ret._cg.get_hdd_data_partition(x) for x in hdd_list]
+    BcachefsUtil.createBcachefs(ssd_list2, hdd_list2, 1, 1)
 
     return ret

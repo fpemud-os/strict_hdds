@@ -1393,22 +1393,6 @@ class EfiCacheGroup:
         self._bootHdd = None
 
 
-class SwapParti:
-
-    @staticmethod
-    def proxy(func):
-        def f(self, *args):
-            return getattr(self._swap, func.__name__)(*args)
-        return f
-
-    def __init__(self, parent):
-        self._parent = parent
-
-    def check_swap_size(self):
-        assert self._parent.dev_swap is not None
-        return Util.getBlkDevSize(self._parent.dev_swap) >= Util.getSwapSize()
-
-
 class SwapLvmLv:
 
     @staticmethod
@@ -1422,10 +1406,6 @@ class SwapLvmLv:
 
     def get_swap_devname(self):
         return LvmUtil.swapLvDevPath if self._bSwapLv else None
-
-    def check_swap_size(self):
-        assert self._bSwapLv
-        return Util.getBlkDevSize(LvmUtil.swapLvDevPath) >= Util.getSwapSize()
 
     def create_swap_lv(self):
         assert not self._bSwapLv
@@ -1460,10 +1440,6 @@ class SwapFile:
     @property
     def dev_swap(self):
         return Util.swapFilepath if self._bSwapFile else None
-
-    def check_swap_size(self):
-        assert self._bSwapFile
-        return os.path.getsize(Util.swapFilepath) >= Util.getSwapSize()
 
     def create_swap_file(self):
         assert not self._bSwapFile

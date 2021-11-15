@@ -87,7 +87,9 @@ class StorageLayoutImpl(StorageLayout):
         pass
 
     def check(self):
-        self._swap.check_swap_size()
+        if self.dev_swap is not None:
+            if Util.getBlkDevSize(self.dev_swap) < Util.getSwapSize():
+                raise errors.StorageLayoutCheckError(self.name, errors.SWAP_SIZE_TOO_SMALL)
 
     @SwapFile.proxy
     def create_swap_file(self):
