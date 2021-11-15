@@ -83,7 +83,7 @@ class StorageLayoutImpl(StorageLayout):
     @property
     @EfiCacheGroup.proxy
     def boot_disk(self):
-        return self._cg.get_ssd() if self._cg.get_ssd() is not None else self._cg.boot_disk
+        pass
 
     def umount_and_dispose(self):
         if True:
@@ -142,90 +142,98 @@ class StorageLayoutImpl(StorageLayout):
     def get_ssd_cache_partition(self):
         pass
 
-    def add_disk(self, devpath):
-        assert devpath is not None
+    @EfiCacheGroup.proxy
+    def get_hdd_list(self):
+        pass
 
-        if devpath not in Util.getDevPathListForFixedDisk():
-            raise errors.StorageLayoutAddDiskError(devpath, errors.NOT_DISK)
+    @EfiCacheGroup.proxy
+    def get_hdd_esp_partition(self, disk):
+        pass
 
-        if Util.isBlkDevSsdOrHdd(devpath):
-            self._cg.add_ssd(devpath)
+    @EfiCacheGroup.proxy
+    def get_hdd_data_partition(self, disk):
+        pass
 
+    def add_disk(self, disk):
+        assert disk is not None
+
+        if disk not in Util.getDevPathListForFixedDisk():
+            raise errors.StorageLayoutAddDiskError(disk, errors.NOT_DISK)
+
+        lastBootHdd = self._cg.boot_disk
+        self._cg.add_ssd(disk)
+
+        if Util.isBlkDevSsdOrHdd(disk):
             # ssd partition 3: make it as cache device
             parti = self._cg.get_ssd_cache_partition()
             BcacheUtil.makeDevice(parti, False)
             BcacheUtil.registerCacheDevice(parti)
             BcacheUtil.attachCacheDevice(self._cg.get_hdd_list(), parti)
-
-            return True     # boot disk changed
         else:
-            lastBootHdd = self._cg.boot_disk
-
-            self._cg.add_hdd(devpath)
-
             # hdd partition 2: make it as backing device and add it to btrfs filesystem
-            parti = self._cg.get_hdd_data_partition(devpath)
+            parti = self._cg.get_hdd_data_partition(disk)
             BcacheUtil.makeDevice(parti, True)
             BcacheUtil.registerBackingDevice(parti)
             bcacheDev = BcacheUtil.findByBackingDevice(parti)
             if self._cg.get_ssd() is not None:
                 BcacheUtil.attachCacheDevice([bcacheDev], self._cg.get_ssd_cache_partition())
             Util.cmdCall("/sbin/btrfs", "device", "add", bcacheDev, "/")
-            self._hddDict[devpath] = bcacheDev
+            self._hddDict[disk] = bcacheDev
 
-            return lastBootHdd != self._cg.boot_disk     # boot disk may change
+        # return True means boot disk is changed
+        return lastBootHdd != self._cg.boot_disk
 
-    def remove_disk(self, devpath):
-        assert devpath is not None
+    def remove_disk(self, disk):
+        assert disk is not None
 
-        if self._cg.get_ssd() is not None and devpath == self._cg.get_ssd():
+        lastBootHdd = self._cg.boot_disk
+
+        if self._cg.get_ssd() is not None and disk == self._cg.get_ssd():
+            # check if swap is in use
             if self._cg.get_ssd_swap_partition() is not None:
                 if Util.systemdFindSwapService(self._cg.get_ssd_swap_partition()) is not None:
                     raise errors.StorageLayoutRemoveDiskError(errors.SWAP_IS_IN_USE)
 
             # ssd partition 3: remove from cache
             BcacheUtil.unregisterCacheDevice(self._cg.get_ssd_cache_partition())
-
-            # remove
-            self._cg.remove_ssd()
-
-            return True     # boot disk changed
-        else:
-            assert devpath in self._cg.get_hdd_list()
-
+        elif disk in self._cg.get_hdd_list():
+            # check for last hdd
             if len(self._cg.get_hdd_list()) <= 1:
                 raise errors.StorageLayoutRemoveDiskError(errors.CAN_NOT_REMOVE_LAST_HDD)
 
-            lastBootHdd = self._cg.boot_disk
-
             # hdd partition 2: remove from btrfs and bcache
-            bcacheDev = BcacheUtil.findByBackingDevice(self._cg.get_hdd_data_partition(devpath))
+            bcacheDev = BcacheUtil.findByBackingDevice(self._cg.get_hdd_data_partition(disk))
             Util.cmdCall("/sbin/btrfs", "device", "delete", bcacheDev, "/")
             BcacheUtil.stopBackingDevice(bcacheDev)
-            del self._hddDict[devpath]
-
-            # remove
-            self._cg.remove_hdd(devpath)
-
-            return lastBootHdd != self._cg.boot_disk     # boot disk may change
-
-
-def create_and_mount(ssd=None, hdd_list=None):
-    if ssd is None and hdd_list is None:
-        # discover all fixed harddisks
-        ssd_list, hdd_list = Util.getDevPathListForFixedSsdAndHdd()
-        if len(ssd_list) == 0:
-            pass
-        elif len(ssd_list) == 1:
-            ssd = ssd_list[0]
+            del self._hddDict[disk]
         else:
-            raise errors.StorageLayoutCreateError(errors.MULTIPLE_SSD)
-        if len(hdd_list) == 0:
-            raise errors.StorageLayoutCreateError(errors.NO_DISK_WHEN_CREATE)
-    else:
-        assert hdd_list is not None and len(hdd_list) > 0
+            assert False
+
+        # remove
+        self._cg.remove_hdd(disk)
+
+        # return True means boot disk is changed
+        return lastBootHdd != self._cg.boot_disk
+
+
+def parse(boot_dev, root_dev):
+    if not GptUtil.isEspPartition(boot_dev):
+        raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.BOOT_DEV_IS_NOT_ESP)
 
     ret = StorageLayoutImpl()
+    return ret
+
+
+def detect_and_mount(disk_list, mount_dir):
+    ssd_list, hdd_list = Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list)
+    _checkSsdAndHdd(ssd_list, hdd_list)
+
+
+
+def create_and_mount(disk_list, mount_dir):
+    ssd_list, hdd_list = Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list)
+    _checkSsdAndHdd(ssd_list, hdd_list)
+
 
     ret._cg = EfiCacheGroup()
 
@@ -250,13 +258,16 @@ def create_and_mount(ssd=None, hdd_list=None):
     # create btrfs filesystem
     Util.cmdCall("/usr/sbin/mkfs.btrfs", "-d", "single", "-m", "single", *ret._hddDict.values())
 
-    return ret
-
-
-def parse(bootDev, rootDev):
     ret = StorageLayoutImpl()
-
-    if not GptUtil.isEspPartition(bootDev):
-        raise errors.StorageLayoutParseError(ret.name, errors.BOOT_DEV_IS_NOT_ESP)
-
     return ret
+
+
+def _checkSsdAndHdd(ssd_list, hdd_list):
+    if len(ssd_list) == 0:
+        ssd = None
+    elif len(ssd_list) == 1:
+        ssd = ssd_list[0]
+    else:
+        raise errors.StorageLayoutCreateError(errors.MULTIPLE_SSD)
+    if len(hdd_list) == 0:
+        raise errors.StorageLayoutCreateError(errors.NO_DISK_WHEN_CREATE)

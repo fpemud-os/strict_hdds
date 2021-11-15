@@ -479,9 +479,13 @@ class Util:
 
     @staticmethod
     def getDevPathListForFixedSsdAndHdd():
+        return Util.getSsdAndHddListFromFixedDiskList(Util.getDevPathListForFixedDisk())
+
+    @staticmethod
+    def splitSsdAndHddFromFixedDiskDevPathList(diskList):
         ssdList = []
         hddList = []
-        for devpath in Util.getDevPathListForFixedDisk():
+        for devpath in diskList:
             if Util.isBlkDevSsdOrHdd(devpath):
                 ssdList.append(devpath)
             else:
@@ -1269,13 +1273,13 @@ class EfiCacheGroup:
     def get_hdd_list(self):
         return self._hddList
 
-    def get_hdd_esp_partition(self, hdd):
-        assert hdd in self._hddList
-        return Util.devPathDiskToParti(hdd, 1)
+    def get_hdd_esp_partition(self, disk):
+        assert disk in self._hddList
+        return Util.devPathDiskToParti(disk, 1)
 
-    def get_hdd_data_partition(self, hdd):
-        assert hdd in self._hddList
-        return Util.devPathDiskToParti(hdd, 2)
+    def get_hdd_data_partition(self, disk):
+        assert disk in self._hddList
+        return Util.devPathDiskToParti(disk, 2)
 
     def add_ssd(self, ssd):
         assert self._ssd is None
