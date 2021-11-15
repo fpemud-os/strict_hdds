@@ -51,6 +51,7 @@ class MountBios:
         self._mountDir = mountDir
         self._rwCtrl = self.BootDirRwController()
 
+    @property
     def mount_point(self):
         return self._mountDir
 
@@ -96,6 +97,7 @@ class MountEfi:
         self._mountDir = mountDir
         self._rwCtrl = self.BootDirRwController()
 
+    @property
     def mount_point(self):
         return self._mountDir
 
@@ -105,6 +107,7 @@ class MountEfi:
 
     def remount_rootfs(self, mount_options):
         Util.cmdCall("/bin/mount", "--remount", ",".join(mount_options))
+        # FIXME: consider boot device
 
     def get_bootdir_rw_controller(self):
         return self._rwCtrl

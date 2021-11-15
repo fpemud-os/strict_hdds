@@ -166,7 +166,7 @@ def get_current_storage_layout():
         return _parseOneStorageLayout("bios-ext4", bootDev, rootDev)
 
 
-def detect_and_mount_storage_layout(mount_dir):
+def detect_and_mount_storage_layout(mount_dir, mount_options):
     allLayoutNames = get_supported_storage_layouts()
 
     diskList = Util.getDevPathListForFixedDisk()
@@ -223,7 +223,7 @@ def detect_and_mount_storage_layout(mount_dir):
         return _detectAndMountOneStorageLayout("bios-ext4", diskList, mount_dir)
 
 
-def create_and_mount_storage_layout(layout_name, mount_dir):
+def create_and_mount_storage_layout(layout_name, mount_dir, mount_options):
     for mod in pkgutil.iter_modules(["."]):
         if mod.name.startswith("layout_"):
             if layout_name == Util.modName2layoutName(mod.name):

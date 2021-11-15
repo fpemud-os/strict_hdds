@@ -56,10 +56,12 @@ class StorageLayoutImpl(StorageLayout):
     def dev_boot(self):
         assert False
 
+    @property
     @SwapFile.proxy
     def dev_swap(self):
         pass
 
+    @property
     @MountBios.proxy
     def mount_point(self):
         pass

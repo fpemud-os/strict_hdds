@@ -90,6 +90,10 @@ class StorageLayoutImpl(StorageLayout):
         pass
 
     @EfiCacheGroup.proxy
+    def get_disk_list(self):
+        pass
+
+    @EfiCacheGroup.proxy
     def get_ssd(self):
         pass
 
@@ -103,10 +107,6 @@ class StorageLayoutImpl(StorageLayout):
 
     @EfiCacheGroup.proxy
     def get_ssd_cache_partition(self):
-        pass
-
-    @EfiCacheGroup.proxy
-    def get_disk_list(self):
         pass
 
     def add_disk(self, disk):
@@ -124,7 +124,7 @@ class StorageLayoutImpl(StorageLayout):
 
             return True     # boot disk changed
         else:
-            lastBootHdd = self._cg.get_boot_hdd()
+            lastBootHdd = self._cg.boot_disk
 
             self._cg.add_hdd(disk)
 
@@ -133,7 +133,7 @@ class StorageLayoutImpl(StorageLayout):
             BcachefsUtil.makeDevice(parti)
             Util.cmdCall("/sbin/bcachefs", "device", "add", parti, "/")
 
-            return lastBootHdd != self._cg.get_boot_hdd()     # boot disk may change
+            return lastBootHdd != self._cg.boot_disk     # boot disk may change
 
     def remove_disk(self, devpath):
         assert devpath is not None
@@ -153,10 +153,10 @@ class StorageLayoutImpl(StorageLayout):
         else:
             assert devpath in self._cg.get_hdd_list()
 
-            if self._cg.get_hdd_count() <= 1:
+            if len(self._cg.get_hdd_list()) <= 1:
                 raise errors.StorageLayoutRemoveDiskError(errors.CAN_NOT_REMOVE_LAST_HDD)
 
-            lastBootHdd = self._cg.get_boot_hdd()
+            lastBootHdd = self._cg.boot_disk
 
             # hdd partition 2: remove from bcachefs
             BcachefsUtil.removeDevice(self._cg.get_hdd_data_partition(devpath))
@@ -164,7 +164,7 @@ class StorageLayoutImpl(StorageLayout):
             # remove
             self._cg.remove_hdd(devpath)
 
-            return lastBootHdd != self._cg.get_boot_hdd()     # boot disk may change
+            return lastBootHdd != self._cg.boot_disk     # boot disk may change
 
 
 def create_and_mount(ssd=None, hdd_list=None):

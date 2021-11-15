@@ -119,7 +119,7 @@ class StorageLayoutImpl(StorageLayout):
         if self._md.get_hdd_count() <= 1:
             raise errors.StorageLayoutRemoveDiskError(errors.CAN_NOT_REMOVE_LAST_HDD)
 
-        lastBootHdd = self._cg.get_boot_hdd()
+        lastBootHdd = self._cg.boot_disk
         parti = self._md.get_disk_data_partition(devpath)
 
         # hdd partition 2: remove from volume group

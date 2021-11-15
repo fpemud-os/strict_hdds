@@ -1075,6 +1075,10 @@ class EfiMultiDisk:
         self._bootHdd = bootHdd
 
     @property
+    def dev_boot(self):
+        return self.get_esp()
+
+    @property
     def boot_disk(self):
         return self._bootHdd
 
@@ -1204,6 +1208,18 @@ class EfiCacheGroup:
                 assert bootHdd is None
         self._bootHdd = bootHdd
 
+    @property
+    def dev_boot(self):
+        return self.get_esp()
+
+    @property
+    def dev_swap(self):
+        return self.get_ssd_swap_partition()
+
+    @property
+    def boot_disk(self):
+        return self._ssd if self._ssd is not None else self._bootHdd
+
     def get_esp(self):
         if self._ssd is not None:
             return self._ssdEspParti
@@ -1223,6 +1239,12 @@ class EfiCacheGroup:
         assert self.get_esp() is not None
         assert dst is not None and dst in self.get_pending_esp_list()
         Util.syncBlkDev(self.get_esp(), dst, mountPoint1=Util.bootDir)
+
+    def get_disk_list(self):
+        if self._ssd is not None:
+            return [self._ssd] + self._hddList
+        else:
+            return self._hddList
 
     def get_ssd(self):
         return self._ssd
@@ -1244,20 +1266,8 @@ class EfiCacheGroup:
         assert self._bootHdd is None
         return self._ssdCacheParti
 
-    def get_disk_list(self):
-        if self._ssd is not None:
-            return [self._ssd] + self._hddList
-        else:
-            return self._hddList
-
-    def get_hdd_count(self):
-        return len(self._hddList)
-
     def get_hdd_list(self):
         return self._hddList
-
-    def get_boot_hdd(self):
-        return self._bootHdd
 
     def get_hdd_esp_partition(self, hdd):
         assert hdd in self._hddList
