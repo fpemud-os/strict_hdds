@@ -22,6 +22,7 @@
 
 
 import os
+import psutil
 from .util import Util
 from . import BootDirRwController
 
@@ -72,16 +73,17 @@ class MountEfi:
 
         @property
         def is_writable(self):
-            # FIXME: get current
+            for pobj in psutil.disk_partitions():
+                if pobj.mountpoint == self._mountDir:
+                    return ("rw" in pobj.opts.split(","))
             assert False
-            return True
 
         def to_read_write(self):
-            # FIXME: check current rw mount option, keep other mount options
+            assert not self.is_writable
             Util.cmdCall("/bin/mount", self._mountDir, "-o", "rw,remount")
 
         def to_read_only(self):
-            # FIXME: check current rw mount option, keep other mount options
+            assert self.is_writable
             Util.cmdCall("/bin/mount", self._mountDir, "-o", "ro,remount")
 
     @staticmethod
