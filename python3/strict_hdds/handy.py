@@ -265,6 +265,6 @@ class HandyUtil:
         if re.search("/dev/hdd/swap:%s:.*" % (LvmUtil.vgName), out, re.M) is not None:
             if Util.getBlkDevFsType(LvmUtil.swapLvDevPath) != Util.fsTypeSwap:
                 raise errors.StorageLayoutParseError(storageLayoutName, errors.SWAP_DEV_HAS_INVALID_FS_FLAG(LvmUtil.swapLvDevPath))
-            return = SwapLvmLv(True)
+            return SwapLvmLv(True)
         else:
-            return = SwapLvmLv(False)
+            return SwapLvmLv(False)
