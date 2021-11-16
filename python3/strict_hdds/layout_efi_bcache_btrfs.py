@@ -256,7 +256,7 @@ def parse(boot_dev, root_dev):
 
 
 def detect_and_mount(disk_list, mount_dir):
-    ssd, hdd_list = HandyUtil.getSsdAndHddList(disk_list)
+    ssd, hdd_list = HandyUtil.getSsdAndHddList(Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list))
     cg = EfiCacheGroup()
 
 
@@ -264,7 +264,7 @@ def create_and_mount(disk_list, mount_dir):
     # add disks, process ssd first so that minimal boot disk change is need
     cg = EfiCacheGroup()
     if True:
-        ssd, hdd_list = HandyUtil.getSsdAndHddList(disk_list)
+        ssd, hdd_list = HandyUtil.getSsdAndHddList(Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list))
         if ssd is not None:
             cg.add_ssd(ssd)
         for hdd in hdd_list:

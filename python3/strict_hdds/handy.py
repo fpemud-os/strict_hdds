@@ -131,8 +131,7 @@ class HandyUtil:
         return storageLayout.dev_swap is not None and Util.systemdFindSwapService(storageLayout.dev_swap) is not None
 
     @staticmethod
-    def getSsdAndHddList(disk_list):
-        ssd_list, hdd_list = Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list)
+    def getSsdAndHddList(ssd_list, hdd_list):
         if len(ssd_list) == 0:
             ssd = None
         elif len(ssd_list) == 1:
@@ -181,7 +180,7 @@ class HandyUtil:
         else:
             return None, None, None
 
-    def cacheGroupFindBcacheDevList(cg):
+    def cacheGroupFindByBackingDeviceList(cg):
         return [BcacheUtil.findByBackingDevice(cg.get_hdd_data_partition(x)) for x in cg.get_hdd_list()]
 
     @staticmethod

@@ -958,6 +958,10 @@ class BcacheUtil:
 class BcachefsUtil:
 
     @staticmethod
+    def getSlaveSsdDevPatListAndHddDevPathList(devPath):
+        return [], []
+
+    @staticmethod
     def createBcachefs(ssdList, hddList):
         assert len(hddList) > 0
 

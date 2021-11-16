@@ -24,7 +24,7 @@
 import os
 import re
 from .util import Util, GptUtil, BcacheUtil, LvmUtil, EfiCacheGroup
-from .handy import MountEfi, HandyUtil
+from .handy import CommonChecks, MountEfi, HandyUtil
 from . import errors
 from . import StorageLayout
 
@@ -98,9 +98,7 @@ class StorageLayoutImpl(StorageLayout):
         pass
 
     def check(self):
-        if self.dev_swap is not None:
-            if Util.getBlkDevSize(self.dev_swap) < Util.getSwapSize():
-                raise errors.StorageLayoutCheckError(self.name, errors.SWAP_SIZE_TOO_SMALL)
+        CommonChecks.storageLayoutCheckSwapSize(self)
 
     def optimize_rootdev(self):
         LvmUtil.autoExtendLv(LvmUtil.rootLvDevPath)
@@ -218,8 +216,8 @@ class StorageLayoutImpl(StorageLayout):
         return lastBootHdd != self._cg.boot_disk     # boot disk may change
 
 
-def parse(bootDev, rootDev):
-    if not GptUtil.isEspPartition(bootDev):
+def parse(boot_dev, root_dev):
+    if not GptUtil.isEspPartition(boot_dev):
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.BOOT_DEV_IS_NOT_ESP)
 
     # vg
@@ -245,7 +243,7 @@ def parse(bootDev, rootDev):
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.LVM_LV_NOT_FOUND(LvmUtil.rootLvDevPath))
 
     # ssd
-    ssd = Util.devPathPartiToDisk(bootDev)
+    ssd = Util.devPathPartiToDisk(boot_dev)
     if ssd in hddDict:
         ssd = None
     ssdEspParti, ssdSwapParti, ssdCacheParti = HandyUtil.cacheGroupGetSsdPartitions(StorageLayoutImpl.name, boot_dev, ssd)
@@ -259,7 +257,7 @@ def parse(bootDev, rootDev):
     if ssd is not None:
         bootHdd = None
     else:
-        bootHdd = Util.devPathPartiToDisk(bootDev)
+        bootHdd = Util.devPathPartiToDisk(boot_dev)
 
     # return
     ret = StorageLayoutImpl()
