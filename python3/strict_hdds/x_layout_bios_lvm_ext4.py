@@ -228,13 +228,8 @@ def parse(booDev, rootDev):
 
 def detect_and_mount(disk_list, mount_dir):
     LvmUtil.activateAll()
-
-    # it is interesting that we can reuse parse function
-    ret = parse(None, None)
-
     Util.cmdCall("/bin/mount", LvmUtil.rootLvName, mount_dir)
-
-    return ret
+    return parse(None, LvmUtil.rootLvName)                      # it is interesting that we can reuse parse function
 
 
 def create_and_mount(disk_list, mount_dir):

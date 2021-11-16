@@ -23,8 +23,9 @@
 
 import os
 import re
+from parted import disk
 import psutil
-from .util import Util, BcacheUtil
+from .util import Util, BcacheUtil, LvmUtil, SwapFile, SwapLvmLv
 from . import errors
 from . import BootDirRwController
 
@@ -143,7 +144,23 @@ class HandyUtil:
         return (ssd, hdd_list)
 
     @staticmethod
-    def cacheGroupGetSsdPartitions(storageLayoutName, bootDev, ssd):
+    def getHdd(disk_list):
+        if len(disk_list) == 0:
+            raise errors.StorageLayoutCreateError(errors.NO_DISK_WHEN_CREATE)
+        if len(disk_list) > 1:
+            raise errors.StorageLayoutCreateError(errors.MULTIPLE_DISKS_WHEN_CREATE)
+        return disk_list[0]
+
+    @staticmethod
+    def cgGetSsdFromBootDev(bootDev, hddList):
+        ssd = Util.devPathPartiToDisk(bootDev)
+        if ssd not in hddList:
+            return ssd
+        else:
+            return None
+
+    @staticmethod
+    def cgGetSsdPartitions(storageLayoutName, bootDev, ssd):
         if ssd is not None:
             ssdEspParti = Util.devPathDiskToParti(ssd, 1)
             if os.path.exists(Util.devPathDiskToParti(ssd, 3)):
@@ -180,7 +197,7 @@ class HandyUtil:
         else:
             return None, None, None
 
-    def cacheGroupFindByBackingDeviceList(cg):
+    def cgFindByBackingDeviceList(cg):
         return [BcacheUtil.findByBackingDevice(cg.get_hdd_data_partition(x)) for x in cg.get_hdd_list()]
 
     @staticmethod
@@ -203,3 +220,51 @@ class HandyUtil:
             raise errors.StorageLayoutParseError(storageLayoutName, "%s(%s) has multiple cache devices" % (hdd, bcacheDev))
         if tlist[0] != ssdCacheParti:
             raise errors.StorageLayoutParseError(storageLayoutName, "%s(%s) has invalid cache device" % (hdd, bcacheDev))
+
+    @staticmethod
+    def lvmGetDiskList(storageLayoutName):
+        # vg
+        if not Util.cmdCallTestSuccess("/sbin/lvm", "vgdisplay", LvmUtil.vgName):
+            raise errors.StorageLayoutParseError(storageLayoutName, errors.LVM_VG_NOT_FOUND(LvmUtil.vgName))
+
+        # pv list
+        diskList = []
+        out = Util.cmdCall("/sbin/lvm", "pvdisplay", "-c")
+        for m in re.finditer("(/dev/\\S+):%s:.*" % (LvmUtil.vgName), out, re.M):
+            hdd, partId = Util.devPathPartiToDiskAndPartiId(m.group(1))
+            if Util.getBlkDevPartitionTableType(hdd) != Util.diskPartTableGpt:
+                raise errors.StorageLayoutParseError(storageLayoutName, errors.PARTITION_TYPE_SHOULD_BE(hdd, Util.diskPartTableGpt))
+            if partId != 2:
+                raise errors.StorageLayoutParseError(storageLayoutName, "physical volume partition of %s is not %s" % (hdd, Util.devPathDiskToParti(hdd, 2)))
+            if Util.getBlkDevSize(Util.devPathDiskToParti(hdd, 1)) != Util.getEspSize():
+                raise errors.StorageLayoutParseError(storageLayoutName, errors.PARTITION_SIZE_INVALID(Util.devPathDiskToParti(hdd, 1)))
+            if os.path.exists(Util.devPathDiskToParti(hdd, 3)):
+                raise errors.StorageLayoutParseError(storageLayoutName, errors.DISK_HAS_REDUNDANT_PARTITION(hdd))
+            diskList.append(hdd)
+
+        # root lv
+        out = Util.cmdCall("/sbin/lvm", "lvdisplay", "-c")
+        if re.search("/dev/hdd/root:%s:.*" % (LvmUtil.vgName), out, re.M) is None:
+            raise errors.StorageLayoutParseError(storageLayoutName, errors.LVM_LV_NOT_FOUND(LvmUtil.rootLvDevPath))
+
+        return diskList
+
+    @staticmethod
+    def swapFileDetectAndNew(storageLayoutName, rootfs_mount_dir):
+        fullfn = rootfs_mount_dir.rstrip("/") + Util.swapFilepath
+        if os.path.exists(fullfn):
+            if not Util.cmdCallTestSuccess("/sbin/swaplabel", fullfn):
+                raise errors.StorageLayoutParseError(storageLayoutName, "SWAP_DEV_HAS_INVALID_FS_FLAG")
+            return SwapFile(True)
+        else:
+            return SwapFile(False)
+
+    @staticmethod
+    def swapLvDetectAndNew(storageLayoutName):
+        out = Util.cmdCall("/sbin/lvm", "lvdisplay", "-c")
+        if re.search("/dev/hdd/swap:%s:.*" % (LvmUtil.vgName), out, re.M) is not None:
+            if Util.getBlkDevFsType(LvmUtil.swapLvDevPath) != Util.fsTypeSwap:
+                raise errors.StorageLayoutParseError(storageLayoutName, errors.SWAP_DEV_HAS_INVALID_FS_FLAG(LvmUtil.swapLvDevPath))
+            return = SwapLvmLv(True)
+        else:
+            return = SwapLvmLv(False)

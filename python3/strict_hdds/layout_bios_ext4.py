@@ -23,7 +23,7 @@
 
 import os
 from .util import Util, MbrUtil, SwapFile
-from .handy import MountBios, CommonChecks
+from .handy import MountBios, CommonChecks, HandyUtil
 from . import errors
 from . import StorageLayout
 
@@ -114,7 +114,7 @@ def parse(boot_dev, root_dev):
     ret = StorageLayoutImpl()
     ret._hdd = hdd
     ret._hddRootParti = root_dev
-    ret._swap = SwapFile.detectAndNewSwapFileObject("/")
+    ret._swap = HandyUtil.swapFileDetectAndNew("/")
     ret._mnt = MountBios("/")
     return ret
 
@@ -147,19 +147,14 @@ def detect_and_mount(disk_list, mount_dir):
     ret = StorageLayoutImpl()
     ret._hdd = Util.devPathPartiToDisk(rootPartitionList[0])
     ret._hddRootParti = rootPartitionList[0]
-    ret._swap = SwapFile.detectAndNewSwapFileObject(mount_dir)
+    ret._swap = HandyUtil.swapFileDetectAndNew(mount_dir)
     ret._mnt = MountBios(mount_dir)
     return ret
 
 
 def create_and_mount(disk_list, mount_dir):
-    if len(disk_list) == 0:
-        raise errors.StorageLayoutCreateError(errors.NO_DISK_WHEN_CREATE)
-    if len(disk_list) > 1:
-        raise errors.StorageLayoutCreateError(errors.MULTIPLE_DISKS_WHEN_CREATE)
-
     # create partitions
-    hdd = disk_list[0]
+    hdd = HandyUtil.getHdd(disk_list)
     Util.initializeDisk(hdd, Util.diskPartTableMbr, [
         ("*", Util.fsTypeExt4),
     ])

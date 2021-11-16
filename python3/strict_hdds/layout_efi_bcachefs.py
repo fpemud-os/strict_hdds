@@ -204,18 +204,15 @@ def parse(boot_dev, root_dev):
 
     # get ssd, hdd list
     ssd, hddList = HandyUtil.getSsdAndHddList(BcachefsUtil.getSlaveSsdDevPatListAndHddDevPathList(root_dev))
-
-    # ssd
+    ssdEspParti, ssdSwapParti, ssdCacheParti = HandyUtil.cgGetSsdPartitions(StorageLayoutImpl.name, root_dev, ssd)
     if ssd is not None:
-        if ssd != Util.devPathPartiToDisk(boot_dev):
-            raise XXXXX
-    ssdEspParti, ssdSwapParti, ssdCacheParti = HandyUtil.cacheGroupGetSsdPartitions(StorageLayoutImpl.name, root_dev, ssd)
-
-    # boot harddisk
-    if ssd is not None:
+        if ssdEspParti != boot_dev:
+            raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.BOOT_DEV_MUST_BE(ssdEspParti))
         bootHdd = None
     else:
         bootHdd = Util.devPathPartiToDisk(boot_dev)
+        if bootHdd not in hddList:
+            raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.BOOT_DEV_INVALID)
 
     ret = StorageLayoutImpl()
     ret._cg = EfiCacheGroup(ssd=ssd, ssdEspParti=ssdEspParti, ssdSwapParti=ssdSwapParti, ssdCacheParti=ssdCacheParti, hddList=hddList, bootHdd=bootHdd)
@@ -223,36 +220,29 @@ def parse(boot_dev, root_dev):
     return ret
 
 
-def create_and_mount(ssd=None, hdd_list=None):
-    if ssd is None and hdd_list is None:
-        ssd_list, hdd_list = Util.getDevPathListForFixedSsdAndHdd()
-        if len(ssd_list) == 0:
-            pass
-        elif len(ssd_list) == 1:
-            ssd = ssd_list[0]
-        else:
-            raise errors.StorageLayoutCreateError(errors.MULTIPLE_SSD)
-        if len(hdd_list) == 0:
-            raise errors.StorageLayoutCreateError(errors.NO_DISK_WHEN_CREATE)
-    else:
-        assert hdd_list is not None and len(hdd_list) > 0
+def detect_and_mount(disk_list, mount_dir):
+    assert False
 
-    ret = StorageLayoutImpl()
 
-    ret._cg = EfiCacheGroup()
+def create_and_mount(disk_list, mount_dir):
+    ssd, hdd_list = HandyUtil.getSsdAndHddList(Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list))
+    cg = EfiCacheGroup()
 
     # add disks, process ssd first so that minimal boot disk change is need
     if ssd is not None:
-        ret._cg.add_ssd(ssd)
+        cg.add_ssd(ssd)
     for hdd in hdd_list:
-        ret._cg.add_hdd(hdd)
+        cg.add_hdd(hdd)
 
     # create bcachefs
-    if ret._cg.get_ssd() is not None:
-        ssd_list2 = [ret._cg.get_ssd_cache_partition()]
+    if cg.get_ssd() is not None:
+        ssd_list2 = [cg.get_ssd_cache_partition()]
     else:
         ssd_list2 = []
-    hdd_list2 = [ret._cg.get_hdd_data_partition(x) for x in hdd_list]
+    hdd_list2 = [cg.get_hdd_data_partition(x) for x in hdd_list]
     BcachefsUtil.createBcachefs(ssd_list2, hdd_list2, 1, 1)
 
+    ret = StorageLayoutImpl()
+    ret._cg = cg
+    ret._mnt = MountEfi(mount_dir)
     return ret

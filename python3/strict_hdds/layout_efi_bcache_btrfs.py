@@ -169,7 +169,7 @@ class StorageLayoutImpl(StorageLayout):
             parti = self._cg.get_ssd_cache_partition()
             BcacheUtil.makeDevice(parti, False)
             BcacheUtil.registerCacheDevice(parti)
-            BcacheUtil.attachCacheDevice(HandyUtil.cacheGroupFindByBackingDeviceList(self._cg), parti)
+            BcacheUtil.attachCacheDevice(HandyUtil.cgFindByBackingDeviceList(self._cg), parti)
         else:
             self._cg.add_hdd(disk)
 
@@ -232,10 +232,8 @@ def parse(boot_dev, root_dev):
         hddDict.update(HandyUtil.bcacheGetHddDictWithOneItem(StorageLayoutImpl.name, bcacheDevPath, m.group(1)))
 
     # ssd
-    ssd = Util.devPathPartiToDisk(boot_dev)
-    if ssd in hddDict:
-        ssd = None
-    ssdEspParti, ssdSwapParti, ssdCacheParti = HandyUtil.cacheGroupGetSsdPartitions(StorageLayoutImpl.name, boot_dev, ssd)
+    ssd = HandyUtil.cgGetSsdFromBootDev(boot_dev, hddDict.keys())
+    ssdEspParti, ssdSwapParti, ssdCacheParti = HandyUtil.cgGetSsdPartitions(StorageLayoutImpl.name, boot_dev, ssd)
 
     # check ssd + hdd_list
     if ssd is not None:

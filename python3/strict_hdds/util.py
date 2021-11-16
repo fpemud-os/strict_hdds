@@ -1425,14 +1425,6 @@ class SwapLvmLv:
 class SwapFile:
 
     @staticmethod
-    def detectAndNewSwapFileObject(rootfs_mount_dir):
-        fullfn = rootfs_mount_dir.rstrip("/") + Util.swapFilepath
-        if os.path.exists(fullfn) and Util.cmdCallTestSuccess("/sbin/swaplabel", fullfn):
-            return SwapFile(True)
-        else:
-            return SwapFile(False)
-
-    @staticmethod
     def proxy(func):
         def f(self, *args):
             return getattr(self._swap, func.__name__)(*args)

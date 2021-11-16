@@ -21,7 +21,9 @@
 # THE SOFTWARE.
 
 
+import os
 from .util import Util, GptUtil, SwapFile
+from .handy import MountEfi, CommonChecks, HandyUtil
 from . import errors
 from . import StorageLayout
 
@@ -37,13 +39,12 @@ class StorageLayoutImpl(StorageLayout):
            3. extra partition is allowed to exist
     """
 
-    def __init__(self, mount_dir):
-        super().__init__(mount_dir)
-
+    def __init__(self):
         self._hdd = None              # boot harddisk name
         self._hddEspParti = None      # ESP partition name
         self._hddRootParti = False    # root partition name
-        self._swap = None               # SwapFile
+        self._swap = None             # SwapFile
+        self._mnt = None              # MountEfi
 
     @property
     def boot_mode(self):
@@ -58,16 +59,33 @@ class StorageLayoutImpl(StorageLayout):
         raise self._hddEspParti
 
     @property
+    @SwapFile.proxy
     def dev_swap(self):
-        return self._swap.dev_swap
+        pass
 
     @property
     def boot_disk(self):
         return self._hdd
 
-    @SwapFile.proxy
-    def check(self):
+    def umount_and_dispose(self):
+        if True:
+            self._mnt.umount()
+            del self._mnt
+        del self._swap
+        del self._hddRootParti
+        del self._hddEspParti
+        del self._hdd
+
+    @MountEfi.proxy
+    def remount_rootfs(self, mount_options):
         pass
+
+    @MountEfi.proxy
+    def get_bootdir_rw_controller(self):
+        pass
+
+    def check(self):
+        CommonChecks.storageLayoutCheckSwapSize(self)
 
     def get_esp(self):
         return self._hddEspParti
@@ -81,17 +99,60 @@ class StorageLayoutImpl(StorageLayout):
         pass
 
 
-def create_and_mount(hdd=None):
-    if hdd is None:
-        hddList = Util.getDevPathListForFixedDisk()
-        if len(hddList) == 0:
-            raise errors.StorageLayoutCreateError(errors.NO_DISK_WHEN_CREATE)
-        if len(hddList) > 1:
-            raise errors.StorageLayoutCreateError(errors.MULTIPLE_DISKS_WHEN_CREATE)
-        hdd = hddList[0]
+def parse(boot_dev, root_dev):
+    if not GptUtil.isEspPartition(boot_dev):
+        raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.BOOT_DEV_IS_NOT_ESP)
+    if Util.devPathPartiToDisk(boot_dev) != Util.devPathPartiToDisk(root_dev):
+        raise errors.StorageLayoutParseError(StorageLayoutImpl.name, "boot device and root device is not the same")
+    if Util.getBlkDevFsType(root_dev) != Util.fsTypeExt4:
+        raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.ROOT_PARTITION_FS_SHOULD_BE(Util.fsTypeExt4))
 
+    ret = StorageLayoutImpl()
+    ret._hdd = Util.devPathPartiToDisk(boot_dev)
+    ret._hddEspParti = boot_dev
+    ret._hddRootParti = root_dev
+    ret._swap = HandyUtil.swapFileDetectAndNew("/")
+    ret._mnt = MountEfi("/")
+    return ret
+
+
+def detect_and_mount(disk_list, mount_dir):
+    # scan for ESP and root partition
+    espAndRootPartitionList = []
+    for disk in disk_list:
+        espParti = Util.devPathDiskToParti(disk, 1)
+        rootParti = Util.devPathDiskToParti(disk, 2)
+        if not os.path.exists(espParti):
+            continue
+        if not os.path.exists(rootParti):
+            continue
+        if not GptUtil.isEspPartition(espParti):
+            continue
+        if Util.getBlkDevFsType(rootParti) != Util.fsTypeExt4:
+            continue
+        espAndRootPartitionList.append((disk, espParti, rootParti))
+    if len(espAndRootPartitionList) == 0:
+        raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.DISK_NOT_FOUND)
+    if len(espAndRootPartitionList) > 1:
+        raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.DISK_TOO_MANY)
+
+    # mount
+    Util.cmdCall("/bin/mount", espAndRootPartitionList[0][1], mount_dir)
+
+    # return
+    ret = StorageLayoutImpl()
+    ret._hdd = espAndRootPartitionList[0][0]
+    ret._hddEspParti = espAndRootPartitionList[0][1]
+    ret._hddRootParti = espAndRootPartitionList[0][2]
+    ret._swap = HandyUtil.swapFileDetectAndNew(mount_dir)
+    ret._mnt = MountEfi(mount_dir)
+    return ret
+
+
+def create_and_mount(disk_list, mount_dir):
     # create partitions
-    Util.initializeDisk(hdd, "gpt", [
+    hdd = HandyUtil.getHdd(disk_list)
+    Util.initializeDisk(hdd, Util.diskPartTableGpt, [
         ("%dMiB" % (Util.getEspSizeInMb()), Util.fsTypeFat),
         ("*", Util.fsTypeExt4),
     ])
@@ -101,27 +162,5 @@ def create_and_mount(hdd=None):
     ret._hddEspParti = Util.devPathDiskToParti(hdd, 1)
     ret._hddRootParti = Util.devPathDiskToParti(hdd, 2)
     ret._swap = SwapFile(False)
-    return ret
-
-
-def parse(bootDev, rootDev):
-    ret = StorageLayoutImpl()
-
-    if not GptUtil.isEspPartition(bootDev):
-        raise errors.StorageLayoutParseError(ret.name, errors.BOOT_DEV_IS_NOT_ESP)
-
-    ret._hdd = Util.devPathPartiToDisk(bootDev)
-    if ret._hdd != Util.devPathPartiToDisk(rootDev):
-        raise errors.StorageLayoutParseError(ret.name, "boot device and root device is not the same")
-
-    ret._hddEspParti = bootDev
-
-    ret._hddRootParti = rootDev
-    if True:
-        fs = Util.getBlkDevFsType(ret._hddRootParti)
-        if fs != Util.fsTypeExt4:
-            raise errors.StorageLayoutParseError(ret.name, "root partition file system is \"%s\", not \"ext4\"" % (fs))
-
-    ret._swap = SwapFile.detectAndNewSwapFileObject()
-
+    ret._mnt = MountEfi(mount_dir)
     return ret

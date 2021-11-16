@@ -163,7 +163,7 @@ class StorageLayoutImpl(StorageLayout):
             parti = self._cg.get_ssd_cache_partition()
             BcacheUtil.makeDevice(parti, False)
             BcacheUtil.registerCacheDevice(parti)
-            BcacheUtil.attachCacheDevice(HandyUtil.cacheGroupFindByBackingDeviceList(self._cg), parti)
+            BcacheUtil.attachCacheDevice(HandyUtil.cgFindByBackingDeviceList(self._cg), parti)
         else:
             self._cg.add_hdd(disk)
 
@@ -219,6 +219,8 @@ class StorageLayoutImpl(StorageLayout):
 def parse(boot_dev, root_dev):
     if not GptUtil.isEspPartition(boot_dev):
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.BOOT_DEV_IS_NOT_ESP)
+    if root_dev != LvmUtil.rootLvDevPath:
+        raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.ROOT_DEV_MUST_BE(LvmUtil.rootLvDevPath))
 
     # vg
     if not Util.cmdCallTestSuccess("/sbin/lvm", "vgdisplay", LvmUtil.vgName):
@@ -243,10 +245,8 @@ def parse(boot_dev, root_dev):
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.LVM_LV_NOT_FOUND(LvmUtil.rootLvDevPath))
 
     # ssd
-    ssd = Util.devPathPartiToDisk(boot_dev)
-    if ssd in hddDict:
-        ssd = None
-    ssdEspParti, ssdSwapParti, ssdCacheParti = HandyUtil.cacheGroupGetSsdPartitions(StorageLayoutImpl.name, boot_dev, ssd)
+    ssd = HandyUtil.cgGetSsdFromBootDev(boot_dev, hddDict.keys())
+    ssdEspParti, ssdSwapParti, ssdCacheParti = HandyUtil.cgGetSsdPartitions(StorageLayoutImpl.name, boot_dev, ssd)
 
     # check ssd + hdd_list
     if ssd is not None:
@@ -267,12 +267,12 @@ def parse(boot_dev, root_dev):
 
 
 def detect_and_mount(disk_list, mount_dir):
-    ssd, hdd_list = _getSsdAndHddList(disk_list)
+    ssd, hdd_list = HandyUtil.getSsdAndHddList(Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list))
     cg = EfiCacheGroup()
 
 
 def create_and_mount(disk_list, mount_dir):
-    ssd, hdd_list = _getSsdAndHddList(disk_list)
+    ssd, hdd_list = HandyUtil.getSsdAndHddList(Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list))
     cg = EfiCacheGroup()
     hddDict = dict()
 
@@ -307,16 +307,3 @@ def create_and_mount(disk_list, mount_dir):
     ret._cg = cg
     ret._mnt = MountEfi(mount_dir)
     return ret
-
-
-def _getSsdAndHddList(disk_list):
-    ssd_list, hdd_list = Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list)
-    if len(ssd_list) == 0:
-        ssd = None
-    elif len(ssd_list) == 1:
-        ssd = ssd_list[0]
-    else:
-        raise errors.StorageLayoutCreateError(errors.MULTIPLE_SSD)
-    if len(hdd_list) == 0:
-        raise errors.StorageLayoutCreateError(errors.NO_DISK_WHEN_CREATE)
-    return (ssd, hdd_list)
