@@ -137,10 +137,23 @@ class StorageLayoutImpl(StorageLayout):
 
         return lastBootHdd != self._md.get_boot_hdd()     # boot disk may change
 
+    def release_disk(self, disk):
+        assert disk is not None
+        assert disk in self._md.disk_list
+
+        # check
+        if len(self._md.get_disk_list()) <= 1:
+            raise errors.StorageLayoutReleaseDiskError(disk, errors.CAN_NOT_REMOVE_LAST_HDD)
+
+        # move data
+        rc, out = Util.cmdCallWithRetCode("/sbin/lvm", "pvmove", Util.devPathDiskToParti(disk, 1))
+        if rc != 5:
+            raise errors.StorageLayoutRemoveDiskError(disk, "failed")
+
     def remove_disk(self, disk):
         assert disk is not None
 
-        if self._md.get_hdd_count() <= 1:
+        if len(self._md.get_disk_list()) <= 1:
             raise errors.StorageLayoutRemoveDiskError(errors.CAN_NOT_REMOVE_LAST_HDD)
 
         lastBootHdd = self._cg.boot_disk
@@ -166,15 +179,16 @@ class StorageLayoutImpl(StorageLayout):
         pass
 
 
-
 def parse(boot_dev, root_dev):
     if not GptUtil.isEspPartition(boot_dev):
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.BOOT_DEV_IS_NOT_ESP)
     if root_dev != LvmUtil.rootLvDevPath:
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.ROOT_DEV_MUST_BE(LvmUtil.rootLvDevPath))
 
-    # get disk list
+    # get disk list and check
     diskList = HandyUtil.lvmGetDiskList(StorageLayoutImpl.name)
+    if Util.devPathPartiToDisk(boot_dev) not in diskList:
+        raise errors.StorageLayoutParseError(StorageLayoutImpl.name, "boot disk must be one of the root device's slave disks")
 
     # check root lv file system 
     if Util.getBlkDevFsType(LvmUtil.rootLvDevPath) != Util.fsTypeExt4:
@@ -189,11 +203,32 @@ def parse(boot_dev, root_dev):
 
 def detect_and_mount(disk_list, mount_dir):
     LvmUtil.activateAll()
-    Util.cmdCall("/bin/mount", LvmUtil.rootLvName, mount_dir)
-    ret = parse(None, LvmUtil.rootLvName)                      # it is interesting that we can reuse parse function
-    if sorted(ret._md.disk_list) != sorted(disk_list):
+
+    # get disk list
+    diskList = HandyUtil.lvmGetDiskList(StorageLayoutImpl.name)
+    if True:
+        d = list(set(diskList) - set(disk_list))
+        if len(d) > 0:
+            raise errors.StorageLayoutParseError(StorageLayoutImpl.name, "extra disk \"%s\" needed" % (d[0]))
+
+    # check root lv file system 
+    if Util.getBlkDevFsType(LvmUtil.rootLvDevPath) != Util.fsTypeExt4:
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.ROOT_PARTITION_FS_SHOULD_BE(Util.fsTypeExt4))
 
+    # check boot disk
+    bootParti = Util.devPathDiskToParti(diskList[0], 1)
+    if not os.path.exists
+
+
+
+    Util.cmdCall("/bin/mount", LvmUtil.rootLvName, mount_dir)
+    Util.cmdCall("/bin/mount", LvmUtil.rootLvName, os.path.join(mount_dir, "boot"))
+
+
+    ret = parse(None, LvmUtil.rootLvName)                      # lucky that we can reuse parse()
+
+
+    return ret
 
 
 def create_and_mount(hddList=None):
