@@ -902,12 +902,12 @@ class BcacheUtil:
 
     @staticmethod
     def findByBackingDevice(devPath):
-        for fn in glob.glob("/dev/bcache*"):
-            if re.fullmatch("/dev/bcache[0-9]+", fn):
+        for fullfn in glob.glob("/dev/bcache*"):
+            if re.fullmatch("/dev/bcache[0-9]+", fullfn):
                 bcachePath = os.path.realpath("/sys/block/" + os.path.basename(devPath) + "/bcache")
                 backingDev = os.path.basename(os.path.dirname(bcachePath))
                 if os.path.basename(devPath) == backingDev:
-                    return fn
+                    return fullfn
         return None
 
     @staticmethod

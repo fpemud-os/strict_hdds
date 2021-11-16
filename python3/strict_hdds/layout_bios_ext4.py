@@ -23,7 +23,7 @@
 
 import os
 from .util import Util, MbrUtil, SwapFile
-from .mount import MountBios
+from .handy import MountBios, CommonChecks
 from . import errors
 from . import StorageLayout
 
@@ -87,9 +87,7 @@ class StorageLayoutImpl(StorageLayout):
         pass
 
     def check(self):
-        if self.dev_swap is not None:
-            if Util.getBlkDevSize(self.dev_swap) < Util.getSwapSize():
-                raise errors.StorageLayoutCheckError(self.name, errors.SWAP_SIZE_TOO_SMALL)
+        CommonChecks.storageLayoutCheckSwapSize(self)
 
     @SwapFile.proxy
     def create_swap_file(self):
