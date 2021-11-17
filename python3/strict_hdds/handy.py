@@ -225,16 +225,15 @@ class HandyUtil:
         return {hddDev: bcacheDev}
 
     @staticmethod
-    def bcacheCheckHddDictItem(storageLayoutName, ssdCacheParti, hdd, bcacheDev):
-        assert ssdCacheParti is not None
-
+    def bcacheCheckHddAndItsBcacheDev(storageLayoutName, ssdCacheParti, hdd, bcacheDev):
         tlist = BcacheUtil.getSlaveDevPathList(bcacheDev)
-        if len(tlist) < 2:
-            raise errors.StorageLayoutParseError(storageLayoutName, "%s(%s) has no cache device" % (hdd, bcacheDev))
         if len(tlist) > 2:
             raise errors.StorageLayoutParseError(storageLayoutName, "%s(%s) has multiple cache devices" % (hdd, bcacheDev))
-        if tlist[0] != ssdCacheParti:
-            raise errors.StorageLayoutParseError(storageLayoutName, "%s(%s) has invalid cache device" % (hdd, bcacheDev))
+        if ssdCacheParti is not None:
+            if len(tlist) < 2:
+                raise errors.StorageLayoutParseError(storageLayoutName, "%s(%s) has no cache device" % (hdd, bcacheDev))
+            if tlist[0] != ssdCacheParti:
+                raise errors.StorageLayoutParseError(storageLayoutName, "%s(%s) has invalid cache device" % (hdd, bcacheDev))
 
     @staticmethod
     def lvmEnsureVgLvAndGetDiskList(storageLayoutName):
@@ -269,7 +268,7 @@ class HandyUtil:
         fullfn = rootfs_mount_dir.rstrip("/") + Util.swapFilepath
         if os.path.exists(fullfn):
             if not Util.cmdCallTestSuccess("/sbin/swaplabel", fullfn):
-                raise errors.StorageLayoutParseError(storageLayoutName, "SWAP_DEV_HAS_INVALID_FS_FLAG")
+                raise errors.StorageLayoutParseError(storageLayoutName, errors.SWAP_DEV_HAS_INVALID_FS_FLAG(fullfn))
             return SwapFile(True)
         else:
             return SwapFile(False)

@@ -198,9 +198,6 @@ class StorageLayoutImpl(StorageLayout):
 
 
 def parse(boot_dev, root_dev):
-    if not GptUtil.isEspPartition(boot_dev):
-        raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.BOOT_DEV_IS_NOT_ESP)
-
     # get ssd, hdd list
     ssd, hddList = HandyUtil.cgGetSsdAndHddList(BcachefsUtil.getSlaveSsdDevPatListAndHddDevPathList(root_dev))
     ssdEspParti, ssdSwapParti, ssdCacheParti = HandyUtil.cgGetSsdPartitions(StorageLayoutImpl.name, ssd)
@@ -209,6 +206,8 @@ def parse(boot_dev, root_dev):
             raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.BOOT_DEV_MUST_BE(ssdEspParti))
         bootHdd = None
     else:
+        if not GptUtil.isEspPartition(boot_dev):
+            raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.BOOT_DEV_IS_NOT_ESP)
         bootHdd = PartiUtil.partiToDisk(boot_dev)
         if bootHdd not in hddList:
             raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.BOOT_DEV_INVALID)
@@ -266,6 +265,7 @@ def create_and_mount(disk_list, mount_dir):
     ret._cg = cg
     ret._mnt = MountEfi(mount_dir)
     return ret
+
 
 def _getDevRoot(cg):
     return ":".join(cg.get_disk_list())

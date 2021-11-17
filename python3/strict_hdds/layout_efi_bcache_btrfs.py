@@ -231,11 +231,10 @@ def parse(boot_dev, root_dev):
     ssdEspParti, ssdSwapParti, ssdCacheParti = HandyUtil.cgGetSsdPartitions(StorageLayoutImpl.name, ssd)
 
     # check ssd + hdd_list
-    if ssd is not None:
-        if ssdEspParti != boot_dev:
-            raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.BOOT_DEV_MUST_BE(ssdEspParti))
-        for hdd, bcacheDev in hddDict.items():
-            HandyUtil.bcacheCheckHddDictItem(StorageLayoutImpl.name, ssdCacheParti, hdd, bcacheDev)
+    if ssdEspParti is not None and ssdEspParti != boot_dev:
+        raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.BOOT_DEV_MUST_BE(ssdEspParti))
+    for hdd, bcacheDev in hddDict.items():
+        HandyUtil.bcacheCheckHddAndBcacheDev(StorageLayoutImpl.name, ssdCacheParti, hdd, bcacheDev)
 
     # boot harddisk
     if ssd is not None:

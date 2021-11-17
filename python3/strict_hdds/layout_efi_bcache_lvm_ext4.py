@@ -21,8 +21,6 @@
 # THE SOFTWARE.
 
 
-import os
-import re
 from .util import Util, PartiUtil, GptUtil, BcacheUtil, LvmUtil, EfiCacheGroup
 from .handy import CommonChecks, MountEfi, HandyUtil
 from . import errors
@@ -237,11 +235,10 @@ def parse(boot_dev, root_dev):
     ssdEspParti, ssdSwapParti, ssdCacheParti = HandyUtil.cgGetSsdPartitions(StorageLayoutImpl.name, ssd)
 
     # check ssd + hdd_list
-    if ssd is not None:
-        if ssdEspParti != boot_dev:
-            raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.BOOT_DEV_MUST_BE(ssdEspParti))
-        for hdd, bcacheDev in hddDict.items():
-            HandyUtil.bcacheCheckHddDictItem(StorageLayoutImpl.name, ssdCacheParti, hdd, bcacheDev)
+    if ssdEspParti is not None and ssdEspParti != boot_dev:
+        raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.BOOT_DEV_MUST_BE(ssdEspParti))
+    for hdd, bcacheDev in hddDict.items():
+        HandyUtil.bcacheCheckHddAndItsBcacheDev(StorageLayoutImpl.name, ssdCacheParti, hdd, bcacheDev)
 
     # boot harddisk
     if ssd is not None:
@@ -263,41 +260,33 @@ def detect_and_mount(disk_list, mount_dir):
     # get disk list and check
     ssd, hdd_list = HandyUtil.cgGetSsdAndHddList(Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list))
     ssdEspParti, ssdSwapParti, ssdCacheParti = HandyUtil.cgGetSsdPartitions(StorageLayoutImpl.name, ssd)
-    lvmDiskList = HandyUtil.lvmEnsureVgLvAndGetDiskList(StorageLayoutImpl.name)
+    lvmHddList = HandyUtil.lvmEnsureVgLvAndGetDiskList(StorageLayoutImpl.name)
     if True:
-        d = list(set(lvmDiskList) - set(hdd_list))
+        d = list(set(lvmHddList) - set(hdd_list))
         if len(d) > 0:
             raise errors.StorageLayoutParseError(StorageLayoutImpl.name, "extra disk \"%s\" needed" % (d[0]))
-
-    # hdd list
-    hddDict = dict()        # dict<hddDevPath,bcacheDevPath>
-    for bcacheDevPath in lvmDiskList:
-        bcacheDev = BcacheUtil.getBcacheDevFromDevPath(bcacheDevPath)
+    for hdd in lvmHddList:
+        bcacheDev = BcacheUtil.getBcacheDevFromDevPath(hdd)
         if bcacheDev is None:
-            raise errors.StorageLayoutParseError(StorageLayoutImpl.name, "%s has non-bcache sub device" % (root_dev))
-        hddDict.update(HandyUtil.bcacheGetHddDictWithOneItem(StorageLayoutImpl.name, bcacheDevPath, m.group(1)))
+            raise errors.StorageLayoutParseError(StorageLayoutImpl.name, "volume group %s has non-bcache physical volume" % (LvmUtil.vgName))
+        HandyUtil.bcacheCheckHddAndItsBcacheDev(StorageLayoutImpl.name, ssdCacheParti, hdd, bcacheDev)
 
-
-    # 
+    # boot disk
     if ssd is not None:
         bootDisk = None
+        bootParti = ssdEspParti
     else:
-        bootDisk = lvmDiskList[0]
+        bootDisk = lvmHddList[0]
         bootParti = PartiUtil.diskToParti(bootDisk, 1)
 
+    # mount
+    MountEfi.mount(LvmUtil.rootLvDevPath, bootParti, mount_dir)
 
     # return
     ret = StorageLayoutImpl()
-    ret._cg = EfiCacheGroup(ssd=ssd, ssdEspParti=ssdEspParti, ssdSwapParti=ssdSwapParti, ssdCacheParti=ssdCacheParti, hddList=hddDict.keys(), bootHdd=bootHdd)
+    ret._cg = EfiCacheGroup(ssd=ssd, ssdEspParti=ssdEspParti, ssdSwapParti=ssdSwapParti, ssdCacheParti=ssdCacheParti, hddList=lvmHddList, bootHdd=bootDisk)
     ret._mnt = MountEfi(mount_dir)
     return ret
-
-    cg = EfiCacheGroup()
-
-
-
-
-
 
 
 def create_and_mount(disk_list, mount_dir):
@@ -325,8 +314,10 @@ def create_and_mount(disk_list, mount_dir):
     for bcacheDev in hddDict.values():
         LvmUtil.addPvToVg(bcacheDev, LvmUtil.vgName, mayCreate=True)
 
-    # create root lv and mount
+    # create root lv
     LvmUtil.createLvWithDefaultSize(LvmUtil.vgName, LvmUtil.rootLvName)
+
+    # mount
     MountEfi.mount(LvmUtil.rootLvDevPath, cg.dev_boot, mount_dir)
 
     # return
