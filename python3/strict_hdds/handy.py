@@ -142,29 +142,42 @@ class HandyUtil:
         return storageLayout.dev_swap is not None and Util.systemdFindSwapService(storageLayout.dev_swap) is not None
 
     @staticmethod
-    def getHdd(disk_list):
+    def checkAndGetHdd(disk_list):
         if len(disk_list) == 0:
             raise errors.StorageLayoutCreateError(errors.NO_DISK_WHEN_CREATE)
         if len(disk_list) > 1:
             raise errors.StorageLayoutCreateError(errors.MULTIPLE_DISKS_WHEN_CREATE)
+        if not Util.isHarddiskClean(disk_list[0]):
+            raise errors.StorageLayoutCreateError(errors.DISK_NOT_CLEAN(disk_list[0]))
         return disk_list[0]
 
     @staticmethod
-    def mdGetHddList(disk_list):
+    def mdCheckAndGetHddList(disk_list):
         if len(disk_list) == 0:
             raise errors.StorageLayoutCreateError(errors.NO_DISK_WHEN_CREATE)
+        for disk in disk_list:
+            if not Util.isHarddiskClean(disk):
+                raise errors.StorageLayoutCreateError(errors.DISK_NOT_CLEAN(disk))
         return disk_list
 
     @staticmethod
-    def cgGetSsdAndHddList(ssd_list, hdd_list):
+    def cgCheckAndGetSsdAndHddList(ssd_list, hdd_list):
         if len(ssd_list) == 0:
             ssd = None
         elif len(ssd_list) == 1:
             ssd = ssd_list[0]
         else:
             raise errors.StorageLayoutCreateError(errors.MULTIPLE_SSD)
+
         if len(hdd_list) == 0:
             raise errors.StorageLayoutCreateError(errors.NO_DISK_WHEN_CREATE)
+
+        if not Util.isHarddiskClean(ssd):
+            raise errors.StorageLayoutCreateError(errors.DISK_NOT_CLEAN(ssd))
+        for hdd in hdd_list:
+            if not Util.isHarddiskClean(hdd):
+                raise errors.StorageLayoutCreateError(errors.DISK_NOT_CLEAN(hdd))
+
         return (ssd, hdd_list)
 
     @staticmethod

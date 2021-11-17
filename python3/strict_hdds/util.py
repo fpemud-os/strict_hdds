@@ -160,6 +160,11 @@ class Util:
             f.write(bytearray(1024))
 
     @staticmethod
+    def isHarddiskClean(devpath):
+        with open(devpath, 'rb') as f:
+            return Util.isBufferAllZero(f.read(1024))
+
+    @staticmethod
     def isBlkDevSsdOrHdd(devPath):
         bn = os.path.basename(devPath)
         with open("/sys/block/%s/queue/rotational" % (bn), "r") as f:
