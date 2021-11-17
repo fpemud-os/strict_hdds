@@ -98,15 +98,16 @@ class StorageLayoutImpl(StorageLayout):
 
 
 def parse(boot_dev, root_dev):
-    if boot_dev is not None:
-        raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.BOOT_DEV_SHOULD_NOT_EXIST)
-    if Util.getBlkDevFsType(root_dev) != Util.fsTypeExt4:
-        raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.ROOT_PARTITION_FS_SHOULD_BE(Util.fsTypeExt4))
-
     # get harddisk
     hdd = PartiUtil.partiToDisk(root_dev)
     if Util.getBlkDevPartitionTableType(hdd) != Util.diskPartTableMbr:
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.PARTITION_TYPE_SHOULD_BE(hdd, Util.diskPartTableMbr))
+    if Util.getBlkDevFsType(root_dev) != Util.fsTypeExt4:
+        raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.ROOT_PARTITION_FS_SHOULD_BE(Util.fsTypeExt4))
+
+    # check boot dev
+    if boot_dev is not None:
+        raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.BOOT_DEV_SHOULD_NOT_EXIST)
 
     # return
     ret = StorageLayoutImpl()

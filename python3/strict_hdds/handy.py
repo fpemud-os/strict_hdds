@@ -186,7 +186,7 @@ class HandyUtil:
             cg.add_hdd(hdd)
 
     @staticmethod
-    def cgCreateAndGetBcacheDevPathList(cg):
+    def cgBcacheCreateAndGetBcacheDevPathList(cg):
         # hdd partition 2: make them as backing device
         bcacheDevPathList = []
         for hdd in cg.get_hdd_list():
@@ -201,6 +201,38 @@ class HandyUtil:
             BcacheUtil.attachCacheDevice(bcacheDevPathList, parti)
 
         return bcacheDevPathList
+
+    @staticmethod
+    def lvmEnsureVgLvAndGetPvList(storageLayoutName):
+        # check vg
+        if not Util.cmdCallTestSuccess("/sbin/lvm", "vgdisplay", LvmUtil.vgName):
+            raise errors.StorageLayoutParseError(storageLayoutName, errors.LVM_VG_NOT_FOUND(LvmUtil.vgName))
+
+        # get pv list
+        pvList = []
+        out = Util.cmdCall("/sbin/lvm", "pvdisplay", "-c")
+        for m in re.finditer("(/dev/\\S+):%s:.*" % (LvmUtil.vgName), out, re.M):
+            pvList.append(m.group(1))
+
+        # check root lv
+        out = Util.cmdCall("/sbin/lvm", "lvdisplay", "-c")
+        if re.search("/dev/hdd/root:%s:.*" % (LvmUtil.vgName), out, re.M) is None:
+            raise errors.StorageLayoutParseError(storageLayoutName, errors.LVM_LV_NOT_FOUND(LvmUtil.rootLvDevPath))
+
+        return pvList
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     @staticmethod
     def cgCheckAndGetSsdAndHddList(ssdList, hddList, bForCreate):

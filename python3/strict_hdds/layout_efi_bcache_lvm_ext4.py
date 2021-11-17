@@ -213,12 +213,12 @@ class StorageLayoutImpl(StorageLayout):
 
 
 def parse(boot_dev, root_dev):
-    # get disk list and check
-    diskList = HandyUtil.lvmEnsureVgLvAndGetDiskList(StorageLayoutImpl.name)
+    # check and get pv list
+    pvList = HandyUtil.lvmEnsureVgLvAndGetPvList(StorageLayoutImpl.name)
 
     # get bcacheDev
     hddDict = dict()        # dict<hddDev,bcacheDev>
-    for disk in diskList:
+    for disk in pvList:
         bcacheDev = BcacheUtil.getBcacheDevFromDevPath(disk)
         if bcacheDev is None:
             raise errors.StorageLayoutParseError(StorageLayoutImpl.name, "volume group \"%s\" has non-bcache physical volume" % (LvmUtil.vgName))
@@ -290,7 +290,7 @@ def create_and_mount(disk_list, mount_dir):
     HandyUtil.cgCheckAndAddDisks(cg, Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list))
 
     # create bcache devices
-    bcacheDevPathList = HandyUtil.cgCreateAndGetBcacheDevPathList(cg)
+    bcacheDevPathList = HandyUtil.cgBcacheCreateAndGetBcacheDevPathList(cg)
 
     # create pv on bcache device, create vg, create root lv
     for bcacheDevPath in bcacheDevPathList:
