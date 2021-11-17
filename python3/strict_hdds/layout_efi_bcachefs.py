@@ -22,7 +22,7 @@
 
 
 import os
-from .util import Util, GptUtil, BcachefsUtil, EfiCacheGroup
+from .util import Util, PartiUtil, GptUtil, BcachefsUtil, EfiCacheGroup
 from .handy import MountEfi, CommonChecks, HandyUtil
 from . import errors
 from . import StorageLayout
@@ -210,7 +210,7 @@ def parse(boot_dev, root_dev):
             raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.BOOT_DEV_MUST_BE(ssdEspParti))
         bootHdd = None
     else:
-        bootHdd = Util.devPathPartiToDisk(boot_dev)
+        bootHdd = PartiUtil.partiToDisk(boot_dev)
         if bootHdd not in hddList:
             raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.BOOT_DEV_INVALID)
 

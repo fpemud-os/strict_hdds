@@ -23,9 +23,8 @@
 
 import os
 import re
-from parted import disk
 import psutil
-from .util import Util, BcacheUtil, LvmUtil, SwapFile, SwapLvmLv
+from .util import Util, PartiUtil, BcacheUtil, LvmUtil, SwapFile, SwapLvmLv
 from . import errors
 from . import BootDirRwController
 
@@ -144,6 +143,12 @@ class HandyUtil:
         return (ssd, hdd_list)
 
     @staticmethod
+    def getHddList(disk_list):
+        if len(disk_list) == 0:
+            raise errors.StorageLayoutCreateError(errors.NO_DISK_WHEN_CREATE)
+        return disk_list
+
+    @staticmethod
     def getHdd(disk_list):
         if len(disk_list) == 0:
             raise errors.StorageLayoutCreateError(errors.NO_DISK_WHEN_CREATE)
@@ -153,7 +158,7 @@ class HandyUtil:
 
     @staticmethod
     def cgGetSsdFromBootDev(bootDev, hddList):
-        ssd = Util.devPathPartiToDisk(bootDev)
+        ssd = PartiUtil.partiToDisk(bootDev)
         if ssd not in hddList:
             return ssd
         else:
@@ -162,14 +167,14 @@ class HandyUtil:
     @staticmethod
     def cgGetSsdPartitions(storageLayoutName, bootDev, ssd):
         if ssd is not None:
-            ssdEspParti = Util.devPathDiskToParti(ssd, 1)
-            if os.path.exists(Util.devPathDiskToParti(ssd, 3)):
-                ssdSwapParti = Util.devPathDiskToParti(ssd, 2)
-                ssdCacheParti = Util.devPathDiskToParti(ssd, 3)
-                if os.path.exists(Util.devPathDiskToParti(ssd, 4)):
+            ssdEspParti = PartiUtil.diskToParti(ssd, 1)
+            if PartiUtil.diskHasParti(ssd, 3):
+                ssdSwapParti = PartiUtil.diskToParti(ssd, 2)
+                ssdCacheParti = PartiUtil.diskToParti(ssd, 3)
+                if PartiUtil.diskHasMoreParti(ssd, 3):
                     raise errors.StorageLayoutParseError(storageLayoutName, errors.DISK_HAS_REDUNDANT_PARTITION(ssd))
             else:
-                ssdCacheParti = Util.devPathDiskToParti(ssd, 2)
+                ssdCacheParti = PartiUtil.diskToParti(ssd, 2)
 
             # ssdEspParti
             if ssdEspParti != bootDev:
@@ -179,18 +184,17 @@ class HandyUtil:
 
             # ssdSwapParti
             if ssdSwapParti is not None:
-                if not os.path.exists(ssdSwapParti):
+                if not PartiUtil.partiExists(ssdSwapParti):
                     raise errors.StorageLayoutParseError(storageLayoutName, "SSD has no swap partition")
                 if Util.getBlkDevFsType(ssdSwapParti) != Util.fsTypeSwap:
                     raise errors.StorageLayoutParseError(storageLayoutName, errors.SWAP_DEV_HAS_INVALID_FS_FLAG(ssdSwapParti))
 
             # ssdCacheParti
-            if not os.path.exists(ssdCacheParti):
+            if not PartiUtil.partiExists(ssdCacheParti):
                 raise errors.StorageLayoutParseError(storageLayoutName, "SSD has no cache partition")
             if True:
-                disk, partId = Util.devPathPartiToDiskAndPartiId(ssdCacheParti)
-                nextPartName = Util.devPathDiskToParti(disk, partId + 1)
-                if os.path.exists(nextPartName):
+                disk, partId = PartiUtil.partiToDiskAndPartiId(ssdCacheParti)
+                if PartiUtil.diskHasMoreParti(disk, partId):
                     raise errors.StorageLayoutParseError(storageLayoutName, errors.DISK_HAS_REDUNDANT_PARTITION(ssd))
 
             return ssdEspParti, ssdSwapParti, ssdCacheParti
@@ -202,10 +206,10 @@ class HandyUtil:
 
     @staticmethod
     def bcacheGetHddDictWithOneItem(storageLayoutName, bcacheDevPath, bcacheDev):
-        hddDev, partId = Util.devPathPartiToDiskAndPartiId(BcacheUtil.getSlaveDevPathList(bcacheDevPath)[-1])
+        hddDev, partId = PartiUtil.partiToDiskAndPartiId(BcacheUtil.getSlaveDevPathList(bcacheDevPath)[-1])
         if partId != 2:
-            raise errors.StorageLayoutParseError(storageLayoutName, "bcache partition of %s is not %s" % (hddDev, Util.devPathDiskToParti(hddDev, 2)))
-        if os.path.exists(Util.devPathDiskToParti(hddDev, 3)):
+            raise errors.StorageLayoutParseError(storageLayoutName, "bcache partition of %s is not %s" % (hddDev, PartiUtil.diskToParti(hddDev, 2)))
+        if PartiUtil.diskHasParti(hddDev, 3):
             raise errors.StorageLayoutParseError(storageLayoutName, errors.DISK_HAS_REDUNDANT_PARTITION(hddDev))
         return {hddDev: bcacheDev}
 
@@ -222,27 +226,27 @@ class HandyUtil:
             raise errors.StorageLayoutParseError(storageLayoutName, "%s(%s) has invalid cache device" % (hdd, bcacheDev))
 
     @staticmethod
-    def lvmGetDiskList(storageLayoutName):
-        # vg
+    def lvmEnsureVgLvAndGetDiskList(storageLayoutName):
+        # check vg
         if not Util.cmdCallTestSuccess("/sbin/lvm", "vgdisplay", LvmUtil.vgName):
             raise errors.StorageLayoutParseError(storageLayoutName, errors.LVM_VG_NOT_FOUND(LvmUtil.vgName))
 
-        # pv list
+        # get pv disk list, check esp partition, check data partition
         diskList = []
         out = Util.cmdCall("/sbin/lvm", "pvdisplay", "-c")
         for m in re.finditer("(/dev/\\S+):%s:.*" % (LvmUtil.vgName), out, re.M):
-            hdd, partId = Util.devPathPartiToDiskAndPartiId(m.group(1))
+            hdd, partId = PartiUtil.partiToDiskAndPartiId(m.group(1))
             if Util.getBlkDevPartitionTableType(hdd) != Util.diskPartTableGpt:
                 raise errors.StorageLayoutParseError(storageLayoutName, errors.PARTITION_TYPE_SHOULD_BE(hdd, Util.diskPartTableGpt))
             if partId != 2:
-                raise errors.StorageLayoutParseError(storageLayoutName, "physical volume partition of %s is not %s" % (hdd, Util.devPathDiskToParti(hdd, 2)))
-            if Util.getBlkDevSize(Util.devPathDiskToParti(hdd, 1)) != Util.getEspSize():
-                raise errors.StorageLayoutParseError(storageLayoutName, errors.PARTITION_SIZE_INVALID(Util.devPathDiskToParti(hdd, 1)))
-            if os.path.exists(Util.devPathDiskToParti(hdd, 3)):
+                raise errors.StorageLayoutParseError(storageLayoutName, "physical volume partition of %s is not %s" % (hdd, PartiUtil.diskToParti(hdd, 2)))
+            if Util.getBlkDevSize(PartiUtil.diskToParti(hdd, 1)) != Util.getEspSize():
+                raise errors.StorageLayoutParseError(storageLayoutName, errors.PARTITION_SIZE_INVALID(PartiUtil.diskToParti(hdd, 1)))
+            if PartiUtil.diskHasParti(hdd, 3):
                 raise errors.StorageLayoutParseError(storageLayoutName, errors.DISK_HAS_REDUNDANT_PARTITION(hdd))
             diskList.append(hdd)
 
-        # root lv
+        # check root lv
         out = Util.cmdCall("/sbin/lvm", "lvdisplay", "-c")
         if re.search("/dev/hdd/root:%s:.*" % (LvmUtil.vgName), out, re.M) is None:
             raise errors.StorageLayoutParseError(storageLayoutName, errors.LVM_LV_NOT_FOUND(LvmUtil.rootLvDevPath))

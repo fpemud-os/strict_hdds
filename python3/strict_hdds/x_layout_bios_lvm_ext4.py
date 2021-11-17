@@ -23,7 +23,7 @@
 
 import os
 import re
-from .util import Util, MbrUtil, LvmUtil, SwapLvmLv
+from .util import Util, PartiUtil, MbrUtil, LvmUtil, SwapLvmLv
 from . import errors
 from . import StorageLayout
 
@@ -86,7 +86,7 @@ class StorageLayoutImpl(StorageLayout):
         if disk not in Util.getDevPathListForFixedDisk():
             raise errors.StorageLayoutAddDiskError(disk, errors.NOT_DISK)
 
-        parti = Util.devPathDiskToParti(disk, 1)
+        parti = PartiUtil.diskToParti(disk, 1)
         originalBootHdd = self._bootHdd
         try:
             # create partitions
@@ -117,7 +117,7 @@ class StorageLayoutImpl(StorageLayout):
             raise errors.StorageLayoutReleaseDiskError(disk, errors.CAN_NOT_REMOVE_LAST_HDD)
 
         # move data
-        rc, out = Util.cmdCallWithRetCode("/sbin/lvm", "pvmove", Util.devPathDiskToParti(disk, 1))
+        rc, out = Util.cmdCallWithRetCode("/sbin/lvm", "pvmove", PartiUtil.diskToParti(disk, 1))
         if rc != 5:
             raise errors.StorageLayoutRemoveDiskError(disk, "failed")
 
@@ -132,7 +132,7 @@ class StorageLayoutImpl(StorageLayout):
         # do remove, no exception is allowed
         ret = self._selectNewBootDiskForRemove(disk)
         self._diskList.remove(disk)
-        LvmUtil.removePvFromVg(Util.devPathDiskToParti(disk, 1), LvmUtil.vgName)
+        LvmUtil.removePvFromVg(PartiUtil.diskToParti(disk, 1), LvmUtil.vgName)
         Util.wipeHarddisk(disk)
 
         return ret
@@ -189,10 +189,10 @@ def parse(booDev, rootDev):
     # pv list
     out = Util.cmdCall("/sbin/lvm", "pvdisplay", "-c")
     for m in re.finditer("(/dev/\\S+):%s:.*" % (LvmUtil.vgName), out, re.M):
-        hdd = Util.devPathPartiToDisk(m.group(1))
+        hdd = PartiUtil.partiToDisk(m.group(1))
         if Util.getBlkDevPartitionTableType(hdd) != Util.diskPartTableMbr:
             raise errors.StorageLayoutParseError(ret.name, errors.PARTITION_TYPE_SHOULD_BE(hdd, Util.diskPartTableMbr))
-        if os.path.exists(Util.devPathDiskToParti(hdd, 2)):
+        if PartiUtil.diskHasParti(hdd, 2):
             raise errors.StorageLayoutParseError(ret.name, errors.DISK_HAS_REDUNDANT_PARTITION(hdd))
         ret._diskList.append(hdd)
 
@@ -243,7 +243,7 @@ def create_and_mount(disk_list, mount_dir):
         ])
 
         # create lvm physical volume on partition1 and add it to volume group
-        LvmUtil.addPvToVg(Util.devPathDiskToParti(devpath, 1), LvmUtil.vgName, mayCreate=True)
+        LvmUtil.addPvToVg(PartiUtil.diskToParti(devpath, 1), LvmUtil.vgName, mayCreate=True)
 
     # create root lv
     LvmUtil.createLvWithDefaultSize(LvmUtil.vgName, LvmUtil.rootLvName)

@@ -23,7 +23,7 @@
 
 import os
 import re
-from .util import Util, GptUtil, BcacheUtil, BtrfsUtil, EfiCacheGroup
+from .util import Util, PartiUtil, GptUtil, BcacheUtil, BtrfsUtil, EfiCacheGroup
 from .handy import MountEfi, HandyUtil
 from . import errors
 from . import StorageLayout
@@ -244,7 +244,7 @@ def parse(boot_dev, root_dev):
     if ssd is not None:
         bootHdd = None
     else:
-        bootHdd = Util.devPathPartiToDisk(boot_dev)
+        bootHdd = PartiUtil.partiToDisk(boot_dev)
 
     # return
     ret = StorageLayoutImpl()

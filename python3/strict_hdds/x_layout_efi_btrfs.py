@@ -146,6 +146,6 @@ def parse(bootDev, rootDev):
 
     # boot harddisk
     ret._md = EfiMultiDisk()
-    ret._md = Util.devPathPartiToDisk(bootDev)
+    ret._md = PartiUtil.partiToDisk(bootDev)
 
     return ret

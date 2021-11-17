@@ -22,8 +22,7 @@
 
 
 import os
-import re
-from .util import Util, GptUtil, LvmUtil, EfiMultiDisk, SwapLvmLv
+from .util import Util, PartiUtil, GptUtil, LvmUtil, EfiMultiDisk, SwapLvmLv
 from .handy import MountEfi, CommonChecks, HandyUtil
 from . import errors
 from . import StorageLayout
@@ -146,7 +145,7 @@ class StorageLayoutImpl(StorageLayout):
             raise errors.StorageLayoutReleaseDiskError(disk, errors.CAN_NOT_REMOVE_LAST_HDD)
 
         # move data
-        rc, out = Util.cmdCallWithRetCode("/sbin/lvm", "pvmove", Util.devPathDiskToParti(disk, 1))
+        rc, out = Util.cmdCallWithRetCode("/sbin/lvm", "pvmove", PartiUtil.diskToParti(disk, 1))
         if rc != 5:
             raise errors.StorageLayoutRemoveDiskError(disk, "failed")
 
@@ -186,17 +185,17 @@ def parse(boot_dev, root_dev):
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.ROOT_DEV_MUST_BE(LvmUtil.rootLvDevPath))
 
     # get disk list and check
-    diskList = HandyUtil.lvmGetDiskList(StorageLayoutImpl.name)
-    if Util.devPathPartiToDisk(boot_dev) not in diskList:
+    diskList = HandyUtil.lvmEnsureVgLvAndGetDiskList(StorageLayoutImpl.name)
+    if PartiUtil.partiToDisk(boot_dev) not in diskList:
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, "boot disk must be one of the root device's slave disks")
 
-    # check root lv file system 
+    # check root lv file system
     if Util.getBlkDevFsType(LvmUtil.rootLvDevPath) != Util.fsTypeExt4:
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.ROOT_PARTITION_FS_SHOULD_BE(Util.fsTypeExt4))
 
     # return
     ret = StorageLayoutImpl()
-    ret._md = EfiMultiDisk(diskList=diskList, bootHdd=Util.devPathPartiToDisk(boot_dev))
+    ret._md = EfiMultiDisk(diskList=diskList, bootHdd=PartiUtil.partiToDisk(boot_dev))
     ret._swap = HandyUtil.swapLvDetectAndNew(StorageLayoutImpl.name)
     return ret
 
@@ -204,54 +203,48 @@ def parse(boot_dev, root_dev):
 def detect_and_mount(disk_list, mount_dir):
     LvmUtil.activateAll()
 
-    # get disk list
-    diskList = HandyUtil.lvmGetDiskList(StorageLayoutImpl.name)
+    # get disk list and check
+    lvmDiskList = HandyUtil.lvmEnsureVgLvAndGetDiskList(StorageLayoutImpl.name)
     if True:
-        d = list(set(diskList) - set(disk_list))
+        d = list(set(lvmDiskList) - set(disk_list))
         if len(d) > 0:
             raise errors.StorageLayoutParseError(StorageLayoutImpl.name, "extra disk \"%s\" needed" % (d[0]))
 
-    # check root lv file system 
+    # get boot disk and boot partition
+    bootDisk = lvmDiskList[0]
+    bootParti = PartiUtil.diskToParti(bootDisk, 1)
+
+    # check root lv file system
     if Util.getBlkDevFsType(LvmUtil.rootLvDevPath) != Util.fsTypeExt4:
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.ROOT_PARTITION_FS_SHOULD_BE(Util.fsTypeExt4))
 
-    # check boot disk
-    bootParti = Util.devPathDiskToParti(diskList[0], 1)
-    if not os.path.exists
-
-
-
+    # mount
     Util.cmdCall("/bin/mount", LvmUtil.rootLvName, mount_dir)
-    Util.cmdCall("/bin/mount", LvmUtil.rootLvName, os.path.join(mount_dir, "boot"))
+    Util.cmdCall("/bin/mount", bootParti, os.path.join(mount_dir, "boot"), "-o", "ro")
 
-
-    ret = parse(None, LvmUtil.rootLvName)                      # lucky that we can reuse parse()
-
-
+    # return
+    ret = parse(None, LvmUtil.rootLvName)                               # lucky that we can re-use parse()
+    ret._md = EfiMultiDisk(diskList=lvmDiskList, bootHdd=bootDisk)
+    ret._swap = HandyUtil.swapLvDetectAndNew(StorageLayoutImpl.name)
     return ret
 
 
-def create_and_mount(hddList=None):
-    if hddList is None:
-        hddList = Util.getDevPathListForFixedDisk()
-        if len(hddList) == 0:
-            raise errors.StorageLayoutCreateError(errors.NO_DISK_WHEN_CREATE)
-    else:
-        assert len(hddList) > 0
-
-    ret = StorageLayoutImpl()
-
-    md = EfiMultiDisk()
-
+def create_and_mount(disk_list, mount_dir):
     # add disks
-    for devpath in hddList:
-        md.add_disk(devpath)
-        LvmUtil.addPvToVg(md.get_disk_data_partition(devpath), LvmUtil.vgName)
+    md = EfiMultiDisk()
+    for hdd in HandyUtil.getHddList(disk_list):
+        md.add_disk(hdd)
+        LvmUtil.addPvToVg(md.get_disk_data_partition(hdd), LvmUtil.vgName)
 
     # create root lv
     LvmUtil.createLvWithDefaultSize(LvmUtil.vgName, LvmUtil.rootLvName)
 
-    ret._swap = SwapLvmLv()
+    # mount
+    Util.cmdCall("/bin/mount", LvmUtil.rootLvName, mount_dir)
+    Util.cmdCall("/bin/mount", md.dev_boot, os.path.join(mount_dir, "boot"), "-o", "ro")
 
+    # return
+    ret = StorageLayoutImpl()
+    ret._md = md
+    ret._swap = HandyUtil.swapLvDetectAndNew(StorageLayoutImpl.name)
     return ret
-

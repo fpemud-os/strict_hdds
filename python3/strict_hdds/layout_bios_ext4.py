@@ -22,7 +22,7 @@
 
 
 import os
-from .util import Util, MbrUtil, SwapFile
+from .util import Util, PartiUtil, MbrUtil, SwapFile
 from .handy import MountBios, CommonChecks, HandyUtil
 from . import errors
 from . import StorageLayout
@@ -102,7 +102,7 @@ def parse(boot_dev, root_dev):
     if boot_dev is not None:
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.BOOT_DEV_SHOULD_NOT_EXIST)
 
-    hdd = Util.devPathPartiToDisk(root_dev)
+    hdd = PartiUtil.partiToDisk(root_dev)
     if Util.getBlkDevPartitionTableType(hdd) != Util.diskPartTableMbr:
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.PARTITION_TYPE_SHOULD_BE(hdd, Util.diskPartTableMbr))
 
@@ -129,8 +129,8 @@ def detect_and_mount(disk_list, mount_dir):
             continue
         i = 1
         while True:
-            parti = Util.devPathDiskToParti(disk, i)
-            if not os.path.exists(parti):
+            parti = PartiUtil.diskToParti(disk, i)
+            if not PartiUtil.partiExists(parti):
                 break
             if Util.getBlkDevFsType(parti) == Util.fsTypeExt4:
                 rootPartitionList.append(parti)
@@ -145,7 +145,7 @@ def detect_and_mount(disk_list, mount_dir):
 
     # return
     ret = StorageLayoutImpl()
-    ret._hdd = Util.devPathPartiToDisk(rootPartitionList[0])
+    ret._hdd = PartiUtil.partiToDisk(rootPartitionList[0])
     ret._hddRootParti = rootPartitionList[0]
     ret._swap = HandyUtil.swapFileDetectAndNew(mount_dir)
     ret._mnt = MountBios(mount_dir)
@@ -160,12 +160,12 @@ def create_and_mount(disk_list, mount_dir):
     ])
 
     # mount
-    Util.cmdCall("/bin/mount", Util.devPathDiskToParti(hdd, 1), mount_dir)
+    Util.cmdCall("/bin/mount", PartiUtil.diskToParti(hdd, 1), mount_dir)
 
     # return
     ret = StorageLayoutImpl(mount_dir)
     ret._hdd = hdd
-    ret._hddRootParti = Util.devPathDiskToParti(hdd, 1)
+    ret._hddRootParti = PartiUtil.diskToParti(hdd, 1)
     ret._swap = SwapFile(False)
     ret._mnt = MountBios(mount_dir)
     return ret
