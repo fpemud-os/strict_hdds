@@ -21,7 +21,6 @@
 # THE SOFTWARE.
 
 
-import os
 import re
 from .util import Util, PartiUtil, MbrUtil, LvmUtil, SwapLvmLv
 from . import errors

@@ -150,7 +150,7 @@ def detect_and_mount(disk_list, mount_dir):
 
 def create_and_mount(disk_list, mount_dir):
     # create partitions
-    hdd = HandyUtil.getHdd(disk_list)
+    hdd = HandyUtil.checkAndGetHdd(disk_list)
     Util.initializeDisk(hdd, Util.diskPartTableGpt, [
         ("%dMiB" % (Util.getEspSizeInMb()), Util.fsTypeFat),
         ("*", Util.fsTypeExt4),

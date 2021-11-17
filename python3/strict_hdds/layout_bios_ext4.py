@@ -21,7 +21,6 @@
 # THE SOFTWARE.
 
 
-import os
 from .util import Util, PartiUtil, MbrUtil, SwapFile
 from .handy import MountBios, CommonChecks, HandyUtil
 from . import errors
@@ -104,6 +103,7 @@ def parse(boot_dev, root_dev):
     if Util.getBlkDevFsType(root_dev) != Util.fsTypeExt4:
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.ROOT_PARTITION_FS_SHOULD_BE(Util.fsTypeExt4))
 
+    # get harddisk
     hdd = PartiUtil.partiToDisk(root_dev)
     if Util.getBlkDevPartitionTableType(hdd) != Util.diskPartTableMbr:
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.PARTITION_TYPE_SHOULD_BE(hdd, Util.diskPartTableMbr))
@@ -152,7 +152,7 @@ def detect_and_mount(disk_list, mount_dir):
 
 def create_and_mount(disk_list, mount_dir):
     # create partitions
-    hdd = HandyUtil.getHdd(disk_list)
+    hdd = HandyUtil.checkAndGetHdd(disk_list)
     Util.initializeDisk(hdd, Util.diskPartTableMbr, [
         ("*", Util.fsTypeExt4),
     ])

@@ -170,7 +170,7 @@ def detect_and_mount(disk_list, mount_dir):
 def create_and_mount(disk_list, mount_dir):
     # add disks
     md = EfiMultiDisk()
-    for hdd in HandyUtil.mdGetHddList(disk_list):
+    for hdd in HandyUtil.mdCheckAndGetHddList(disk_list):
         md.add_disk(hdd)
 
     # create and mount
