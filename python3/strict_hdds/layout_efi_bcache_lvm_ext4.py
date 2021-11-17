@@ -217,39 +217,31 @@ class StorageLayoutImpl(StorageLayout):
 
 
 def parse(boot_dev, root_dev):
-    if not GptUtil.isEspPartition(boot_dev):
-        raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.BOOT_DEV_IS_NOT_ESP)
+    # get disk list and check
+    diskList = HandyUtil.lvmEnsureVgLvAndGetDiskList(StorageLayoutImpl.name)
+
+    # get bcacheDev
+    hddDict = dict()        # dict<hddDev,bcacheDev>
+    for disk in diskList:
+        m = re.fullmatch("/dev/(bcache[0-9]+)", disk)
+        if m is None:
+            raise errors.StorageLayoutParseError(StorageLayoutImpl.name, "volume group \"%s\" has non-bcache physical volume" % (LvmUtil.vgName))
+        hddDict.update(HandyUtil.bcacheGetHddDictWithOneItem(StorageLayoutImpl.name, disk, m.group(1)))
+
+    # check root lv
     if root_dev != LvmUtil.rootLvDevPath:
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.ROOT_DEV_MUST_BE(LvmUtil.rootLvDevPath))
-
-    # vg
-    if not Util.cmdCallTestSuccess("/sbin/lvm", "vgdisplay", LvmUtil.vgName):
-        raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.LVM_VG_NOT_FOUND(LvmUtil.vgName))
-
-    # pv list
-    hddDict = dict()        # dict<hddDev,bcacheDev>
-    out = Util.cmdCall("/sbin/lvm", "pvdisplay", "-c")
-    for m in re.finditer("(/dev/\\S+):%s:.*" % (LvmUtil.vgName), out, re.M):
-        m2 = re.fullmatch("/dev/(bcache[0-9]+)", m.group(1))
-        if m2 is None:
-            raise errors.StorageLayoutParseError(StorageLayoutImpl.name, "volume group \"%s\" has non-bcache physical volume" % (LvmUtil.vgName))
-        hddDict.update(HandyUtil.bcacheGetHddDictWithOneItem(StorageLayoutImpl.name, m.group(1), m2.group(1)))
-
-    # root lv
-    out = Util.cmdCall("/sbin/lvm", "lvdisplay", "-c")
-    if re.search("/dev/hdd/root:%s:.*" % (LvmUtil.vgName), out, re.M) is not None:
-        fs = Util.getBlkDevFsType(LvmUtil.rootLvDevPath)
-        if fs != Util.fsTypeExt4:
-            raise errors.StorageLayoutParseError(StorageLayoutImpl.name, "root partition file system is \"%s\", not \"ext4\"" % (fs))
-    else:
-        raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.LVM_LV_NOT_FOUND(LvmUtil.rootLvDevPath))
+    if Util.getBlkDevFsType(LvmUtil.rootLvDevPath) != Util.fsTypeExt4:
+        raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.ROOT_PARTITION_FS_SHOULD_BE(Util.fsTypeExt4))
 
     # ssd
     ssd = HandyUtil.cgGetSsdFromBootDev(boot_dev, hddDict.keys())
-    ssdEspParti, ssdSwapParti, ssdCacheParti = HandyUtil.cgGetSsdPartitions(StorageLayoutImpl.name, boot_dev, ssd)
+    ssdEspParti, ssdSwapParti, ssdCacheParti = HandyUtil.cgGetSsdPartitions(StorageLayoutImpl.name, ssd)
 
     # check ssd + hdd_list
     if ssd is not None:
+        if ssdEspParti != boot_dev:
+            raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.BOOT_DEV_MUST_BE(ssdEspParti))
         for hdd, bcacheDev in hddDict.items():
             HandyUtil.bcacheCheckHddDictItem(StorageLayoutImpl.name, ssdCacheParti, hdd, bcacheDev)
 
@@ -267,12 +259,42 @@ def parse(boot_dev, root_dev):
 
 
 def detect_and_mount(disk_list, mount_dir):
-    ssd, hdd_list = HandyUtil.getSsdAndHddList(Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list))
+    BcacheUtil.scanAndRegisterAll()
+    LvmUtil.activateAll()
+
+    # get disk list and check
+    ssd, hdd_list = HandyUtil.cgGetSsdAndHddList(Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list))
+    ssdEspParti, ssdSwapParti, ssdCacheParti = HandyUtil.cgGetSsdPartitions(StorageLayoutImpl.name, ssd)
+    lvmDiskList = HandyUtil.lvmEnsureVgLvAndGetDiskList(StorageLayoutImpl.name)
+    if True:
+        d = list(set(lvmDiskList) - set(hdd_list))
+        if len(d) > 0:
+            raise errors.StorageLayoutParseError(StorageLayoutImpl.name, "extra disk \"%s\" needed" % (d[0]))
+
+    # 
+    if ssd is not None:
+        bootDisk = None
+    else:
+        bootDisk = lvmDiskList[0]
+        bootParti = PartiUtil.diskToParti(bootDisk, 1)
+
+
+    # return
+    ret = StorageLayoutImpl()
+    ret._cg = EfiCacheGroup(ssd=ssd, ssdEspParti=ssdEspParti, ssdSwapParti=ssdSwapParti, ssdCacheParti=ssdCacheParti, hddList=hddDict.keys(), bootHdd=bootHdd)
+    ret._mnt = MountEfi("/")
+    return ret
+
     cg = EfiCacheGroup()
 
 
+
+
+
+
+
 def create_and_mount(disk_list, mount_dir):
-    ssd, hdd_list = HandyUtil.getSsdAndHddList(Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list))
+    ssd, hdd_list = HandyUtil.cgGetSsdAndHddList(Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list))
     cg = EfiCacheGroup()
     hddDict = dict()
 
@@ -300,7 +322,7 @@ def create_and_mount(disk_list, mount_dir):
 
     # create root lv and mount
     LvmUtil.createLvWithDefaultSize(LvmUtil.vgName, LvmUtil.rootLvName)
-    Util.cmdCall("/bin/mount", LvmUtil.rootLvDevPath, mount_dir)
+    MountEfi.mount(LvmUtil.rootLvDevPath, cg.dev_boot, mount_dir)
 
     # return
     ret = StorageLayoutImpl()

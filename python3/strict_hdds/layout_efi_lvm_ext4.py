@@ -181,15 +181,15 @@ class StorageLayoutImpl(StorageLayout):
 def parse(boot_dev, root_dev):
     if not GptUtil.isEspPartition(boot_dev):
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.BOOT_DEV_IS_NOT_ESP)
-    if root_dev != LvmUtil.rootLvDevPath:
-        raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.ROOT_DEV_MUST_BE(LvmUtil.rootLvDevPath))
 
     # get disk list and check
     diskList = HandyUtil.lvmEnsureVgLvAndGetDiskList(StorageLayoutImpl.name)
     if PartiUtil.partiToDisk(boot_dev) not in diskList:
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, "boot disk must be one of the root device's slave disks")
 
-    # check root lv file system
+    # check root lv
+    if root_dev != LvmUtil.rootLvDevPath:
+        raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.ROOT_DEV_MUST_BE(LvmUtil.rootLvDevPath))
     if Util.getBlkDevFsType(LvmUtil.rootLvDevPath) != Util.fsTypeExt4:
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.ROOT_PARTITION_FS_SHOULD_BE(Util.fsTypeExt4))
 
@@ -219,11 +219,10 @@ def detect_and_mount(disk_list, mount_dir):
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.ROOT_PARTITION_FS_SHOULD_BE(Util.fsTypeExt4))
 
     # mount
-    Util.cmdCall("/bin/mount", LvmUtil.rootLvName, mount_dir)
-    Util.cmdCall("/bin/mount", bootParti, os.path.join(mount_dir, "boot"), "-o", "ro")
+    MountEfi.mount(LvmUtil.rootLvDevPath, bootParti, mount_dir)
 
     # return
-    ret = parse(None, LvmUtil.rootLvName)                               # lucky that we can re-use parse()
+    ret = StorageLayoutImpl()
     ret._md = EfiMultiDisk(diskList=lvmDiskList, bootHdd=bootDisk)
     ret._swap = HandyUtil.swapLvDetectAndNew(StorageLayoutImpl.name)
     return ret
@@ -232,7 +231,7 @@ def detect_and_mount(disk_list, mount_dir):
 def create_and_mount(disk_list, mount_dir):
     # add disks
     md = EfiMultiDisk()
-    for hdd in HandyUtil.getHddList(disk_list):
+    for hdd in HandyUtil.mdGetHddList(disk_list):
         md.add_disk(hdd)
         LvmUtil.addPvToVg(md.get_disk_data_partition(hdd), LvmUtil.vgName)
 
@@ -240,8 +239,7 @@ def create_and_mount(disk_list, mount_dir):
     LvmUtil.createLvWithDefaultSize(LvmUtil.vgName, LvmUtil.rootLvName)
 
     # mount
-    Util.cmdCall("/bin/mount", LvmUtil.rootLvName, mount_dir)
-    Util.cmdCall("/bin/mount", md.dev_boot, os.path.join(mount_dir, "boot"), "-o", "ro")
+    MountEfi.mount(LvmUtil.rootLvDevPath, md.dev_boot, mount_dir)
 
     # return
     ret = StorageLayoutImpl()

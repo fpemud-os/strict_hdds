@@ -21,7 +21,6 @@
 # THE SOFTWARE.
 
 
-import os
 from .util import Util, PartiUtil, GptUtil, BcachefsUtil, EfiCacheGroup
 from .handy import MountEfi, CommonChecks, HandyUtil
 from . import errors
@@ -60,7 +59,7 @@ class StorageLayoutImpl(StorageLayout):
 
     @property
     def dev_rootfs(self):
-        return ":".join(self.get_disk_list())
+        return _getDevRoot(self._cg)
 
     @property
     @EfiCacheGroup.proxy
@@ -166,10 +165,10 @@ class StorageLayoutImpl(StorageLayout):
 
             return lastBootHdd != self._cg.boot_disk     # boot disk may change
 
-    def remove_disk(self, devpath):
-        assert devpath is not None
+    def remove_disk(self, disk):
+        assert disk is not None
 
-        if self._cg.get_ssd() is not None and devpath == self._cg.get_ssd():
+        if self._cg.get_ssd() is not None and disk == self._cg.get_ssd():
             if self._cg.get_ssd_swap_partition() is not None:
                 if Util.systemdFindSwapService(self._cg.get_ssd_swap_partition()) is not None:
                     raise errors.StorageLayoutRemoveDiskError(errors.SWAP_IS_IN_USE)
@@ -182,7 +181,7 @@ class StorageLayoutImpl(StorageLayout):
 
             return True     # boot disk changed
         else:
-            assert devpath in self._cg.get_hdd_list()
+            assert disk in self._cg.get_hdd_list()
 
             if len(self._cg.get_hdd_list()) <= 1:
                 raise errors.StorageLayoutRemoveDiskError(errors.CAN_NOT_REMOVE_LAST_HDD)
@@ -190,10 +189,10 @@ class StorageLayoutImpl(StorageLayout):
             lastBootHdd = self._cg.boot_disk
 
             # hdd partition 2: remove from bcachefs
-            BcachefsUtil.removeDevice(self._cg.get_hdd_data_partition(devpath))
+            BcachefsUtil.removeDevice(self._cg.get_hdd_data_partition(disk))
 
             # remove
-            self._cg.remove_hdd(devpath)
+            self._cg.remove_hdd(disk)
 
             return lastBootHdd != self._cg.boot_disk     # boot disk may change
 
@@ -203,7 +202,26 @@ def parse(boot_dev, root_dev):
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.BOOT_DEV_IS_NOT_ESP)
 
     # get ssd, hdd list
-    ssd, hddList = HandyUtil.getSsdAndHddList(BcachefsUtil.getSlaveSsdDevPatListAndHddDevPathList(root_dev))
+    ssd, hddList = HandyUtil.cgGetSsdAndHddList(BcachefsUtil.getSlaveSsdDevPatListAndHddDevPathList(root_dev))
+    ssdEspParti, ssdSwapParti, ssdCacheParti = HandyUtil.cgGetSsdPartitions(StorageLayoutImpl.name, ssd)
+    if ssd is not None:
+        if ssdEspParti != boot_dev:
+            raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.BOOT_DEV_MUST_BE(ssdEspParti))
+        bootHdd = None
+    else:
+        bootHdd = PartiUtil.partiToDisk(boot_dev)
+        if bootHdd not in hddList:
+            raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.BOOT_DEV_INVALID)
+
+    # return
+    ret = StorageLayoutImpl()
+    ret._cg = EfiCacheGroup(ssd=ssd, ssdEspParti=ssdEspParti, ssdSwapParti=ssdSwapParti, ssdCacheParti=ssdCacheParti, hddList=hddList, bootHdd=bootHdd)
+    ret._mnt = MountEfi("/")
+    return ret
+
+
+def detect_and_mount(disk_list, mount_dir):
+    ssd, hdd_list = HandyUtil.cgGetSsdAndHddList(Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list))
     ssdEspParti, ssdSwapParti, ssdCacheParti = HandyUtil.cgGetSsdPartitions(StorageLayoutImpl.name, root_dev, ssd)
     if ssd is not None:
         if ssdEspParti != boot_dev:
@@ -214,18 +232,16 @@ def parse(boot_dev, root_dev):
         if bootHdd not in hddList:
             raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.BOOT_DEV_INVALID)
 
-    ret = StorageLayoutImpl()
-    ret._cg = EfiCacheGroup(ssd=ssd, ssdEspParti=ssdEspParti, ssdSwapParti=ssdSwapParti, ssdCacheParti=ssdCacheParti, hddList=hddList, bootHdd=bootHdd)
-    ret._mnt = MountEfi("/")
-    return ret
+
+    cg = EfiCacheGroup()
 
 
-def detect_and_mount(disk_list, mount_dir):
+
     assert False
 
 
 def create_and_mount(disk_list, mount_dir):
-    ssd, hdd_list = HandyUtil.getSsdAndHddList(Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list))
+    ssd, hdd_list = HandyUtil.cgGetSsdAndHddList(Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list))
     cg = EfiCacheGroup()
 
     # add disks, process ssd first so that minimal boot disk change is need
@@ -242,7 +258,14 @@ def create_and_mount(disk_list, mount_dir):
     hdd_list2 = [cg.get_hdd_data_partition(x) for x in hdd_list]
     BcachefsUtil.createBcachefs(ssd_list2, hdd_list2, 1, 1)
 
+    # mount
+    MountEfi.mount(_getDevRoot(cg), cg.dev_boot, mount_dir)
+
+    # return
     ret = StorageLayoutImpl()
     ret._cg = cg
     ret._mnt = MountEfi(mount_dir)
     return ret
+
+def _getDevRoot(cg):
+    return ":".join(cg.get_disk_list())

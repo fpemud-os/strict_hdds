@@ -102,13 +102,13 @@ class StorageLayoutImpl(StorageLayout):
 def parse(boot_dev, root_dev):
     if not GptUtil.isEspPartition(boot_dev):
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.BOOT_DEV_IS_NOT_ESP)
-    if Util.partiToDisk(boot_dev) != Util.partiToDisk(root_dev):
-        raise errors.StorageLayoutParseError(StorageLayoutImpl.name, "boot device and root device is not the same")
+    if PartiUtil.partiToDisk(boot_dev) != PartiUtil.partiToDisk(root_dev):
+        raise errors.StorageLayoutParseError(StorageLayoutImpl.name, "boot device and root device are not on the same harddisk")
     if Util.getBlkDevFsType(root_dev) != Util.fsTypeExt4:
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.ROOT_PARTITION_FS_SHOULD_BE(Util.fsTypeExt4))
 
     ret = StorageLayoutImpl()
-    ret._hdd = Util.partiToDisk(boot_dev)
+    ret._hdd = PartiUtil.partiToDisk(boot_dev)
     ret._hddEspParti = boot_dev
     ret._hddRootParti = root_dev
     ret._swap = HandyUtil.swapFileDetectAndNew("/")
@@ -120,8 +120,8 @@ def detect_and_mount(disk_list, mount_dir):
     # scan for ESP and root partition
     espAndRootPartitionList = []
     for disk in disk_list:
-        espParti = Util.diskToParti(disk, 1)
-        rootParti = Util.diskToParti(disk, 2)
+        espParti = PartiUtil.diskToParti(disk, 1)
+        rootParti = PartiUtil.diskToParti(disk, 2)
         if not PartiUtil.partiExists(espParti):
             continue
         if not PartiUtil.partiExists(rootParti):
@@ -137,7 +137,7 @@ def detect_and_mount(disk_list, mount_dir):
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.DISK_TOO_MANY)
 
     # mount
-    Util.cmdCall("/bin/mount", espAndRootPartitionList[0][1], mount_dir)
+    MountEfi.mount(espAndRootPartitionList[0][2], espAndRootPartitionList[0][1], mount_dir)
 
     # return
     ret = StorageLayoutImpl()
@@ -157,10 +157,18 @@ def create_and_mount(disk_list, mount_dir):
         ("*", Util.fsTypeExt4),
     ])
 
+    # get esp partition and root partition
+    espParti = PartiUtil.diskToParti(hdd, 1)
+    rootParti = PartiUtil.diskToParti(hdd, 2)
+
+    # mount
+    MountEfi.mount(rootParti, espParti, mount_dir)
+
+    # return
     ret = StorageLayoutImpl()
     ret._hdd = hdd
-    ret._hddEspParti = Util.diskToParti(hdd, 1)
-    ret._hddRootParti = Util.diskToParti(hdd, 2)
+    ret._hddEspParti = espParti
+    ret._hddRootParti = rootParti
     ret._swap = SwapFile(False)
     ret._mnt = MountEfi(mount_dir)
     return ret

@@ -24,7 +24,7 @@
 import os
 import re
 import psutil
-from .util import Util, PartiUtil, BcacheUtil, LvmUtil, SwapFile, SwapLvmLv
+from .util import Util, PartiUtil, GptUtil, BcacheUtil, LvmUtil, SwapFile, SwapLvmLv
 from . import errors
 from . import BootDirRwController
 
@@ -42,6 +42,10 @@ class MountBios:
 
         def to_read_only(self):
             pass
+
+    @staticmethod
+    def mount(rootParti, mountDir):
+        Util.cmdCall("/bin/mount", rootParti, mountDir)
 
     @staticmethod
     def proxy(func):
@@ -90,6 +94,13 @@ class MountEfi:
             Util.cmdCall("/bin/mount", self._mountDir, "-o", "ro,remount")
 
     @staticmethod
+    def mount(rootParti, espParti, mountDir):
+        Util.cmdCall("/bin/mount", rootParti, mountDir)
+        bootDir = os.path.join(mountDir, "boot")
+        os.makedirs(bootDir, exist_ok=True)
+        Util.cmdCall("/bin/mount", espParti, bootDir, "-o", "ro")
+
+    @staticmethod
     def proxy(func):
         def f(self, *args):
             return getattr(self._mnt, func.__name__)(*args)
@@ -131,7 +142,21 @@ class HandyUtil:
         return storageLayout.dev_swap is not None and Util.systemdFindSwapService(storageLayout.dev_swap) is not None
 
     @staticmethod
-    def getSsdAndHddList(ssd_list, hdd_list):
+    def getHdd(disk_list):
+        if len(disk_list) == 0:
+            raise errors.StorageLayoutCreateError(errors.NO_DISK_WHEN_CREATE)
+        if len(disk_list) > 1:
+            raise errors.StorageLayoutCreateError(errors.MULTIPLE_DISKS_WHEN_CREATE)
+        return disk_list[0]
+
+    @staticmethod
+    def mdGetHddList(disk_list):
+        if len(disk_list) == 0:
+            raise errors.StorageLayoutCreateError(errors.NO_DISK_WHEN_CREATE)
+        return disk_list
+
+    @staticmethod
+    def cgGetSsdAndHddList(ssd_list, hdd_list):
         if len(ssd_list) == 0:
             ssd = None
         elif len(ssd_list) == 1:
@@ -143,20 +168,6 @@ class HandyUtil:
         return (ssd, hdd_list)
 
     @staticmethod
-    def getHddList(disk_list):
-        if len(disk_list) == 0:
-            raise errors.StorageLayoutCreateError(errors.NO_DISK_WHEN_CREATE)
-        return disk_list
-
-    @staticmethod
-    def getHdd(disk_list):
-        if len(disk_list) == 0:
-            raise errors.StorageLayoutCreateError(errors.NO_DISK_WHEN_CREATE)
-        if len(disk_list) > 1:
-            raise errors.StorageLayoutCreateError(errors.MULTIPLE_DISKS_WHEN_CREATE)
-        return disk_list[0]
-
-    @staticmethod
     def cgGetSsdFromBootDev(bootDev, hddList):
         ssd = PartiUtil.partiToDisk(bootDev)
         if ssd not in hddList:
@@ -165,7 +176,7 @@ class HandyUtil:
             return None
 
     @staticmethod
-    def cgGetSsdPartitions(storageLayoutName, bootDev, ssd):
+    def cgGetSsdPartitions(storageLayoutName, ssd):
         if ssd is not None:
             ssdEspParti = PartiUtil.diskToParti(ssd, 1)
             if PartiUtil.diskHasParti(ssd, 3):
@@ -177,8 +188,8 @@ class HandyUtil:
                 ssdCacheParti = PartiUtil.diskToParti(ssd, 2)
 
             # ssdEspParti
-            if ssdEspParti != bootDev:
-                raise errors.StorageLayoutParseError(storageLayoutName, "SSD is not boot device")
+            if not GptUtil.isEspPartition(ssdEspParti):
+                raise errors.StorageLayoutParseError(storageLayoutName, errors.BOOT_DEV_IS_NOT_ESP)
             if Util.getBlkDevSize(ssdEspParti) != Util.getEspSize():
                 raise errors.StorageLayoutParseError(storageLayoutName, errors.PARTITION_SIZE_INVALID(ssdEspParti))
 
