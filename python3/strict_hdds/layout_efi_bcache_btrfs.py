@@ -245,34 +245,19 @@ def parse(boot_dev, root_dev):
 
 
 def detect_and_mount(disk_list, mount_dir):
-    ssd, hdd_list = HandyUtil.cgCheckAndGetSsdAndHddList(Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list), False)
-    cg = EfiCacheGroup()
+    pass
 
 
 def create_and_mount(disk_list, mount_dir):
-    # add disks, process ssd first so that minimal boot disk change is need
+    # add disks to cache group
     cg = EfiCacheGroup()
-    if True:
-        ssd, hdd_list = HandyUtil.cgCheckAndGetSsdAndHddList(Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list), True)
-        if ssd is not None:
-            cg.add_ssd(ssd)
-        for hdd in hdd_list:
-            cg.add_hdd(hdd)
+    HandyUtil.cgCheckAndAddDisks(cg, Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list))
 
-    # hdd partition 2: make them as backing device
-    hddDict = dict()        # dict<hddDevPath,bcacheDev>
-    for hdd in cg.get_hdd_list():
-        parti = cg.get_hdd_data_partition(hdd)
-        BcacheUtil.makeAndRegisterBackingDevice(parti)
-        hddDict[hdd] = BcacheUtil.findByBackingDevice(parti)
+    # create bcache devices
+    bcacheDevPathList = HandyUtil.cgCreateAndGetBcacheDevPathList(cg)
 
-    # ssd partition 3: make it as cache device
-    if cg.get_ssd() is not None:
-        BcacheUtil.makeAndRegisterCacheDevice(cg.get_ssd_cache_partition())
-        BcacheUtil.attachCacheDevice(hddDict.values(), cg.get_ssd_cache_partition())
-
-    # create and mount
-    Util.cmdCall("/usr/sbin/mkfs.btrfs", "-d", "single", "-m", "single", *[os.path.join("/dev", x) for x in hddDict.values()])
+    # create btrfs and mount
+    Util.cmdCall("/usr/sbin/mkfs.btrfs", "-d", "single", "-m", "single", *bcacheDevPathList)
     MountEfi.mount(_getDevRoot(cg), cg.dev_boot, mount_dir)
 
     # return

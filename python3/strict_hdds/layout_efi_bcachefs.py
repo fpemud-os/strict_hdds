@@ -218,19 +218,14 @@ def detect_and_mount(disk_list, mount_dir):
     # return
     ret = StorageLayoutImpl()
     ret._cg = EfiCacheGroup(ssd=ssd, ssdEspParti=ssdEspParti, ssdSwapParti=ssdSwapParti, ssdCacheParti=ssdCacheParti, hddList=hddList, bootHdd=bootHdd)
-    ret._mnt = MountEfi("/")
+    ret._mnt = MountEfi(mount_dir)
     return ret
 
 
 def create_and_mount(disk_list, mount_dir):
+    # add disks to cache group
     cg = EfiCacheGroup()
-    if True:
-        # add disks, process ssd first so that minimal boot disk change is need
-        ssd, hdd_list = HandyUtil.cgCheckAndGetSsdAndHddList(Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list), True)
-        if ssd is not None:
-            cg.add_ssd(ssd)
-        for hdd in hdd_list:
-            cg.add_hdd(hdd)
+    HandyUtil.cgCheckAndAddDisks(cg, Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list))
 
     # create bcachefs
     if cg.get_ssd() is not None:

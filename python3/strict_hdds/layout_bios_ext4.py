@@ -158,12 +158,13 @@ def create_and_mount(disk_list, mount_dir):
     ])
 
     # mount
-    MountBios.mount(PartiUtil.diskToParti(hdd, 1), mount_dir)
+    rootParti = PartiUtil.diskToParti(hdd, 1)
+    MountBios.mount(rootParti, mount_dir)
 
     # return
     ret = StorageLayoutImpl(mount_dir)
     ret._hdd = hdd
-    ret._hddRootParti = PartiUtil.diskToParti(hdd, 1)
+    ret._hddRootParti = rootParti
     ret._swap = SwapFile(False)
     ret._mnt = MountBios(mount_dir)
     return ret

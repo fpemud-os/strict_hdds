@@ -233,11 +233,11 @@ def detect_and_mount(disk_list, mount_dir):
 def create_and_mount(disk_list, mount_dir):
     # add disks
     md = EfiMultiDisk()
-    for hdd in HandyUtil.mdCheckAndGetHddList(disk_list):
-        md.add_disk(hdd)
-        LvmUtil.addPvToVg(md.get_disk_data_partition(hdd), LvmUtil.vgName)
+    HandyUtil.mdCheckAndAddDisks(disk_list)
 
-    # create root lv
+    # create pv, create vg, create root lv
+    for disk in md.get_disk_list():
+        LvmUtil.addPvToVg(md.get_disk_data_partition(disk), LvmUtil.vgName)
     LvmUtil.createLvWithDefaultSize(LvmUtil.vgName, LvmUtil.rootLvName)
 
     # mount

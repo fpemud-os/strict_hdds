@@ -170,8 +170,7 @@ def detect_and_mount(disk_list, mount_dir):
 def create_and_mount(disk_list, mount_dir):
     # add disks
     md = EfiMultiDisk()
-    for hdd in HandyUtil.mdCheckAndGetHddList(disk_list):
-        md.add_disk(hdd)
+    HandyUtil.mdCheckAndAddDisks(disk_list)
 
     # create and mount
     Util.cmdCall("/usr/sbin/mkfs.btrfs", "-d", "single", "-m", "single", *[md.get_disk_data_partition(x) for x in md.get_disk_list()])
