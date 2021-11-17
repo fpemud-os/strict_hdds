@@ -183,8 +183,9 @@ def parse(boot_dev, root_dev):
 
     # get disk list and check
     diskList = HandyUtil.lvmEnsureVgLvAndGetDiskList(StorageLayoutImpl.name)
-    if PartiUtil.partiToDisk(boot_dev) not in diskList:
-        raise errors.StorageLayoutParseError(StorageLayoutImpl.name, "boot disk must be one of the root device's slave disks")
+    bootHdd = PartiUtil.partiToDisk(boot_dev)
+    if bootHdd not in diskList:
+        raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.BOOT_DISK_MUST_IN_SLAVE_DISK_LIST)
 
     # check root lv
     if root_dev != LvmUtil.rootLvDevPath:
@@ -194,8 +195,9 @@ def parse(boot_dev, root_dev):
 
     # return
     ret = StorageLayoutImpl()
-    ret._md = EfiMultiDisk(diskList=diskList, bootHdd=PartiUtil.partiToDisk(boot_dev))
+    ret._md = EfiMultiDisk(diskList=diskList, bootHdd=bootHdd)
     ret._swap = HandyUtil.swapLvDetectAndNew(StorageLayoutImpl.name)
+    ret._mnt = MountEfi("/")
     return ret
 
 
@@ -224,6 +226,7 @@ def detect_and_mount(disk_list, mount_dir):
     ret = StorageLayoutImpl()
     ret._md = EfiMultiDisk(diskList=lvmDiskList, bootHdd=bootDisk)
     ret._swap = HandyUtil.swapLvDetectAndNew(StorageLayoutImpl.name)
+    ret._mnt = MountEfi(mount_dir)
     return ret
 
 
@@ -244,4 +247,5 @@ def create_and_mount(disk_list, mount_dir):
     ret = StorageLayoutImpl()
     ret._md = md
     ret._swap = HandyUtil.swapLvDetectAndNew(StorageLayoutImpl.name)
+    ret._mnt = MountEfi(mount_dir)
     return ret

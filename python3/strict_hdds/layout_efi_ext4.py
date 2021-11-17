@@ -21,7 +21,6 @@
 # THE SOFTWARE.
 
 
-import os
 from .util import Util, PartiUtil, GptUtil, SwapFile
 from .handy import MountEfi, CommonChecks, HandyUtil
 from . import errors
