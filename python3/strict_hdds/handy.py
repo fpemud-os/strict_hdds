@@ -221,7 +221,9 @@ class HandyUtil:
 
         return pvList
 
-
+    @staticmethod
+    def getSsdAndHddListFromBcacheDevPathList(bcacheDevPathList):
+        assert False
 
 
 
