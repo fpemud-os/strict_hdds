@@ -167,16 +167,14 @@ class StorageLayoutImpl(StorageLayout):
 
             # ssd partition 3: make it as cache device
             parti = self._cg.get_ssd_cache_partition()
-            BcacheUtil.makeDevice(parti, False)
-            BcacheUtil.registerCacheDevice(parti)
+            BcacheUtil.makeAndRegisterCacheDevice(parti)
             BcacheUtil.attachCacheDevice(HandyUtil.cgFindByBackingDeviceList(self._cg), parti)
         else:
             self._cg.add_hdd(disk)
 
             # hdd partition 2: make it as backing device and add it to btrfs filesystem
             parti = self._cg.get_hdd_data_partition(disk)
-            BcacheUtil.makeDevice(parti, True)
-            BcacheUtil.registerBackingDevice(parti)
+            BcacheUtil.makeAndRegisterBackingDevice(parti)
             bcacheDev = BcacheUtil.findByBackingDevice(parti)
             if self._cg.get_ssd() is not None:
                 BcacheUtil.attachCacheDevice([bcacheDev], self._cg.get_ssd_cache_partition())
@@ -223,10 +221,10 @@ def parse(boot_dev, root_dev):
     # hdd list
     hddDict = dict()        # dict<hddDevPath,bcacheDevPath>
     for bcacheDevPath in BtrfsUtil.getSlaveDevPathList(root_dev):
-        m = re.fullmatch("/dev/(bcache[0-9]+)", bcacheDevPath)
-        if m is None:
+        bcacheDev = BcacheUtil.getBcacheDevFromDevPath(bcacheDevPath)
+        if bcacheDev is None:
             raise errors.StorageLayoutParseError(StorageLayoutImpl.name, "%s has non-bcache sub device" % (root_dev))
-        hddDict.update(HandyUtil.bcacheGetHddDictWithOneItem(StorageLayoutImpl.name, bcacheDevPath, m.group(1)))
+        hddDict.update(HandyUtil.bcacheGetHddDictWithOneItem(StorageLayoutImpl.name, bcacheDevPath, bcacheDev))
 
     # ssd
     ssd = HandyUtil.cgGetSsdFromBootDev(boot_dev, hddDict.keys())
@@ -271,19 +269,17 @@ def create_and_mount(disk_list, mount_dir):
     hddDict = dict()        # dict<hddDevPath,bcacheDev>
     for hdd in cg.get_hdd_list():
         parti = cg.get_hdd_data_partition(hdd)
-        BcacheUtil.makeDevice(parti, True)
-        BcacheUtil.registerBackingDevice(parti)
+        BcacheUtil.makeAndRegisterBackingDevice(parti)
         hddDict[hdd] = BcacheUtil.findByBackingDevice(parti)
 
     # ssd partition 3: make it as cache device
     if cg.get_ssd() is not None:
-        BcacheUtil.makeDevice(cg.get_ssd_cache_partition(), False)
-        BcacheUtil.registerCacheDevice(cg.get_ssd_cache_partition())
+        BcacheUtil.makeAndRegisterCacheDevice(cg.get_ssd_cache_partition())
         BcacheUtil.attachCacheDevice(hddDict.values(), cg.get_ssd_cache_partition())
 
     # create and mount
     Util.cmdCall("/usr/sbin/mkfs.btrfs", "-d", "single", "-m", "single", *[os.path.join("/dev", x) for x in hddDict.values()])
-    Util.cmdCall("/bin/mount", _getDevRoot(cg), mount_dir)
+    MountEfi.mount(_getDevRoot(cg), cg.dev_boot, mount_dir)
 
     # return
     ret = StorageLayoutImpl()

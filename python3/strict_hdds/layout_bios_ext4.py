@@ -101,14 +101,12 @@ class StorageLayoutImpl(StorageLayout):
 def parse(boot_dev, root_dev):
     if boot_dev is not None:
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.BOOT_DEV_SHOULD_NOT_EXIST)
+    if Util.getBlkDevFsType(root_dev) != Util.fsTypeExt4:
+        raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.ROOT_PARTITION_FS_SHOULD_BE(Util.fsTypeExt4))
 
     hdd = PartiUtil.partiToDisk(root_dev)
     if Util.getBlkDevPartitionTableType(hdd) != Util.diskPartTableMbr:
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.PARTITION_TYPE_SHOULD_BE(hdd, Util.diskPartTableMbr))
-
-    fs = Util.getBlkDevFsType(root_dev)
-    if fs != Util.fsTypeExt4:
-        raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.ROOT_PARTITION_FS_SHOULD_BE(fs, Util.fsTypeExt4))
 
     # return
     ret = StorageLayoutImpl()
@@ -141,7 +139,7 @@ def detect_and_mount(disk_list, mount_dir):
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.ROOT_PARTITIONS_TOO_MANY)
 
     # mount
-    Util.cmdCall("/bin/mount", rootPartitionList[0], mount_dir)
+    MountBios.mount(rootPartitionList[0], mount_dir)
 
     # return
     ret = StorageLayoutImpl()
@@ -160,7 +158,7 @@ def create_and_mount(disk_list, mount_dir):
     ])
 
     # mount
-    Util.cmdCall("/bin/mount", PartiUtil.diskToParti(hdd, 1), mount_dir)
+    MountBios.mount(PartiUtil.diskToParti(hdd, 1), mount_dir)
 
     # return
     ret = StorageLayoutImpl(mount_dir)

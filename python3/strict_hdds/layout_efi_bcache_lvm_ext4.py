@@ -161,16 +161,14 @@ class StorageLayoutImpl(StorageLayout):
 
             # ssd partition 3: make it as cache device
             parti = self._cg.get_ssd_cache_partition()
-            BcacheUtil.makeDevice(parti, False)
-            BcacheUtil.registerCacheDevice(parti)
+            BcacheUtil.makeAndRegisterCacheDevice(parti)
             BcacheUtil.attachCacheDevice(HandyUtil.cgFindByBackingDeviceList(self._cg), parti)
         else:
             self._cg.add_hdd(disk)
 
             # hdd partition 2: make it as backing device, create lvm physical volume on bcache device and add it to volume group
             parti = self._cg.get_ssd_cache_partition()
-            BcacheUtil.makeDevice(parti, True)
-            BcacheUtil.registerBackingDevice(parti)
+            BcacheUtil.makeAndRegisterBackingDevice(parti)
             bcacheDev = BcacheUtil.findByBackingDevice(parti)
             if self.cg.get_ssd() is not None:
                 BcacheUtil.attachCacheDevice([bcacheDev], self._cg.get_ssd_cache_partition())
@@ -223,10 +221,10 @@ def parse(boot_dev, root_dev):
     # get bcacheDev
     hddDict = dict()        # dict<hddDev,bcacheDev>
     for disk in diskList:
-        m = re.fullmatch("/dev/(bcache[0-9]+)", disk)
-        if m is None:
+        bcacheDev = BcacheUtil.getBcacheDevFromDevPath(disk)
+        if bcacheDev is None:
             raise errors.StorageLayoutParseError(StorageLayoutImpl.name, "volume group \"%s\" has non-bcache physical volume" % (LvmUtil.vgName))
-        hddDict.update(HandyUtil.bcacheGetHddDictWithOneItem(StorageLayoutImpl.name, disk, m.group(1)))
+        hddDict.update(HandyUtil.bcacheGetHddDictWithOneItem(StorageLayoutImpl.name, disk, bcacheDev))
 
     # check root lv
     if root_dev != LvmUtil.rootLvDevPath:
@@ -271,6 +269,15 @@ def detect_and_mount(disk_list, mount_dir):
         if len(d) > 0:
             raise errors.StorageLayoutParseError(StorageLayoutImpl.name, "extra disk \"%s\" needed" % (d[0]))
 
+    # hdd list
+    hddDict = dict()        # dict<hddDevPath,bcacheDevPath>
+    for bcacheDevPath in lvmDiskList:
+        bcacheDev = BcacheUtil.getBcacheDevFromDevPath(bcacheDevPath)
+        if bcacheDev is None:
+            raise errors.StorageLayoutParseError(StorageLayoutImpl.name, "%s has non-bcache sub device" % (root_dev))
+        hddDict.update(HandyUtil.bcacheGetHddDictWithOneItem(StorageLayoutImpl.name, bcacheDevPath, m.group(1)))
+
+
     # 
     if ssd is not None:
         bootDisk = None
@@ -282,7 +289,7 @@ def detect_and_mount(disk_list, mount_dir):
     # return
     ret = StorageLayoutImpl()
     ret._cg = EfiCacheGroup(ssd=ssd, ssdEspParti=ssdEspParti, ssdSwapParti=ssdSwapParti, ssdCacheParti=ssdCacheParti, hddList=hddDict.keys(), bootHdd=bootHdd)
-    ret._mnt = MountEfi("/")
+    ret._mnt = MountEfi(mount_dir)
     return ret
 
     cg = EfiCacheGroup()
@@ -307,13 +314,11 @@ def create_and_mount(disk_list, mount_dir):
     # hdd partition 2: make them as backing device
     for hdd in hdd_list:
         parti = cg.get_hdd_data_partition(hdd)
-        BcacheUtil.makeDevice(parti, True)
-        BcacheUtil.registerBackingDevice(parti)
+        BcacheUtil.makeAndRegisterBackingDevice(parti)
         hddDict[hdd] = BcacheUtil.findByBackingDevice(parti)
 
     # ssd partition 3: make it as cache device
-    BcacheUtil.makeDevice(cg.get_ssd_cache_partition(), False)
-    BcacheUtil.registerCacheDevice(cg.get_ssd_cache_partition())
+    BcacheUtil.makeAndRegisterCacheDevice(cg.get_ssd_cache_partition())
     BcacheUtil.attachCacheDevice(cg.get_hdd_list(), cg.get_ssd_cache_partition())
 
     # create lvm physical volume on bcache device and add it to volume group

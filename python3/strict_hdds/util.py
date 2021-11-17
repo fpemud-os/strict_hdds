@@ -676,6 +676,14 @@ class GptUtil:
 class BcacheUtil:
 
     @staticmethod
+    def getBcacheDevFromDevPath(bcacheDevPath):
+        m = re.fullmatch("/dev/(bcache[0-9]+)", bcacheDevPath)
+        if m is not None:
+            return m.group(1)
+        else:
+            return None
+
+    @staticmethod
     def makeDevice(devPath, backingDeviceOrCacheDevice, blockSize=None, bucketSize=None, dataOffset=None):
         assert isinstance(backingDeviceOrCacheDevice, bool)
         assert blockSize is None or (isinstance(blockSize, int) and blockSize > 0)
@@ -870,6 +878,16 @@ class BcacheUtil:
     @staticmethod
     def registerCacheDevice(devPath):
         BcacheUtil._registerDevice(devPath)
+
+    @staticmethod
+    def makeAndRegisterBackingDevice(devPath):
+        BcacheUtil.makeDevice(devPath, True)
+        BcacheUtil.registerBackingDevice(devPath)
+
+    @staticmethod
+    def makeAndRegisterCacheDevice(devPath):
+        BcacheUtil.makeDevice(devPath, False)
+        BcacheUtil.registerCacheDevice(devPath)
 
     @staticmethod
     def attachCacheDevice(backingDevPathList, cacheDevPath):
