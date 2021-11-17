@@ -231,20 +231,15 @@ def parse(boot_dev, root_dev):
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.ROOT_PARTITION_FS_SHOULD_BE(Util.fsTypeExt4))
 
     # ssd
-    ssd = HandyUtil.cgGetSsdFromBootDev(boot_dev, hddDict.keys())
-    ssdEspParti, ssdSwapParti, ssdCacheParti = HandyUtil.cgGetSsdPartitions(StorageLayoutImpl.name, ssd)
+    ssd = HandyUtil.cgCheckAndGetSsdFromBootDev(boot_dev, hddDict.keys())
+    ssdEspParti, ssdSwapParti, ssdCacheParti = HandyUtil.cgCheckAndGetSsdPartitions(StorageLayoutImpl.name, ssd)
 
     # check ssd + hdd_list
-    if ssdEspParti is not None and ssdEspParti != boot_dev:
-        raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.BOOT_DEV_MUST_BE(ssdEspParti))
     for hdd, bcacheDev in hddDict.items():
         HandyUtil.bcacheCheckHddAndItsBcacheDev(StorageLayoutImpl.name, ssdCacheParti, hdd, bcacheDev)
 
-    # boot harddisk
-    if ssd is not None:
-        bootHdd = None
-    else:
-        bootHdd = PartiUtil.partiToDisk(boot_dev)
+    # check and get boot harddisk
+    bootHdd = HandyUtil.cgCheckAndGetBootHddFromBootDev(boot_dev, ssdEspParti, hddDict.keys())
 
     # return
     ret = StorageLayoutImpl()
@@ -258,8 +253,8 @@ def detect_and_mount(disk_list, mount_dir):
     LvmUtil.activateAll()
 
     # get disk list and check
-    ssd, hdd_list = HandyUtil.cgCheckAndGetSsdAndHddList(Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list))
-    ssdEspParti, ssdSwapParti, ssdCacheParti = HandyUtil.cgGetSsdPartitions(StorageLayoutImpl.name, ssd)
+    ssd, hdd_list = HandyUtil.cgCheckAndGetSsdAndHddList(Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list), False)
+    ssdEspParti, ssdSwapParti, ssdCacheParti = HandyUtil.cgCheckAndGetSsdPartitions(StorageLayoutImpl.name, ssd)
     lvmHddList = HandyUtil.lvmEnsureVgLvAndGetDiskList(StorageLayoutImpl.name)
     if True:
         d = list(set(lvmHddList) - set(hdd_list))
@@ -294,7 +289,7 @@ def create_and_mount(disk_list, mount_dir):
     hddDict = dict()
     if True:
         # add disks, process ssd first so that minimal boot disk change is need
-        ssd, hdd_list = HandyUtil.cgCheckAndGetSsdAndHddList(Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list))
+        ssd, hdd_list = HandyUtil.cgCheckAndGetSsdAndHddList(Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list), True)
         if ssd is not None:
             cg.add_ssd(ssd)
         for hdd in hdd_list:

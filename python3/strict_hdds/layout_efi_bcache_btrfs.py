@@ -227,20 +227,15 @@ def parse(boot_dev, root_dev):
         hddDict.update(HandyUtil.bcacheGetHddDictWithOneItem(StorageLayoutImpl.name, bcacheDevPath, bcacheDev))
 
     # ssd
-    ssd = HandyUtil.cgGetSsdFromBootDev(boot_dev, hddDict.keys())
-    ssdEspParti, ssdSwapParti, ssdCacheParti = HandyUtil.cgGetSsdPartitions(StorageLayoutImpl.name, ssd)
+    ssd = HandyUtil.cgCheckAndGetSsdFromBootDev(boot_dev, hddDict.keys())
+    ssdEspParti, ssdSwapParti, ssdCacheParti = HandyUtil.cgCheckAndGetSsdPartitions(StorageLayoutImpl.name, ssd)
 
-    # check ssd + hdd_list
-    if ssdEspParti is not None and ssdEspParti != boot_dev:
-        raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.BOOT_DEV_MUST_BE(ssdEspParti))
+    # check hdd list
     for hdd, bcacheDev in hddDict.items():
         HandyUtil.bcacheCheckHddAndItsBcacheDev(StorageLayoutImpl.name, ssdCacheParti, hdd, bcacheDev)
 
-    # boot harddisk
-    if ssd is not None:
-        bootHdd = None
-    else:
-        bootHdd = PartiUtil.partiToDisk(boot_dev)
+    # check and get boot harddisk
+    bootHdd = HandyUtil.cgCheckAndGetBootHddFromBootDev(boot_dev, ssdEspParti, hddDict.keys())
 
     # return
     ret = StorageLayoutImpl()
@@ -250,7 +245,7 @@ def parse(boot_dev, root_dev):
 
 
 def detect_and_mount(disk_list, mount_dir):
-    ssd, hdd_list = HandyUtil.cgCheckAndGetSsdAndHddList(Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list))
+    ssd, hdd_list = HandyUtil.cgCheckAndGetSsdAndHddList(Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list), False)
     cg = EfiCacheGroup()
 
 
@@ -258,7 +253,7 @@ def create_and_mount(disk_list, mount_dir):
     # add disks, process ssd first so that minimal boot disk change is need
     cg = EfiCacheGroup()
     if True:
-        ssd, hdd_list = HandyUtil.cgCheckAndGetSsdAndHddList(Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list))
+        ssd, hdd_list = HandyUtil.cgCheckAndGetSsdAndHddList(Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list), True)
         if ssd is not None:
             cg.add_ssd(ssd)
         for hdd in hdd_list:

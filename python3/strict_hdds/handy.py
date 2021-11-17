@@ -142,46 +142,69 @@ class HandyUtil:
         return storageLayout.dev_swap is not None and Util.systemdFindSwapService(storageLayout.dev_swap) is not None
 
     @staticmethod
-    def checkAndGetHdd(disk_list):
-        if len(disk_list) == 0:
+    def checkAndGetHdd(diskList):
+        if len(diskList) == 0:
             raise errors.StorageLayoutCreateError(errors.NO_DISK_WHEN_CREATE)
-        if len(disk_list) > 1:
+        if len(diskList) > 1:
             raise errors.StorageLayoutCreateError(errors.MULTIPLE_DISKS_WHEN_CREATE)
-        if not Util.isHarddiskClean(disk_list[0]):
-            raise errors.StorageLayoutCreateError(errors.DISK_NOT_CLEAN(disk_list[0]))
-        return disk_list[0]
+        if not Util.isHarddiskClean(diskList[0]):
+            raise errors.StorageLayoutCreateError(errors.DISK_NOT_CLEAN(diskList[0]))
+        return diskList[0]
 
     @staticmethod
-    def mdCheckAndGetHddList(disk_list):
-        if len(disk_list) == 0:
+    def mdCheckAndGetHddList(diskList):
+        if len(diskList) == 0:
             raise errors.StorageLayoutCreateError(errors.NO_DISK_WHEN_CREATE)
-        for disk in disk_list:
+        for disk in diskList:
             if not Util.isHarddiskClean(disk):
                 raise errors.StorageLayoutCreateError(errors.DISK_NOT_CLEAN(disk))
-        return disk_list
+        return diskList
 
     @staticmethod
-    def cgCheckAndGetSsdAndHddList(ssd_list, hdd_list):
-        if len(ssd_list) == 0:
+    def mdCheckHdd(storageLayoutName, hdd):
+        if Util.getBlkDevPartitionTableType(hdd) != Util.diskPartTableGpt:
+            raise errors.StorageLayoutParseError(storageLayoutName, errors.PARTITION_TYPE_SHOULD_BE(hdd, Util.diskPartTableGpt))
+
+        # esp partition
+        espParti = PartiUtil.diskToParti(hdd, 1)
+        if Util.getBlkDevFsType(espParti) != Util.fsTypeFat:
+            raise errors.StorageLayoutParseError(storageLayoutName, errors.PARTITION_TYPE_SHOULD_BE(espParti, Util.fsTypeFat))
+        if Util.getBlkDevSize(espParti) != Util.getEspSize():
+            raise errors.StorageLayoutParseError(storageLayoutName, errors.PARTITION_SIZE_INVALID(espParti))
+
+        # data partition
+        if not PartiUtil.diskHasParti(hdd, 2):
+            raise errors.StorageLayoutParseError(storageLayoutName, "HDD \"%s\" has no data partition" % (hdd))
+
+        # redundant partitions
+        if PartiUtil.diskHasMoreParti(hdd, 2):
+            raise errors.StorageLayoutParseError(storageLayoutName, errors.DISK_HAS_REDUNDANT_PARTITION(hdd))
+
+    @staticmethod
+    def cgCheckAndGetSsdAndHddList(ssdList, hddList, bForCreate):
+        if len(ssdList) == 0:
             ssd = None
-        elif len(ssd_list) == 1:
-            ssd = ssd_list[0]
+        elif len(ssdList) == 1:
+            ssd = ssdList[0]
         else:
             raise errors.StorageLayoutCreateError(errors.MULTIPLE_SSD)
 
-        if len(hdd_list) == 0:
+        if len(hddList) == 0:
             raise errors.StorageLayoutCreateError(errors.NO_DISK_WHEN_CREATE)
 
-        if not Util.isHarddiskClean(ssd):
-            raise errors.StorageLayoutCreateError(errors.DISK_NOT_CLEAN(ssd))
-        for hdd in hdd_list:
-            if not Util.isHarddiskClean(hdd):
-                raise errors.StorageLayoutCreateError(errors.DISK_NOT_CLEAN(hdd))
+        if bForCreate:
+            if not Util.isHarddiskClean(ssd):
+                raise errors.StorageLayoutCreateError(errors.DISK_NOT_CLEAN(ssd))
+            for hdd in hddList:
+                if not Util.isHarddiskClean(hdd):
+                    raise errors.StorageLayoutCreateError(errors.DISK_NOT_CLEAN(hdd))
 
-        return (ssd, hdd_list)
+        return (ssd, hddList)
 
     @staticmethod
-    def cgGetSsdFromBootDev(bootDev, hddList):
+    def cgCheckAndGetSsdFromBootDev(bootDev, hddList):
+        assert bootDev is not None
+
         ssd = PartiUtil.partiToDisk(bootDev)
         if ssd not in hddList:
             return ssd
@@ -189,7 +212,7 @@ class HandyUtil:
             return None
 
     @staticmethod
-    def cgGetSsdPartitions(storageLayoutName, ssd):
+    def cgCheckAndGetSsdPartitions(storageLayoutName, ssd):
         if ssd is not None:
             ssdEspParti = PartiUtil.diskToParti(ssd, 1)
             if PartiUtil.diskHasParti(ssd, 3):
@@ -216,6 +239,8 @@ class HandyUtil:
             # ssdCacheParti
             if not PartiUtil.partiExists(ssdCacheParti):
                 raise errors.StorageLayoutParseError(storageLayoutName, "SSD has no cache partition")
+
+            # redundant partitions
             if True:
                 disk, partId = PartiUtil.partiToDiskAndPartiId(ssdCacheParti)
                 if PartiUtil.diskHasMoreParti(disk, partId):
@@ -224,6 +249,37 @@ class HandyUtil:
             return ssdEspParti, ssdSwapParti, ssdCacheParti
         else:
             return None, None, None
+
+    @staticmethod
+    def cgCheckHdd(storageLayoutName, hdd):
+        return HandyUtil.mdCheckHdd(storageLayoutName, hdd)
+
+    @staticmethod
+    def cgCheckAndGetBootHdd(storageLayoutName, ssdEspParti, hddList):
+        if ssdEspParti is not None:
+            return None
+
+        for hdd in hddList:
+            espParti = PartiUtil.diskToParti(hdd, 1)
+            if GptUtil.isEspPartition(espParti):
+                return hdd
+        return None
+
+    @staticmethod
+    def cgCheckAndGetBootHddFromBootDev(storageLayoutName, bootDev, ssdEspParti, hddList):
+        assert bootDev is not None
+
+        if ssdEspParti is not None:
+            if ssdEspParti != bootDev:
+                raise errors.StorageLayoutParseError(storageLayoutName, errors.BOOT_DEV_MUST_BE(ssdEspParti))
+            return None
+        else:
+            if not GptUtil.isEspPartition(bootDev):
+                raise errors.StorageLayoutParseError(storageLayoutName, errors.BOOT_DEV_IS_NOT_ESP)
+            bootHdd = PartiUtil.partiToDisk(bootDev)
+            if bootHdd not in hddList:
+                raise errors.StorageLayoutParseError(storageLayoutName, errors.BOOT_DEV_INVALID)
+            return bootHdd
 
     def cgFindByBackingDeviceList(cg):
         return [BcacheUtil.findByBackingDevice(cg.get_hdd_data_partition(x)) for x in cg.get_hdd_list()]

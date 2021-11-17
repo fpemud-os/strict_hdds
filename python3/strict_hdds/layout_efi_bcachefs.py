@@ -198,19 +198,10 @@ class StorageLayoutImpl(StorageLayout):
 
 
 def parse(boot_dev, root_dev):
-    # get ssd, hdd list
-    ssd, hddList = HandyUtil.cgCheckAndGetSsdAndHddList(BcachefsUtil.getSlaveSsdDevPatListAndHddDevPathList(root_dev))
-    ssdEspParti, ssdSwapParti, ssdCacheParti = HandyUtil.cgGetSsdPartitions(StorageLayoutImpl.name, ssd)
-    if ssd is not None:
-        if ssdEspParti != boot_dev:
-            raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.BOOT_DEV_MUST_BE(ssdEspParti))
-        bootHdd = None
-    else:
-        if not GptUtil.isEspPartition(boot_dev):
-            raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.BOOT_DEV_IS_NOT_ESP)
-        bootHdd = PartiUtil.partiToDisk(boot_dev)
-        if bootHdd not in hddList:
-            raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.BOOT_DEV_INVALID)
+    # get values
+    ssd, hddList = HandyUtil.cgCheckAndGetSsdAndHddList(BcachefsUtil.getSlaveSsdDevPatListAndHddDevPathList(root_dev), False)
+    ssdEspParti, ssdSwapParti, ssdCacheParti = HandyUtil.cgCheckAndGetSsdPartitions(StorageLayoutImpl.name, ssd)
+    bootHdd = HandyUtil.cgCheckAndGetBootHddFromBootDev(boot_dev, ssdEspParti, hddList)
 
     # return
     ret = StorageLayoutImpl()
@@ -220,30 +211,22 @@ def parse(boot_dev, root_dev):
 
 
 def detect_and_mount(disk_list, mount_dir):
-    ssd, hdd_list = HandyUtil.cgCheckAndGetSsdAndHddList(Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list))
-    ssdEspParti, ssdSwapParti, ssdCacheParti = HandyUtil.cgGetSsdPartitions(StorageLayoutImpl.name, root_dev, ssd)
-    if ssd is not None:
-        if ssdEspParti != boot_dev:
-            raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.BOOT_DEV_MUST_BE(ssdEspParti))
-        bootHdd = None
-    else:
-        bootHdd = PartiUtil.partiToDisk(boot_dev)
-        if bootHdd not in hddList:
-            raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.BOOT_DEV_INVALID)
+    ssd, hddList = HandyUtil.cgCheckAndGetSsdAndHddList(Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list), False)
+    ssdEspParti, ssdSwapParti, ssdCacheParti = HandyUtil.cgCheckAndGetSsdPartitions(StorageLayoutImpl.name, ssd)
+    bootHdd = HandyUtil.cgCheckAndGetBootHddFromBootDev(boot_dev, ssdEspParti, hddList)
 
-
-    cg = EfiCacheGroup()
-
-
-
-    assert False
+    # return
+    ret = StorageLayoutImpl()
+    ret._cg = EfiCacheGroup(ssd=ssd, ssdEspParti=ssdEspParti, ssdSwapParti=ssdSwapParti, ssdCacheParti=ssdCacheParti, hddList=hddList, bootHdd=bootHdd)
+    ret._mnt = MountEfi("/")
+    return ret
 
 
 def create_and_mount(disk_list, mount_dir):
     cg = EfiCacheGroup()
     if True:
         # add disks, process ssd first so that minimal boot disk change is need
-        ssd, hdd_list = HandyUtil.cgCheckAndGetSsdAndHddList(Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list))
+        ssd, hdd_list = HandyUtil.cgCheckAndGetSsdAndHddList(Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list), True)
         if ssd is not None:
             cg.add_ssd(ssd)
         for hdd in hdd_list:
