@@ -139,7 +139,7 @@ def get_current_storage_layout():
         if Util.anyIn(["efi-bcache-btrfs", "efi-btrfs"], allLayoutNames):
             if rootDevFs == Util.fsTypeBtrfs:
                 tlist = BtrfsUtil.getSlaveDevPathList(rootDev)          # only call btrfs related procedure when corresponding storage layout exists
-                if any(re.fullmatch("/dev/bcache[0-9]+", x) is not None for x in tlist):
+                if any(BcacheUtil.getBcacheDevFromDevPath(x) is not None for x in tlist):
                     return _parseOneStorageLayout("efi-bcache-btrfs", bootDev, rootDev)
                 else:
                     return _parseOneStorageLayout("efi-btrfs", bootDev, rootDev)
@@ -149,7 +149,7 @@ def get_current_storage_layout():
             lvmInfo = Util.getBlkDevLvmInfo(rootDev)                    # only call lvm related procedure when corresponding storage layout exists
             if lvmInfo is not None:
                 tlist = LvmUtil.getSlaveDevPathList(lvmInfo[0])
-                if any(re.fullmatch("/dev/bcache[0-9]+", x) is not None for x in tlist):
+                if any(BcacheUtil.getBcacheDevFromDevPath(x) is not None for x in tlist):
                     return _parseOneStorageLayout("efi-bcache-lvm-ext4", bootDev, rootDev)
                 else:
                     return _parseOneStorageLayout("efi-lvm-ext4", bootDev, rootDev)
