@@ -163,22 +163,25 @@ def parse(boot_dev, root_dev):
     return ret
 
 
-def create_and_mount(disk_list=None):
-    if disk_list is None:
-        disk_list = Util.getDevPathListForFixedDisk()
-        if len(disk_list) == 0:
-            raise errors.StorageLayoutCreateError(errors.NO_DISK_WHEN_CREATE)
-    else:
-        assert len(disk_list) > 0
+def detect_and_mount(disk_list, mount_dir):
+    pass
 
+
+def create_and_mount(disk_list, mount_dir):
+    # add disks
+    md = EfiMultiDisk()
+    for hdd in HandyUtil.mdGetHddList(disk_list):
+        md.add_disk(hdd)
+
+    # create and mount
+    Util.cmdCall("/usr/sbin/mkfs.btrfs", "-d", "single", "-m", "single", *[md.get_disk_data_partition(x) for x in md.get_disk_list()])
+    MountEfi.mount(_getDevRoot(md), md.dev_boot, mount_dir)
+
+    # return
     ret = StorageLayoutImpl()
-
-    ret._md = EfiMultiDisk()
-    for devpath in disk_list:
-        ret._md.add_disk(devpath)
-
+    ret._md = md
+    ret._mnt = MountEfi(mount_dir)
     return ret
-
 
 
 def _getDevRoot(md):
