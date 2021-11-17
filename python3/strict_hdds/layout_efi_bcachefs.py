@@ -240,21 +240,21 @@ def detect_and_mount(disk_list, mount_dir):
 
 
 def create_and_mount(disk_list, mount_dir):
-    ssd, hdd_list = HandyUtil.cgCheckAndGetSsdAndHddList(Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list))
     cg = EfiCacheGroup()
-
-    # add disks, process ssd first so that minimal boot disk change is need
-    if ssd is not None:
-        cg.add_ssd(ssd)
-    for hdd in hdd_list:
-        cg.add_hdd(hdd)
+    if True:
+        # add disks, process ssd first so that minimal boot disk change is need
+        ssd, hdd_list = HandyUtil.cgCheckAndGetSsdAndHddList(Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list))
+        if ssd is not None:
+            cg.add_ssd(ssd)
+        for hdd in hdd_list:
+            cg.add_hdd(hdd)
 
     # create bcachefs
     if cg.get_ssd() is not None:
         ssd_list2 = [cg.get_ssd_cache_partition()]
     else:
         ssd_list2 = []
-    hdd_list2 = [cg.get_hdd_data_partition(x) for x in hdd_list]
+    hdd_list2 = [cg.get_hdd_data_partition(x) for x in cg.get_hdd_list()]
     BcachefsUtil.createBcachefs(ssd_list2, hdd_list2, 1, 1)
 
     # mount

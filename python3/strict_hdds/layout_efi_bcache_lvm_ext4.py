@@ -290,18 +290,18 @@ def detect_and_mount(disk_list, mount_dir):
 
 
 def create_and_mount(disk_list, mount_dir):
-    ssd, hdd_list = HandyUtil.cgCheckAndGetSsdAndHddList(Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list))
     cg = EfiCacheGroup()
     hddDict = dict()
-
-    # add disks, process ssd first so that minimal boot disk change is need
-    if ssd is not None:
-        cg.add_ssd(ssd)
-    for hdd in hdd_list:
-        cg.add_hdd(hdd)
+    if True:
+        # add disks, process ssd first so that minimal boot disk change is need
+        ssd, hdd_list = HandyUtil.cgCheckAndGetSsdAndHddList(Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list))
+        if ssd is not None:
+            cg.add_ssd(ssd)
+        for hdd in hdd_list:
+            cg.add_hdd(hdd)
 
     # hdd partition 2: make them as backing device
-    for hdd in hdd_list:
+    for hdd in cg.get_hdd_list():
         parti = cg.get_hdd_data_partition(hdd)
         BcacheUtil.makeAndRegisterBackingDevice(parti)
         hddDict[hdd] = BcacheUtil.findByBackingDevice(parti)

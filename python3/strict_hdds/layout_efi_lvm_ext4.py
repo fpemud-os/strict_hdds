@@ -246,6 +246,6 @@ def create_and_mount(disk_list, mount_dir):
     # return
     ret = StorageLayoutImpl()
     ret._md = md
-    ret._swap = HandyUtil.swapLvDetectAndNew(StorageLayoutImpl.name)
+    ret._swap = SwapLvmLv(False)
     ret._mnt = MountEfi(mount_dir)
     return ret
