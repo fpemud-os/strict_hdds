@@ -224,16 +224,19 @@ def parse(boot_dev, root_dev):
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.ROOT_PARTITION_FS_SHOULD_BE(Util.fsTypeBtrfs))
 
     # bcache device list
-    bcacheDevPathList = BtrfsUtil.getSlaveDevPathList(root_dev)
+    slaveDevPathList = BtrfsUtil.getSlaveDevPathList(root_dev)
+    for slaveDevPath in slaveDevPathList:
+        if BcacheUtil.getBcacheDevFromDevPath(slaveDevPath) is None:
+            raise errors.StorageLayoutParseError(StorageLayoutImpl.name, "\"%s\" has non-bcache slave device" % (root_dev))
 
     # ssd, hdd_list, boot_disk
-    ssd, hddList = HandyUtil.bcacheGetSsdAndHddListFromDevPathList(bcacheDevPathList)
+    ssd, hddList = HandyUtil.bcacheGetSsdAndHddListFromDevPathList(slaveDevPathList)
     ssdEspParti, ssdSwapParti, ssdCacheParti = HandyCg.checkAndGetSsdPartitions(StorageLayoutImpl.name, ssd)
     bootHdd = HandyCg.checkAndGetBootHddFromBootDev(boot_dev, ssdEspParti, hddList)
 
     # return
     ret = StorageLayoutImpl()
-    ret._cg = EfiCacheGroup(ssd=ssd, ssdEspParti=ssdEspParti, ssdSwapParti=ssdSwapParti, ssdCacheParti=ssdCacheParti, hddList=hddDict.keys(), bootHdd=bootHdd)
+    ret._cg = EfiCacheGroup(ssd=ssd, ssdEspParti=ssdEspParti, ssdSwapParti=ssdSwapParti, ssdCacheParti=ssdCacheParti, hddList=hddList, bootHdd=bootHdd)
     ret._mnt = MountEfi("/")
     return ret
 

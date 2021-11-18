@@ -221,20 +221,19 @@ def parse(boot_dev, root_dev):
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.ROOT_PARTITION_FS_SHOULD_BE(Util.fsTypeExt4))
 
     # pv list
-    pvList = HandyUtil.lvmEnsureVgLvAndGetPvList(StorageLayoutImpl.name)
-    for pv in pvList:
-        bcacheDev = BcacheUtil.getBcacheDevFromDevPath(pv)
-        if bcacheDev is None:
+    pvDevPathList = HandyUtil.lvmEnsureVgLvAndGetPvList(StorageLayoutImpl.name)
+    for pvDevPath in pvDevPathList:
+        if BcacheUtil.getBcacheDevFromDevPath(pvDevPath) is None:
             raise errors.StorageLayoutParseError(StorageLayoutImpl.name, "volume group \"%s\" has non-bcache physical volume" % (LvmUtil.vgName))
 
     # ssd, hdd_list, boot_disk
-    ssd, hddList = HandyUtil.bcacheGetSsdAndHddListFromDevPathList(pvList)
+    ssd, hddList = HandyUtil.bcacheGetSsdAndHddListFromDevPathList(pvDevPathList)
     ssdEspParti, ssdSwapParti, ssdCacheParti = HandyCg.checkAndGetSsdPartitions(StorageLayoutImpl.name, ssd)
     bootHdd = HandyCg.checkAndGetBootHddFromBootDev(boot_dev, ssdEspParti, hddList)
 
     # return
     ret = StorageLayoutImpl()
-    ret._cg = EfiCacheGroup(ssd=ssd, ssdEspParti=ssdEspParti, ssdSwapParti=ssdSwapParti, ssdCacheParti=ssdCacheParti, hddList=hddDict.keys(), bootHdd=bootHdd)
+    ret._cg = EfiCacheGroup(ssd=ssd, ssdEspParti=ssdEspParti, ssdSwapParti=ssdSwapParti, ssdCacheParti=ssdCacheParti, hddList=hddList, bootHdd=bootHdd)
     ret._mnt = MountEfi("/")
     return ret
 
