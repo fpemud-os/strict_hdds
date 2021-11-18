@@ -156,8 +156,9 @@ class Util:
 
     @staticmethod
     def wipeHarddisk(devpath):
-        with open(devpath, 'wb') as f:
-            f.write(bytearray(1024))
+        pass
+        # with open(devpath, 'wb') as f:
+        #     f.write(bytearray(1024))
 
     @staticmethod
     def isHarddiskClean(devpath):
@@ -551,8 +552,9 @@ class MbrUtil:
 
     @staticmethod
     def wipeBootCode(devPath):
-        with open(devPath, "wb") as f:
-            f.write(bytearray(440))
+        pass
+        # with open(devPath, "wb") as f:
+        #     f.write(bytearray(440))
 
 
 class GptUtil:
