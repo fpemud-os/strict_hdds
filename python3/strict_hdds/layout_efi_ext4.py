@@ -106,6 +106,7 @@ def parse(boot_dev, root_dev):
     if Util.getBlkDevFsType(root_dev) != Util.fsTypeExt4:
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.ROOT_PARTITION_FS_SHOULD_BE(Util.fsTypeExt4))
 
+    # return
     ret = StorageLayoutImpl()
     ret._hdd = PartiUtil.partiToDisk(boot_dev)
     ret._hddEspParti = boot_dev

@@ -220,14 +220,14 @@ def parse(boot_dev, root_dev):
     if Util.getBlkDevFsType(LvmUtil.rootLvDevPath) != Util.fsTypeExt4:
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.ROOT_PARTITION_FS_SHOULD_BE(Util.fsTypeExt4))
 
-    # get pv list and check
+    # pv list
     pvList = HandyUtil.lvmEnsureVgLvAndGetPvList(StorageLayoutImpl.name)
     for pv in pvList:
         bcacheDev = BcacheUtil.getBcacheDevFromDevPath(pv)
         if bcacheDev is None:
             raise errors.StorageLayoutParseError(StorageLayoutImpl.name, "volume group \"%s\" has non-bcache physical volume" % (LvmUtil.vgName))
 
-    # get ssd + hdd list + boot disk
+    # ssd, hdd_list, boot_disk
     ssd, hddList = HandyUtil.bcacheGetSsdAndHddListFromDevPathList(pvList)
     ssdEspParti, ssdSwapParti, ssdCacheParti = HandyCg.checkAndGetSsdPartitions(StorageLayoutImpl.name, ssd)
     bootHdd = HandyCg.checkAndGetBootHddFromBootDev(boot_dev, ssdEspParti, hddList)

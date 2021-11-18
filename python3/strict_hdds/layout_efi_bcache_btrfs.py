@@ -223,10 +223,10 @@ def parse(boot_dev, root_dev):
     if Util.getBlkDevFsType(root_dev) != Util.fsTypeBtrfs:
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.ROOT_PARTITION_FS_SHOULD_BE(Util.fsTypeBtrfs))
 
-    # get bcache device list
+    # bcache device list
     bcacheDevPathList = BtrfsUtil.getSlaveDevPathList(root_dev)
 
-    # get ssd + hdd list + boot disk
+    # ssd, hdd_list, boot_disk
     ssd, hddList = HandyUtil.bcacheGetSsdAndHddListFromDevPathList(bcacheDevPathList)
     ssdEspParti, ssdSwapParti, ssdCacheParti = HandyCg.checkAndGetSsdPartitions(StorageLayoutImpl.name, ssd)
     bootHdd = HandyCg.checkAndGetBootHddFromBootDev(boot_dev, ssdEspParti, hddList)

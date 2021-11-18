@@ -150,7 +150,7 @@ def parse(boot_dev, root_dev):
     if Util.getBlkDevFsType(root_dev) != Util.fsTypeBtrfs:
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.ROOT_PARTITION_FS_SHOULD_BE(Util.fsTypeBtrfs))
 
-    # get disk list + boot disk
+    # disk_list, boot_disk
     diskList = BtrfsUtil.getSlaveDevPathList(root_dev)
     bootHdd = HandyMd.checkAndGetBootDiskFromBootDevAndDiskList(boot_dev, diskList)
 

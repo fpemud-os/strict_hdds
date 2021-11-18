@@ -203,7 +203,7 @@ def parse(boot_dev, root_dev):
     if Util.getBlkDevFsType(root_dev) != Util.fsTypeBcachefs:
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.ROOT_PARTITION_FS_SHOULD_BE(Util.fsTypeBcachefs))
 
-    # get ssd + hdd list + boot disk
+    # ssd, hdd_list, boot_disk
     ssd, hddList = HandyUtil.cgCheckAndGetSsdAndHddList(BcachefsUtil.getSlaveSsdDevPatListAndHddDevPathList(root_dev), False)
     ssdEspParti, ssdSwapParti, ssdCacheParti = HandyCg.checkAndGetSsdPartitions(StorageLayoutImpl.name, ssd)
     bootHdd = HandyCg.checkAndGetBootHddFromBootDev(boot_dev, ssdEspParti, hddList)

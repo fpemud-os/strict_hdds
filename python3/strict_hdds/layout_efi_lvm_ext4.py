@@ -185,7 +185,7 @@ def parse(boot_dev, root_dev):
     if Util.getBlkDevFsType(LvmUtil.rootLvDevPath) != Util.fsTypeExt4:
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.ROOT_PARTITION_FS_SHOULD_BE(Util.fsTypeExt4))
 
-    # get disk list + boot disk
+    # disk_list, boot_disk
     pvList = HandyUtil.lvmEnsureVgLvAndGetPvList(StorageLayoutImpl.name)
     diskList = [PartiUtil.partiToDisk(x) for x in pvList]
     bootHdd = HandyMd.checkAndGetBootDiskFromBootDevAndDiskList(boot_dev, diskList)
