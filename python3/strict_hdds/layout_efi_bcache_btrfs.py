@@ -230,9 +230,9 @@ def parse(boot_dev, root_dev):
             raise errors.StorageLayoutParseError(StorageLayoutImpl.name, "\"%s\" has non-bcache slave device" % (root_dev))
 
     # ssd, hdd_list, boot_disk
-    ssd, hddList = HandyBcache.getSsdAndHddListFromBcacheDevPathList(slaveDevPathList)
+    ssd, hddList = HandyBcache.getSsdAndHddListFromBcacheDevPathList(StorageLayoutImpl.name, slaveDevPathList)
     ssdEspParti, ssdSwapParti, ssdCacheParti = HandyCg.checkAndGetSsdPartitions(StorageLayoutImpl.name, ssd)
-    bootHdd = HandyCg.checkAndGetBootHddFromBootDev(boot_dev, ssdEspParti, hddList)
+    bootHdd = HandyCg.checkAndGetBootHddFromBootDev(StorageLayoutImpl.name, boot_dev, ssdEspParti, hddList)
 
     # return
     ret = StorageLayoutImpl()
@@ -249,10 +249,10 @@ def detect_and_mount(disk_list, mount_dir):
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.DISK_NOT_FOUND)
 
     # ssd, hdd_list, boot_disk
-    ssd, hddList = HandyBcache.getSsdAndHddListFromBcacheDevPathList(bcacheDevPathList)
-    HandyCg.checkExtraDisks(ssd, hddList, disk_list)
+    ssd, hddList = HandyBcache.getSsdAndHddListFromBcacheDevPathList(StorageLayoutImpl.name, bcacheDevPathList)
+    HandyCg.checkExtraDisks(StorageLayoutImpl.name, ssd, hddList, disk_list)
     ssdEspParti, ssdSwapParti, ssdCacheParti = HandyCg.checkAndGetSsdPartitions(StorageLayoutImpl.name, ssd)
-    bootHdd = HandyCg.checkAndGetBootHddAndBootDev(ssdEspParti, hddList)[0]
+    bootHdd = HandyCg.checkAndGetBootHddAndBootDev(StorageLayoutImpl.name, ssdEspParti, hddList)[0]
 
     # return
     ret = StorageLayoutImpl()

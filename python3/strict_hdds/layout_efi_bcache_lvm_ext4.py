@@ -228,9 +228,9 @@ def parse(boot_dev, root_dev):
             raise errors.StorageLayoutParseError(StorageLayoutImpl.name, "volume group \"%s\" has non-bcache physical volume" % (LvmUtil.vgName))
 
     # ssd, hdd_list, boot_disk
-    ssd, hddList = HandyBcache.getSsdAndHddListFromBcacheDevPathList(pvDevPathList)
+    ssd, hddList = HandyBcache.getSsdAndHddListFromBcacheDevPathList(StorageLayoutImpl.name, pvDevPathList)
     ssdEspParti, ssdSwapParti, ssdCacheParti = HandyCg.checkAndGetSsdPartitions(StorageLayoutImpl.name, ssd)
-    bootHdd = HandyCg.checkAndGetBootHddFromBootDev(boot_dev, ssdEspParti, hddList)
+    bootHdd = HandyCg.checkAndGetBootHddFromBootDev(StorageLayoutImpl.name, boot_dev, ssdEspParti, hddList)
 
     # return
     ret = StorageLayoutImpl()
@@ -249,10 +249,10 @@ def detect_and_mount(disk_list, mount_dir):
         if BcacheUtil.getBcacheDevFromDevPath(pvDevPath) is None:
             raise errors.StorageLayoutParseError(StorageLayoutImpl.name, "volume group \"%s\" has non-bcache physical volume" % (LvmUtil.vgName))
     # ssd, hdd_list, boot_disk, boot_device
-    ssd, hddList = HandyBcache.getSsdAndHddListFromBcacheDevPathList(pvDevPathList)
-    HandyCg.checkExtraDisks(ssd, hddList, disk_list)
+    ssd, hddList = HandyBcache.getSsdAndHddListFromBcacheDevPathList(StorageLayoutImpl.name, pvDevPathList)
+    HandyCg.checkExtraDisks(StorageLayoutImpl.name, ssd, hddList, disk_list)
     ssdEspParti, ssdSwapParti, ssdCacheParti = HandyCg.checkAndGetSsdPartitions(StorageLayoutImpl.name, ssd)
-    bootHdd, bootDev = HandyCg.checkAndGetBootHddAndBootDev(ssdEspParti, hddList)
+    bootHdd, bootDev = HandyCg.checkAndGetBootHddAndBootDev(StorageLayoutImpl.name, ssdEspParti, hddList)
 
     # check root lv
     if Util.getBlkDevFsType(LvmUtil.rootLvDevPath) != Util.fsTypeExt4:

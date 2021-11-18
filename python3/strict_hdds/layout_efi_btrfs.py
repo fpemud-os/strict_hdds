@@ -152,7 +152,7 @@ def parse(boot_dev, root_dev):
 
     # disk_list, boot_disk
     diskList = BtrfsUtil.getSlaveDevPathList(root_dev)
-    bootHdd = HandyMd.checkAndGetBootDiskFromBootDev(boot_dev, diskList)
+    bootHdd = HandyMd.checkAndGetBootDiskFromBootDev(StorageLayoutImpl.name, boot_dev, diskList)
 
     # return
     ret = StorageLayoutImpl()
@@ -168,7 +168,7 @@ def detect_and_mount(disk_list, mount_dir):
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.DISK_NOT_FOUND)
 
     # boot_disk, boot_device
-    bootHdd = HandyMd.checkAndGetBootDiskAndBootDev(diskList)[0]
+    bootHdd = HandyMd.checkAndGetBootDiskAndBootDev(StorageLayoutImpl.name, diskList)[0]
 
     # return
     ret = StorageLayoutImpl()

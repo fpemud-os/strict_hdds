@@ -211,7 +211,7 @@ def parse(boot_dev, root_dev):
     # ssd, hdd_list, boot_disk
     ssd, hddList = HandyCg.checkAndGetSsdAndHddList(BcachefsUtil.getSlaveSsdDevPatListAndHddDevPathList(root_dev), False)
     ssdEspParti, ssdSwapParti, ssdCacheParti = HandyCg.checkAndGetSsdPartitions(StorageLayoutImpl.name, ssd)
-    bootHdd = HandyCg.checkAndGetBootHddFromBootDev(boot_dev, ssdEspParti, hddList)
+    bootHdd = HandyCg.checkAndGetBootHddFromBootDev(storageLayoutName, boot_dev, ssdEspParti, hddList)
 
     # return
     ret = StorageLayoutImpl()
@@ -229,7 +229,7 @@ def detect_and_mount(disk_list, mount_dir):
     # ssd, hdd_list, boot_disk
     ssd, hddList = HandyCg.checkAndGetSsdAndHddList(Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list))
     ssdEspParti, ssdSwapParti, ssdCacheParti = HandyCg.checkAndGetSsdPartitions(StorageLayoutImpl.name, ssd)
-    bootHdd = HandyCg.checkAndGetBootHddAndBootDev(ssdEspParti, hddList)[0]
+    bootHdd = HandyCg.checkAndGetBootHddAndBootDev(StorageLayoutImpl.name, ssdEspParti, hddList)[0]
 
     # return
     ret = StorageLayoutImpl()

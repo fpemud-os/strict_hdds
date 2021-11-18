@@ -188,7 +188,7 @@ def parse(boot_dev, root_dev):
     # disk_list, boot_disk
     pvDevPathList = HandyUtil.lvmEnsureVgLvAndGetPvList(StorageLayoutImpl.name)
     diskList = [PartiUtil.partiToDisk(x) for x in pvDevPathList]
-    bootHdd = HandyMd.checkAndGetBootDiskFromBootDev(boot_dev, diskList)
+    bootHdd = HandyMd.checkAndGetBootDiskFromBootDev(StorageLayoutImpl.name, boot_dev, diskList)
 
     # return
     ret = StorageLayoutImpl()
@@ -204,8 +204,8 @@ def detect_and_mount(disk_list, mount_dir):
     # pv list
     pvDevPathList = HandyUtil.lvmEnsureVgLvAndGetPvList(StorageLayoutImpl.name)
     diskList = [PartiUtil.partiToDisk(x) for x in pvDevPathList]
-    HandyMd.checkExtraDisks(pvDevPathList, disk_list)
-    bootHdd, bootDev = HandyMd.checkAndGetBootDiskAndBootDev(diskList)
+    HandyMd.checkExtraDisks(StorageLayoutImpl.name, pvDevPathList, disk_list)
+    bootHdd, bootDev = HandyMd.checkAndGetBootDiskAndBootDev(StorageLayoutImpl.name, diskList)
 
     # check root lv
     if Util.getBlkDevFsType(LvmUtil.rootLvDevPath) != Util.fsTypeExt4:
