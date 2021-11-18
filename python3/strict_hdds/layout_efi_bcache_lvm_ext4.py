@@ -22,7 +22,7 @@
 
 
 from .util import Util, PartiUtil, GptUtil, BcacheUtil, LvmUtil, EfiCacheGroup
-from .handy import CommonChecks, MountEfi, HandyUtil
+from .handy import CommonChecks, MountEfi, HandyCg, HandyUtil
 from . import errors
 from . import StorageLayout
 
@@ -213,33 +213,24 @@ class StorageLayoutImpl(StorageLayout):
 
 
 def parse(boot_dev, root_dev):
-    # check and get pv list
-    pvList = HandyUtil.lvmEnsureVgLvAndGetPvList(StorageLayoutImpl.name)
-
-    # get bcacheDev
-    hddDict = dict()        # dict<hddDev,bcacheDev>
-    for disk in pvList:
-        bcacheDev = BcacheUtil.getBcacheDevFromDevPath(disk)
-        if bcacheDev is None:
-            raise errors.StorageLayoutParseError(StorageLayoutImpl.name, "volume group \"%s\" has non-bcache physical volume" % (LvmUtil.vgName))
-        hddDict.update(HandyUtil.bcacheGetHddDictWithOneItem(StorageLayoutImpl.name, disk, bcacheDev))
-
-    # check root lv
+    if boot_dev is None:
+        raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.BOOT_DEV_NOT_EXIST)
     if root_dev != LvmUtil.rootLvDevPath:
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.ROOT_DEV_MUST_BE(LvmUtil.rootLvDevPath))
     if Util.getBlkDevFsType(LvmUtil.rootLvDevPath) != Util.fsTypeExt4:
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.ROOT_PARTITION_FS_SHOULD_BE(Util.fsTypeExt4))
 
-    # ssd
-    ssd = HandyUtil.cgCheckAndGetSsdFromBootDev(boot_dev, hddDict.keys())
-    ssdEspParti, ssdSwapParti, ssdCacheParti = HandyUtil.cgCheckAndGetSsdPartitions(StorageLayoutImpl.name, ssd)
+    # get pv list and check
+    pvList = HandyUtil.lvmEnsureVgLvAndGetPvList(StorageLayoutImpl.name)
+    for pv in pvList:
+        bcacheDev = BcacheUtil.getBcacheDevFromDevPath(pv)
+        if bcacheDev is None:
+            raise errors.StorageLayoutParseError(StorageLayoutImpl.name, "volume group \"%s\" has non-bcache physical volume" % (LvmUtil.vgName))
 
-    # check ssd + hdd_list
-    for hdd, bcacheDev in hddDict.items():
-        HandyUtil.bcacheCheckHddAndItsBcacheDev(StorageLayoutImpl.name, ssdCacheParti, hdd, bcacheDev)
-
-    # check and get boot harddisk
-    bootHdd = HandyUtil.cgCheckAndGetBootHddFromBootDev(boot_dev, ssdEspParti, hddDict.keys())
+    # get ssd + hdd list + boot disk
+    ssd, hddList = HandyUtil.bcacheGetSsdAndHddListFromDevPathList(pvList)
+    ssdEspParti, ssdSwapParti, ssdCacheParti = HandyCg.checkAndGetSsdPartitions(StorageLayoutImpl.name, ssd)
+    bootHdd = HandyCg.checkAndGetBootHddFromBootDev(boot_dev, ssdEspParti, hddList)
 
     # return
     ret = StorageLayoutImpl()
@@ -254,7 +245,7 @@ def detect_and_mount(disk_list, mount_dir):
 
     # get disk list and check
     ssd, hdd_list = HandyUtil.cgCheckAndGetSsdAndHddList(Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list), False)
-    ssdEspParti, ssdSwapParti, ssdCacheParti = HandyUtil.cgCheckAndGetSsdPartitions(StorageLayoutImpl.name, ssd)
+    ssdEspParti, ssdSwapParti, ssdCacheParti = HandyCg.checkAndGetSsdPartitions(StorageLayoutImpl.name, ssd)
     lvmHddList = HandyUtil.lvmEnsureVgLvAndGetDiskList(StorageLayoutImpl.name)
     if True:
         d = list(set(lvmHddList) - set(hdd_list))
@@ -287,7 +278,7 @@ def detect_and_mount(disk_list, mount_dir):
 def create_and_mount(disk_list, mount_dir):
     # add disks to cache group
     cg = EfiCacheGroup()
-    HandyUtil.cgCheckAndAddDisks(cg, Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list))
+    HandyCg.checkAndAddDisks(cg, Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list))
 
     # create bcache devices
     bcacheDevPathList = HandyUtil.cgBcacheCreateAndGetBcacheDevPathList(cg)

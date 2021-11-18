@@ -22,7 +22,7 @@
 
 
 from .util import Util, PartiUtil, GptUtil, EfiMultiDisk, BtrfsUtil
-from .handy import MountEfi, HandyUtil
+from .handy import MountEfi, HandyMd, HandyUtil
 from . import errors
 from . import StorageLayout
 
@@ -145,16 +145,14 @@ class StorageLayoutImpl(StorageLayout):
 
 
 def parse(boot_dev, root_dev):
-    if not GptUtil.isEspPartition(boot_dev):
-        raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.BOOT_DEV_IS_NOT_ESP)
+    if boot_dev is None:
+        raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.BOOT_DEV_NOT_EXIST)
     if Util.getBlkDevFsType(root_dev) != Util.fsTypeBtrfs:
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.ROOT_PARTITION_FS_SHOULD_BE(Util.fsTypeBtrfs))
 
-    # get disk list and check
+    # get disk list + boot disk
     diskList = BtrfsUtil.getSlaveDevPathList(root_dev)
-    bootHdd = PartiUtil.partiToDisk(boot_dev)
-    if bootHdd not in diskList:
-        raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.BOOT_DISK_MUST_IN_SLAVE_DISK_LIST)
+    bootHdd = HandyMd.checkAndGetBootDiskFromBootDevAndDiskList(boot_dev, diskList)
 
     # return
     ret = StorageLayoutImpl()
@@ -170,7 +168,7 @@ def detect_and_mount(disk_list, mount_dir):
 def create_and_mount(disk_list, mount_dir):
     # add disks
     md = EfiMultiDisk()
-    HandyUtil.mdCheckAndAddDisks(disk_list)
+    HandyMd.checkAndAddDisks(disk_list)
 
     # create and mount
     Util.cmdCall("/usr/sbin/mkfs.btrfs", "-d", "single", "-m", "single", *[md.get_disk_data_partition(x) for x in md.get_disk_list()])

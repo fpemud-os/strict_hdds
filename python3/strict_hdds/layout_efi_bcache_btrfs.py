@@ -24,7 +24,7 @@
 import os
 import re
 from .util import Util, PartiUtil, GptUtil, BcacheUtil, BtrfsUtil, EfiCacheGroup
-from .handy import MountEfi, HandyUtil
+from .handy import MountEfi, HandyCg, HandyUtil
 from . import errors
 from . import StorageLayout
 
@@ -218,24 +218,18 @@ class StorageLayoutImpl(StorageLayout):
 
 
 def parse(boot_dev, root_dev):
-    # hdd list
-    hddDict = dict()        # dict<hddDevPath,bcacheDevPath>
-    for bcacheDevPath in BtrfsUtil.getSlaveDevPathList(root_dev):
-        bcacheDev = BcacheUtil.getBcacheDevFromDevPath(bcacheDevPath)
-        if bcacheDev is None:
-            raise errors.StorageLayoutParseError(StorageLayoutImpl.name, "%s has non-bcache sub device" % (root_dev))
-        hddDict.update(HandyUtil.bcacheGetHddDictWithOneItem(StorageLayoutImpl.name, bcacheDevPath, bcacheDev))
+    if boot_dev is None:
+        raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.BOOT_DEV_NOT_EXIST)
+    if Util.getBlkDevFsType(root_dev) != Util.fsTypeBtrfs:
+        raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.ROOT_PARTITION_FS_SHOULD_BE(Util.fsTypeBtrfs))
 
-    # ssd
-    ssd = HandyUtil.cgCheckAndGetSsdFromBootDev(boot_dev, hddDict.keys())
-    ssdEspParti, ssdSwapParti, ssdCacheParti = HandyUtil.cgCheckAndGetSsdPartitions(StorageLayoutImpl.name, ssd)
+    # get bcache device list
+    bcacheDevPathList = BtrfsUtil.getSlaveDevPathList(root_dev)
 
-    # check hdd list
-    for hdd, bcacheDev in hddDict.items():
-        HandyUtil.bcacheCheckHddAndItsBcacheDev(StorageLayoutImpl.name, ssdCacheParti, hdd, bcacheDev)
-
-    # check and get boot harddisk
-    bootHdd = HandyUtil.cgCheckAndGetBootHddFromBootDev(boot_dev, ssdEspParti, hddDict.keys())
+    # get ssd + hdd list + boot disk
+    ssd, hddList = HandyUtil.bcacheGetSsdAndHddListFromDevPathList(bcacheDevPathList)
+    ssdEspParti, ssdSwapParti, ssdCacheParti = HandyCg.checkAndGetSsdPartitions(StorageLayoutImpl.name, ssd)
+    bootHdd = HandyCg.checkAndGetBootHddFromBootDev(boot_dev, ssdEspParti, hddList)
 
     # return
     ret = StorageLayoutImpl()
@@ -251,7 +245,7 @@ def detect_and_mount(disk_list, mount_dir):
 def create_and_mount(disk_list, mount_dir):
     # add disks to cache group
     cg = EfiCacheGroup()
-    HandyUtil.cgCheckAndAddDisks(cg, Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list))
+    HandyCg.checkAndAddDisks(cg, Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list))
 
     # create bcache devices
     bcacheDevPathList = HandyUtil.cgCreateAndGetBcacheDevPathList(cg)

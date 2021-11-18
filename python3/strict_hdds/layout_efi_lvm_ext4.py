@@ -22,7 +22,7 @@
 
 
 from .util import Util, PartiUtil, GptUtil, LvmUtil, EfiMultiDisk, SwapLvmLv
-from .handy import MountEfi, CommonChecks, HandyUtil
+from .handy import MountEfi, CommonChecks, HandyMd, HandyUtil
 from . import errors
 from . import StorageLayout
 
@@ -178,20 +178,17 @@ class StorageLayoutImpl(StorageLayout):
 
 
 def parse(boot_dev, root_dev):
-    if not GptUtil.isEspPartition(boot_dev):
-        raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.BOOT_DEV_IS_NOT_ESP)
-
-    # get disk list and check
-    diskList = HandyUtil.lvmEnsureVgLvAndGetDiskList(StorageLayoutImpl.name)
-    bootHdd = PartiUtil.partiToDisk(boot_dev)
-    if bootHdd not in diskList:
-        raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.BOOT_DISK_MUST_IN_SLAVE_DISK_LIST)
-
-    # check root lv
+    if boot_dev is None:
+        raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.BOOT_DEV_NOT_EXIST)
     if root_dev != LvmUtil.rootLvDevPath:
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.ROOT_DEV_MUST_BE(LvmUtil.rootLvDevPath))
     if Util.getBlkDevFsType(LvmUtil.rootLvDevPath) != Util.fsTypeExt4:
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.ROOT_PARTITION_FS_SHOULD_BE(Util.fsTypeExt4))
+
+    # get disk list + boot disk
+    pvList = HandyUtil.lvmEnsureVgLvAndGetPvList(StorageLayoutImpl.name)
+    diskList = [PartiUtil.partiToDisk(x) for x in pvList]
+    bootHdd = HandyMd.checkAndGetBootDiskFromBootDevAndDiskList(boot_dev, diskList)
 
     # return
     ret = StorageLayoutImpl()
@@ -215,7 +212,7 @@ def detect_and_mount(disk_list, mount_dir):
     bootDisk = lvmDiskList[0]
     bootParti = PartiUtil.diskToParti(bootDisk, 1)
 
-    # check root lv file system
+    # check root lv
     if Util.getBlkDevFsType(LvmUtil.rootLvDevPath) != Util.fsTypeExt4:
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.ROOT_PARTITION_FS_SHOULD_BE(Util.fsTypeExt4))
 
@@ -233,7 +230,7 @@ def detect_and_mount(disk_list, mount_dir):
 def create_and_mount(disk_list, mount_dir):
     # add disks
     md = EfiMultiDisk()
-    HandyUtil.mdCheckAndAddDisks(disk_list)
+    HandyMd.checkAndAddDisks(disk_list)
 
     # create pv, create vg, create root lv
     for disk in md.get_disk_list():
