@@ -22,7 +22,7 @@
 
 
 from .util import Util, BcachefsUtil, EfiCacheGroup
-from .handy import MountEfi, CommonChecks, HandyCg
+from .handy import MountEfi, HandyCg
 from . import errors
 from . import StorageLayout
 
@@ -110,6 +110,10 @@ class StorageLayoutImpl(StorageLayout):
         pass
 
     @EfiCacheGroup.proxy
+    def get_suggest_esp_size(self):
+        pass
+
+    @EfiCacheGroup.proxy
     def get_disk_list(self):
         pass
 
@@ -127,6 +131,10 @@ class StorageLayoutImpl(StorageLayout):
 
     @EfiCacheGroup.proxy
     def get_ssd_cache_partition(self):
+        pass
+
+    @EfiCacheGroup.proxy
+    def get_suggest_swap_size(self):
         pass
 
     @EfiCacheGroup.proxy
@@ -198,9 +206,6 @@ class StorageLayoutImpl(StorageLayout):
 
             return lastBootHdd != self._cg.boot_disk     # boot disk may change
 
-    def check_swap_size(self):
-        CommonChecks.check_swap_size(self)
-
 
 def parse(boot_dev, root_dev):
     if boot_dev is None:
@@ -211,7 +216,7 @@ def parse(boot_dev, root_dev):
     # ssd, hdd_list, boot_disk
     ssd, hddList = HandyCg.checkAndGetSsdAndHddList(BcachefsUtil.getSlaveSsdDevPatListAndHddDevPathList(root_dev), False)
     ssdEspParti, ssdSwapParti, ssdCacheParti = HandyCg.checkAndGetSsdPartitions(StorageLayoutImpl.name, ssd)
-    bootHdd = HandyCg.checkAndGetBootHddFromBootDev(storageLayoutName, boot_dev, ssdEspParti, hddList)
+    bootHdd = HandyCg.checkAndGetBootHddFromBootDev(StorageLayoutImpl.name, boot_dev, ssdEspParti, hddList)
 
     # return
     ret = StorageLayoutImpl()

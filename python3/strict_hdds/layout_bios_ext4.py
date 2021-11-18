@@ -22,7 +22,7 @@
 
 
 from .util import Util, PartiUtil, MbrUtil, SwapFile
-from .handy import MountBios, CommonChecks, HandyUtil
+from .handy import MountBios, HandyUtil
 from . import errors
 from . import StorageLayout
 
@@ -85,8 +85,9 @@ class StorageLayoutImpl(StorageLayout):
     def get_bootdir_rw_controller(self):
         pass
 
-    def check_swap_size(self):
-        CommonChecks.check_swap_size(self)
+    @SwapFile.proxy
+    def get_suggest_swap_size(self):
+        pass
 
     @SwapFile.proxy
     def create_swap_file(self):

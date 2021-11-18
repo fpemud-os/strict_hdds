@@ -117,6 +117,10 @@ class StorageLayoutImpl(StorageLayout):
         pass
 
     @EfiCacheGroup.proxy
+    def get_suggest_esp_size(self):
+        pass
+
+    @EfiCacheGroup.proxy
     def get_disk_list(self):
         pass
 
@@ -134,6 +138,10 @@ class StorageLayoutImpl(StorageLayout):
 
     @EfiCacheGroup.proxy
     def get_ssd_cache_partition(self):
+        pass
+
+    @EfiCacheGroup.proxy
+    def get_suggest_swap_size(self):
         pass
 
     @EfiCacheGroup.proxy
@@ -210,11 +218,6 @@ class StorageLayoutImpl(StorageLayout):
 
         # return True means boot disk is changed
         return lastBootHdd != self._cg.boot_disk
-
-    def check_swap_size(self):
-        if self.dev_swap is not None:
-            if Util.getBlkDevSize(self.dev_swap) < Util.getSwapSize():
-                raise errors.StorageLayoutCheckError(self.name, errors.SWAP_SIZE_TOO_SMALL)
 
 
 def parse(boot_dev, root_dev):

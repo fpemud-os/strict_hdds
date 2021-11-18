@@ -96,6 +96,10 @@ class StorageLayoutImpl(StorageLayout):
         pass
 
     @EfiMultiDisk.proxy
+    def get_suggest_esp_size(self):
+        pass
+
+    @EfiMultiDisk.proxy
     def get_disk_list(self):
         pass
 

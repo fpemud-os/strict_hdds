@@ -22,7 +22,7 @@
 
 
 from .util import Util, PartiUtil, GptUtil, SwapFile
-from .handy import MountEfi, CommonChecks, HandyUtil
+from .handy import MountEfi, HandyUtil
 from . import errors
 from . import StorageLayout
 
@@ -87,15 +87,16 @@ class StorageLayoutImpl(StorageLayout):
         return self._hddEspParti
 
     @SwapFile.proxy
+    def get_suggest_swap_size(self):
+        pass
+
+    @SwapFile.proxy
     def create_swap_file(self):
         pass
 
     @SwapFile.proxy
     def remove_swap_file(self):
         pass
-
-    def check_swap_size(self):
-        CommonChecks.check_swap_size(self)
 
 
 def parse(boot_dev, root_dev):

@@ -22,7 +22,7 @@
 
 
 from .util import Util, BcacheUtil, LvmUtil, EfiCacheGroup
-from .handy import CommonChecks, MountEfi, HandyCg, HandyBcache, HandyUtil
+from .handy import MountEfi, HandyCg, HandyBcache, HandyUtil
 from . import errors
 from . import StorageLayout
 
@@ -112,6 +112,10 @@ class StorageLayoutImpl(StorageLayout):
         pass
 
     @EfiCacheGroup.proxy
+    def get_suggest_esp_size(self):
+        pass
+
+    @EfiCacheGroup.proxy
     def get_disk_list(self):
         pass
 
@@ -129,6 +133,10 @@ class StorageLayoutImpl(StorageLayout):
 
     @EfiCacheGroup.proxy
     def get_ssd_cache_partition(self):
+        pass
+
+    @EfiCacheGroup.proxy
+    def get_suggest_swap_size(self):
         pass
 
     @EfiCacheGroup.proxy
@@ -208,9 +216,6 @@ class StorageLayoutImpl(StorageLayout):
             assert False
 
         return lastBootHdd != self._cg.boot_disk     # boot disk may change
-
-    def check_swap_size(self):
-        CommonChecks.check_swap_size(self)
 
 
 def parse(boot_dev, root_dev):

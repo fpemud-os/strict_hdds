@@ -22,7 +22,7 @@
 
 
 from .util import Util, PartiUtil, LvmUtil, EfiMultiDisk, SwapLvmLv
-from .handy import MountEfi, CommonChecks, HandyMd, HandyUtil
+from .handy import MountEfi, HandyMd, HandyUtil
 from . import errors
 from . import StorageLayout
 
@@ -105,6 +105,10 @@ class StorageLayoutImpl(StorageLayout):
         pass
 
     @EfiMultiDisk.proxy
+    def get_suggest_esp_size(self):
+        pass
+
+    @EfiMultiDisk.proxy
     def get_disk_list(self):
         pass
 
@@ -166,15 +170,16 @@ class StorageLayoutImpl(StorageLayout):
         return lastBootHdd != self._md.get_boot_hdd()     # boot disk may change
 
     @SwapLvmLv.proxy
+    def get_suggest_swap_size(self):
+        pass
+
+    @SwapLvmLv.proxy
     def create_swap_lv(self):
         pass
 
     @SwapLvmLv.proxy
     def remove_swap_lv(self):
         pass
-
-    def check_swap_size(self):
-        CommonChecks.check_swap_size(self)
 
 
 def parse(boot_dev, root_dev):

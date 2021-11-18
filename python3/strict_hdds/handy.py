@@ -126,15 +126,6 @@ class MountEfi:
         return self._rwCtrl
 
 
-class CommonChecks:
-
-    @staticmethod
-    def check_swap_size(storageLayout):
-        if storageLayout.dev_swap is not None:
-            if Util.getBlkDevSize(storageLayout.dev_swap) < Util.getSwapSize():
-                raise errors.StorageLayoutCheckError(storageLayout.name, errors.SWAP_SIZE_TOO_SMALL)
-
-
 class HandyMd:
 
     @staticmethod
