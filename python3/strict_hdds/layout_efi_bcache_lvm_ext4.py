@@ -95,9 +95,6 @@ class StorageLayoutImpl(StorageLayout):
     def get_bootdir_rw_controller(self):
         pass
 
-    def check(self):
-        CommonChecks.storageLayoutCheckSwapSize(self)
-
     def optimize_rootdev(self):
         LvmUtil.autoExtendLv(LvmUtil.rootLvDevPath)
         Util.cmdExec("/sbin/resize2fs", LvmUtil.rootLvDevPath)
@@ -211,6 +208,9 @@ class StorageLayoutImpl(StorageLayout):
             assert False
 
         return lastBootHdd != self._cg.boot_disk     # boot disk may change
+
+    def check_swap_size(self):
+        CommonChecks.check_swap_size(self)
 
 
 def parse(boot_dev, root_dev):

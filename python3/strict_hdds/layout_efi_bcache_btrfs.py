@@ -100,11 +100,6 @@ class StorageLayoutImpl(StorageLayout):
     def get_bootdir_rw_controller(self):
         pass
 
-    def check(self):
-        if self.dev_swap is not None:
-            if Util.getBlkDevSize(self.dev_swap) < Util.getSwapSize():
-                raise errors.StorageLayoutCheckError(self.name, errors.SWAP_SIZE_TOO_SMALL)
-
     def optimize_rootdev(self):
         # FIXME: btrfs balance
         pass
@@ -215,6 +210,11 @@ class StorageLayoutImpl(StorageLayout):
 
         # return True means boot disk is changed
         return lastBootHdd != self._cg.boot_disk
+
+    def check_swap_size(self):
+        if self.dev_swap is not None:
+            if Util.getBlkDevSize(self.dev_swap) < Util.getSwapSize():
+                raise errors.StorageLayoutCheckError(self.name, errors.SWAP_SIZE_TOO_SMALL)
 
 
 def parse(boot_dev, root_dev):

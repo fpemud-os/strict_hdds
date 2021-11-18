@@ -66,9 +66,6 @@ class StorageLayoutImpl(StorageLayout):
     def boot_disk(self):
         return self._bootHdd
 
-    def check(self):
-        self._swap.check_swap_size()
-
     def optimize_rootdev(self):
         LvmUtil.autoExtendLv(LvmUtil.rootLvDevPath)
         Util.cmdExec("/sbin/resize2fs", LvmUtil.rootLvDevPath)
@@ -157,6 +154,9 @@ class StorageLayoutImpl(StorageLayout):
     @SwapLvmLv.proxy
     def remove_swap_lv(self):
         pass
+
+    def check_swap_size(self):
+        self._swap.check_swap_size()
 
     def _selectNewBootDiskForAdd(self, disk_added):
         if self._bootHdd is not None:

@@ -83,9 +83,6 @@ class StorageLayoutImpl(StorageLayout):
     def get_bootdir_rw_controller(self):
         pass
 
-    def check(self):
-        pass
-
     @EfiMultiDisk.proxy
     def get_esp(self):
         pass

@@ -97,9 +97,6 @@ class StorageLayoutImpl(StorageLayout):
     def get_bootdir_rw_controller(self):
         pass
 
-    def check(self):
-        CommonChecks.storageLayoutCheckSwapSize(self)
-
     @EfiCacheGroup.proxy
     def get_esp(self):
         pass
@@ -200,6 +197,9 @@ class StorageLayoutImpl(StorageLayout):
             self._cg.remove_hdd(disk)
 
             return lastBootHdd != self._cg.boot_disk     # boot disk may change
+
+    def check_swap_size(self):
+        CommonChecks.check_swap_size(self)
 
 
 def parse(boot_dev, root_dev):

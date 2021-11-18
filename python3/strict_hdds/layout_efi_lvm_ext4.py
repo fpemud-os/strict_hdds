@@ -88,9 +88,6 @@ class StorageLayoutImpl(StorageLayout):
     def get_bootdir_rw_controller(self):
         pass
 
-    def check(self):
-        CommonChecks.storageLayoutCheckSwapSize(self)
-
     def optimize_rootdev(self):
         LvmUtil.autoExtendLv(LvmUtil.rootLvDevPath)
         Util.cmdExec("/sbin/resize2fs", LvmUtil.rootLvDevPath)
@@ -175,6 +172,9 @@ class StorageLayoutImpl(StorageLayout):
     @SwapLvmLv.proxy
     def remove_swap_lv(self):
         pass
+
+    def check_swap_size(self):
+        CommonChecks.check_swap_size(self)
 
 
 def parse(boot_dev, root_dev):
