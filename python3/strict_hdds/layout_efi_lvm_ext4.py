@@ -186,8 +186,8 @@ def parse(boot_dev, root_dev):
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.ROOT_PARTITION_FS_SHOULD_BE(Util.fsTypeExt4))
 
     # disk_list, boot_disk
-    pvList = HandyUtil.lvmEnsureVgLvAndGetPvList(StorageLayoutImpl.name)
-    diskList = [PartiUtil.partiToDisk(x) for x in pvList]
+    pvDevPathList = HandyUtil.lvmEnsureVgLvAndGetPvList(StorageLayoutImpl.name)
+    diskList = [PartiUtil.partiToDisk(x) for x in pvDevPathList]
     bootHdd = HandyMd.checkAndGetBootDiskFromBootDev(boot_dev, diskList)
 
     # return
@@ -201,27 +201,22 @@ def parse(boot_dev, root_dev):
 def detect_and_mount(disk_list, mount_dir):
     LvmUtil.activateAll()
 
-    # get disk list and check
-    lvmDiskList = HandyUtil.lvmEnsureVgLvAndGetDiskList(StorageLayoutImpl.name)
-    if True:
-        d = list(set(lvmDiskList) - set(disk_list))
-        if len(d) > 0:
-            raise errors.StorageLayoutParseError(StorageLayoutImpl.name, "extra disk \"%s\" needed" % (d[0]))
-
-    # get boot disk and boot partition
-    bootDisk = lvmDiskList[0]
-    bootParti = PartiUtil.diskToParti(bootDisk, 1)
+    # pv list
+    pvDevPathList = HandyUtil.lvmEnsureVgLvAndGetPvList(StorageLayoutImpl.name)
+    diskList = [PartiUtil.partiToDisk(x) for x in pvDevPathList]
+    HandyMd.checkExtraDisks(pvDevPathList, disk_list)
+    bootHdd, bootDev = HandyMd.checkAndGetBootDiskAndBootDev(diskList)
 
     # check root lv
     if Util.getBlkDevFsType(LvmUtil.rootLvDevPath) != Util.fsTypeExt4:
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.ROOT_PARTITION_FS_SHOULD_BE(Util.fsTypeExt4))
 
     # mount
-    MountEfi.mount(LvmUtil.rootLvDevPath, bootParti, mount_dir)
+    MountEfi.mount(LvmUtil.rootLvDevPath, bootDev, mount_dir)
 
     # return
     ret = StorageLayoutImpl()
-    ret._md = EfiMultiDisk(diskList=lvmDiskList, bootHdd=bootDisk)
+    ret._md = EfiMultiDisk(diskList=diskList, bootHdd=bootHdd)
     ret._swap = HandyUtil.swapLvDetectAndNew(StorageLayoutImpl.name)
     ret._mnt = MountEfi(mount_dir)
     return ret

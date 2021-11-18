@@ -204,7 +204,7 @@ def parse(boot_dev, root_dev):
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.ROOT_PARTITION_FS_SHOULD_BE(Util.fsTypeBcachefs))
 
     # ssd, hdd_list, boot_disk
-    ssd, hddList = HandyUtil.cgCheckAndGetSsdAndHddList(BcachefsUtil.getSlaveSsdDevPatListAndHddDevPathList(root_dev), False)
+    ssd, hddList = HandyCg.checkAndGetSsdAndHddList(BcachefsUtil.getSlaveSsdDevPatListAndHddDevPathList(root_dev), False)
     ssdEspParti, ssdSwapParti, ssdCacheParti = HandyCg.checkAndGetSsdPartitions(StorageLayoutImpl.name, ssd)
     bootHdd = HandyCg.checkAndGetBootHddFromBootDev(boot_dev, ssdEspParti, hddList)
 
@@ -216,9 +216,18 @@ def parse(boot_dev, root_dev):
 
 
 def detect_and_mount(disk_list, mount_dir):
-    ssd, hddList = HandyUtil.cgCheckAndGetSsdAndHddList(Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list), False)
+    # filter
+    diskList = [x for x in disk_list if Util.getBlkDevFsType(x) == Util.fsTypeBcachefs]
+    if len(diskList) == 0:
+        raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.DISK_NOT_FOUND)
+
+    # ssd, hdd_list, boot_disk
+    ssd, hddList = HandyCg.checkAndGetSsdAndHddList(Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list))
     ssdEspParti, ssdSwapParti, ssdCacheParti = HandyCg.checkAndGetSsdPartitions(StorageLayoutImpl.name, ssd)
-    bootHdd = HandyCg.checkAndGetBootHddFromBootDev(boot_dev, ssdEspParti, hddList)
+    bootHdd, bootDev = HandyCg.checkAndGetBootHddAndBootDev(ssdEspParti, hddList)
+
+    # mount
+    MountEfi.mount(_getDevRootFromDiskList(diskList), bootDev, mount_dir)
 
     # return
     ret = StorageLayoutImpl()
@@ -230,7 +239,7 @@ def detect_and_mount(disk_list, mount_dir):
 def create_and_mount(disk_list, mount_dir):
     # add disks to cache group
     cg = EfiCacheGroup()
-    HandyCg.checkAndAddDisks(cg, Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list))
+    HandyCg.checkAndAddDisks(cg, *Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list))
 
     # create bcachefs
     if cg.get_ssd() is not None:
@@ -251,4 +260,10 @@ def create_and_mount(disk_list, mount_dir):
 
 
 def _getDevRoot(cg):
+    # FIXME
     return ":".join(cg.get_disk_list())
+
+
+def _getDevRootFromDiskList(diskList):
+    # FIXME
+    return ":".join(diskList)

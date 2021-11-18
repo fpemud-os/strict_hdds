@@ -955,7 +955,13 @@ class BcacheUtil:
 
     @staticmethod
     def scanAndRegisterAll():
-        return False
+        # FIXME
+
+        ret = []
+        for fn in os.listdir("/dev"):
+            if re.fullmatch("bcache[0-9]+", fn) is not None:
+                ret.append(os.path.join("/dev", fn))
+        return ret
 
     @staticmethod
     def _isBackingDeviceOrCachDevice(devPath, backingDeviceOrCacheDevice):

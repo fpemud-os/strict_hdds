@@ -54,7 +54,7 @@ class StorageLayoutImpl(StorageLayout):
 
     @property
     def dev_rootfs(self):
-        return _getDevRoot(self._md)
+        return _getDevRootFromMd(self._md)
 
     @property
     @EfiMultiDisk.proxy
@@ -162,7 +162,22 @@ def parse(boot_dev, root_dev):
 
 
 def detect_and_mount(disk_list, mount_dir):
-    pass
+    # disk_list
+    diskList = [x for x in disk_list if Util.getBlkDevFsType(x) == Util.fsTypeBtrfs]
+    if len(diskList) == 0:
+        raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.DISK_NOT_FOUND)
+
+    # boot_disk, boot_device
+    bootHdd, bootDev = HandyMd.checkAndGetBootDiskAndBootDev(diskList)
+
+    # mount
+    MountEfi.mount(_getDevRootFromDiskList(diskList), bootDev, mount_dir)
+
+    # return
+    ret = StorageLayoutImpl()
+    ret._md = EfiMultiDisk(diskList=diskList, bootHdd=bootHdd)
+    ret._mnt = MountEfi(mount_dir)
+    return ret
 
 
 def create_and_mount(disk_list, mount_dir):
@@ -172,7 +187,7 @@ def create_and_mount(disk_list, mount_dir):
 
     # create and mount
     Util.cmdCall("/usr/sbin/mkfs.btrfs", "-d", "single", "-m", "single", *[md.get_disk_data_partition(x) for x in md.get_disk_list()])
-    MountEfi.mount(_getDevRoot(md), md.dev_boot, mount_dir)
+    MountEfi.mount(_getDevRootFromMd(md), md.dev_boot, mount_dir)
 
     # return
     ret = StorageLayoutImpl()
@@ -181,5 +196,11 @@ def create_and_mount(disk_list, mount_dir):
     return ret
 
 
-def _getDevRoot(md):
+def _getDevRootFromMd(md):
+    # FIXME
     return md.get_disk_list()[0]
+
+
+def _getDevRootFromDiskList(diskList):
+    # FIXME
+    return diskList[0]

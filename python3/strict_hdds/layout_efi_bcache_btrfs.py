@@ -24,7 +24,7 @@
 import os
 import re
 from .util import Util, PartiUtil, GptUtil, BcacheUtil, BtrfsUtil, EfiCacheGroup
-from .handy import MountEfi, HandyCg, HandyUtil
+from .handy import MountEfi, HandyCg, HandyBcache, HandyUtil
 from . import errors
 from . import StorageLayout
 
@@ -63,7 +63,7 @@ class StorageLayoutImpl(StorageLayout):
 
     @property
     def dev_rootfs(self):
-        return _getDevRoot(self._cg)
+        return _getDevRootFromCg(self._cg)
 
     @property
     @EfiCacheGroup.proxy
@@ -167,8 +167,9 @@ class StorageLayoutImpl(StorageLayout):
 
             # ssd partition 3: make it as cache device
             parti = self._cg.get_ssd_cache_partition()
+            bcacheDevPathList = [BcacheUtil.findByBackingDevice(self._cg.get_hdd_data_partition(x)) for x in self._cg.get_hdd_list()]
             BcacheUtil.makeAndRegisterCacheDevice(parti)
-            BcacheUtil.attachCacheDevice(HandyUtil.cgFindByBackingDeviceList(self._cg), parti)
+            BcacheUtil.attachCacheDevice(bcacheDevPathList, parti)
         else:
             self._cg.add_hdd(disk)
 
@@ -230,7 +231,7 @@ def parse(boot_dev, root_dev):
             raise errors.StorageLayoutParseError(StorageLayoutImpl.name, "\"%s\" has non-bcache slave device" % (root_dev))
 
     # ssd, hdd_list, boot_disk
-    ssd, hddList = HandyUtil.bcacheGetSsdAndHddListFromDevPathList(slaveDevPathList)
+    ssd, hddList = HandyBcache.getSsdAndHddListFromBcacheDevPathList(slaveDevPathList)
     ssdEspParti, ssdSwapParti, ssdCacheParti = HandyCg.checkAndGetSsdPartitions(StorageLayoutImpl.name, ssd)
     bootHdd = HandyCg.checkAndGetBootHddFromBootDev(boot_dev, ssdEspParti, hddList)
 
@@ -242,20 +243,49 @@ def parse(boot_dev, root_dev):
 
 
 def detect_and_mount(disk_list, mount_dir):
-    pass
+    # scan
+    bcacheDevPathList = BcacheUtil.scanAndRegisterAll()
+    bcacheDevPathList = [x for x in bcacheDevPathList if Util.getBlkDevFsType(x) == Util.fsTypeBtrfs]
+    if len(bcacheDevPathList) == 0:
+        raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.DISK_NOT_FOUND)
+
+    # ssd, hdd_list, boot_disk
+    ssd, hddList = HandyBcache.getSsdAndHddListFromBcacheDevPathList(bcacheDevPathList)
+    HandyCg.checkExtraDisks(ssd, hddList, disk_list)
+    ssdEspParti, ssdSwapParti, ssdCacheParti = HandyCg.checkAndGetSsdPartitions(StorageLayoutImpl.name, ssd)
+    bootHdd, bootDev = HandyCg.checkAndGetBootHddAndBootDev(ssdEspParti, hddList)
+
+    # mount
+    MountEfi.mount(_getDevRootFromHddList(hddList), bootDev, mount_dir)
+
+    # return
+    ret = StorageLayoutImpl()
+    ret._cg = EfiCacheGroup(ssd=ssd, ssdEspParti=ssdEspParti, ssdSwapParti=ssdSwapParti, ssdCacheParti=ssdCacheParti, hddList=hddList, bootHdd=bootHdd)
+    ret._mnt = MountEfi(mount_dir)
+    return ret
 
 
 def create_and_mount(disk_list, mount_dir):
     # add disks to cache group
     cg = EfiCacheGroup()
-    HandyCg.checkAndAddDisks(cg, Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list))
+    HandyCg.checkAndAddDisks(cg, *Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list))
 
-    # create bcache devices
-    bcacheDevPathList = HandyUtil.cgCreateAndGetBcacheDevPathList(cg)
+    # hdd partition 2: make them as backing device
+    bcacheDevPathList = []
+    for hdd in cg.get_hdd_list():
+        parti = cg.get_hdd_data_partition(hdd)
+        BcacheUtil.makeAndRegisterBackingDevice(parti)
+        bcacheDevPathList.append(BcacheUtil.findByBackingDevice(parti))
+
+    # ssd partition 3: make it as cache device
+    if cg.get_ssd() is not None:
+        parti = cg.get_ssd_cache_partition()
+        BcacheUtil.makeAndRegisterCacheDevice(parti)
+        BcacheUtil.attachCacheDevice(bcacheDevPathList, parti)
 
     # create btrfs and mount
     Util.cmdCall("/usr/sbin/mkfs.btrfs", "-d", "single", "-m", "single", *bcacheDevPathList)
-    MountEfi.mount(_getDevRoot(cg), cg.dev_boot, mount_dir)
+    MountEfi.mount(_getDevRootFromCg(cg), cg.dev_boot, mount_dir)
 
     # return
     ret = StorageLayoutImpl()
@@ -264,5 +294,11 @@ def create_and_mount(disk_list, mount_dir):
     return ret
 
 
-def _getDevRoot(cg):
+def _getDevRootFromCg(cg):
+    # FIXME
     return sorted(cg.get_hdd_list())[0]
+
+
+def _getDevRootFromHddList(hddList):
+    # FIXME
+    return sorted(hddList)[0]
