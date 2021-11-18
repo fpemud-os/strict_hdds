@@ -228,29 +228,8 @@ def parse(booDev, rootDev):
 def detect_and_mount(disk_list, mount_dir):
     LvmUtil.activateAll()
     Util.cmdCall("/bin/mount", LvmUtil.rootLvName, mount_dir)
-    return parse(None, LvmUtil.rootLvName)                      # it is interesting that we can reuse parse function
+    return parse(None, LvmUtil.rootLvName)
 
 
 def create_and_mount(disk_list, mount_dir):
-    if len(disk_list) == 0:
-        raise errors.StorageLayoutCreateError(errors.NO_DISK_WHEN_CREATE)
-
-    for devpath in disk_list:
-        # create partitions
-        Util.initializeDisk(devpath, Util.diskPartTableMbr, [
-            ("*", "lvm"),
-        ])
-
-        # create lvm physical volume on partition1 and add it to volume group
-        LvmUtil.addPvToVg(PartiUtil.diskToParti(devpath, 1), LvmUtil.vgName, mayCreate=True)
-
-    # create root lv
-    LvmUtil.createLvWithDefaultSize(LvmUtil.vgName, LvmUtil.rootLvName)
-
-    # return value
-    ret = StorageLayoutImpl()
-    ret._diskList = disk_list
-    ret._swap = SwapLvmLv()
-    ret._bootHdd = None
-    return ret
-
+    assert False

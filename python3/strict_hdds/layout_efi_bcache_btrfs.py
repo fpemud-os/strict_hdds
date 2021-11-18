@@ -21,9 +21,7 @@
 # THE SOFTWARE.
 
 
-import os
-import re
-from .util import Util, PartiUtil, GptUtil, BcacheUtil, BtrfsUtil, EfiCacheGroup
+from .util import Util, BcacheUtil, BtrfsUtil, EfiCacheGroup
 from .handy import MountEfi, HandyCg, HandyBcache, HandyUtil
 from . import errors
 from . import StorageLayout
@@ -63,7 +61,8 @@ class StorageLayoutImpl(StorageLayout):
 
     @property
     def dev_rootfs(self):
-        return _getDevRootFromCg(self._cg)
+        # FIXME
+        return self.get_hdd_data_partition(self.get_hdd_list()[0])
 
     @property
     @EfiCacheGroup.proxy
@@ -253,15 +252,16 @@ def detect_and_mount(disk_list, mount_dir):
     ssd, hddList = HandyBcache.getSsdAndHddListFromBcacheDevPathList(bcacheDevPathList)
     HandyCg.checkExtraDisks(ssd, hddList, disk_list)
     ssdEspParti, ssdSwapParti, ssdCacheParti = HandyCg.checkAndGetSsdPartitions(StorageLayoutImpl.name, ssd)
-    bootHdd, bootDev = HandyCg.checkAndGetBootHddAndBootDev(ssdEspParti, hddList)
-
-    # mount
-    MountEfi.mount(_getDevRootFromHddList(hddList), bootDev, mount_dir)
+    bootHdd = HandyCg.checkAndGetBootHddAndBootDev(ssdEspParti, hddList)[0]
 
     # return
     ret = StorageLayoutImpl()
     ret._cg = EfiCacheGroup(ssd=ssd, ssdEspParti=ssdEspParti, ssdSwapParti=ssdSwapParti, ssdCacheParti=ssdCacheParti, hddList=hddList, bootHdd=bootHdd)
     ret._mnt = MountEfi(mount_dir)
+
+    # mount
+    MountEfi.mount(ret.dev_rootfs, ret.dev_boot, mount_dir)
+
     return ret
 
 
@@ -283,22 +283,14 @@ def create_and_mount(disk_list, mount_dir):
         BcacheUtil.makeAndRegisterCacheDevice(parti)
         BcacheUtil.attachCacheDevice(bcacheDevPathList, parti)
 
-    # create btrfs and mount
+    # create btrfs
     Util.cmdCall("/usr/sbin/mkfs.btrfs", "-d", "single", "-m", "single", *bcacheDevPathList)
-    MountEfi.mount(_getDevRootFromCg(cg), cg.dev_boot, mount_dir)
 
     # return
     ret = StorageLayoutImpl()
     ret._cg = cg
     ret._mnt = MountEfi(mount_dir)
+
+    # mount
+    MountEfi.mount(ret.dev_rootfs, ret.dev_boot, mount_dir)
     return ret
-
-
-def _getDevRootFromCg(cg):
-    # FIXME
-    return sorted(cg.get_hdd_list())[0]
-
-
-def _getDevRootFromHddList(hddList):
-    # FIXME
-    return sorted(hddList)[0]

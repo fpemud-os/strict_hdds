@@ -21,8 +21,8 @@
 # THE SOFTWARE.
 
 
-from .util import Util, PartiUtil, GptUtil, BcachefsUtil, EfiCacheGroup
-from .handy import MountEfi, CommonChecks, HandyCg, HandyUtil
+from .util import Util, BcachefsUtil, EfiCacheGroup
+from .handy import MountEfi, CommonChecks, HandyCg
 from . import errors
 from . import StorageLayout
 
@@ -59,7 +59,12 @@ class StorageLayoutImpl(StorageLayout):
 
     @property
     def dev_rootfs(self):
-        return _getDevRoot(self._cg)
+        tlist = []
+        if self.get_ssd() is not None:
+            tlist.append(self.get_ssd_cache_partition)
+        for hdd in self.get_hdd_list():
+            tlist.append(self.get_hdd_data_partition(hdd))
+        return ":".join(tlist)
 
     @property
     @EfiCacheGroup.proxy
@@ -224,15 +229,15 @@ def detect_and_mount(disk_list, mount_dir):
     # ssd, hdd_list, boot_disk
     ssd, hddList = HandyCg.checkAndGetSsdAndHddList(Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list))
     ssdEspParti, ssdSwapParti, ssdCacheParti = HandyCg.checkAndGetSsdPartitions(StorageLayoutImpl.name, ssd)
-    bootHdd, bootDev = HandyCg.checkAndGetBootHddAndBootDev(ssdEspParti, hddList)
-
-    # mount
-    MountEfi.mount(_getDevRootFromDiskList(diskList), bootDev, mount_dir)
+    bootHdd = HandyCg.checkAndGetBootHddAndBootDev(ssdEspParti, hddList)[0]
 
     # return
     ret = StorageLayoutImpl()
     ret._cg = EfiCacheGroup(ssd=ssd, ssdEspParti=ssdEspParti, ssdSwapParti=ssdSwapParti, ssdCacheParti=ssdCacheParti, hddList=hddList, bootHdd=bootHdd)
     ret._mnt = MountEfi(mount_dir)
+
+    # mount
+    MountEfi.mount(ret.dev_rootfs, ret.dev_boot, mount_dir)
     return ret
 
 
@@ -249,21 +254,11 @@ def create_and_mount(disk_list, mount_dir):
     hdd_list2 = [cg.get_hdd_data_partition(x) for x in cg.get_hdd_list()]
     BcachefsUtil.createBcachefs(ssd_list2, hdd_list2, 1, 1)
 
-    # mount
-    MountEfi.mount(_getDevRoot(cg), cg.dev_boot, mount_dir)
-
     # return
     ret = StorageLayoutImpl()
     ret._cg = cg
     ret._mnt = MountEfi(mount_dir)
+
+    # mount
+    MountEfi.mount(ret.dev_rootfs, ret.dev_boot, mount_dir)
     return ret
-
-
-def _getDevRoot(cg):
-    # FIXME
-    return ":".join(cg.get_disk_list())
-
-
-def _getDevRootFromDiskList(diskList):
-    # FIXME
-    return ":".join(diskList)

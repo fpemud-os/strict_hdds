@@ -21,7 +21,7 @@
 # THE SOFTWARE.
 
 
-from .util import Util, PartiUtil, GptUtil, BcacheUtil, LvmUtil, EfiCacheGroup
+from .util import Util, BcacheUtil, LvmUtil, EfiCacheGroup
 from .handy import CommonChecks, MountEfi, HandyCg, HandyBcache, HandyUtil
 from . import errors
 from . import StorageLayout
