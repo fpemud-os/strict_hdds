@@ -148,7 +148,7 @@ class HandyMd:
             md.add_disk(disk)
 
     @staticmethod
-    def checkAndGetBootDiskFromBootDevAndDiskList(storageLayoutName, bootDev, diskList):
+    def checkAndGetBootDiskFromBootDev(storageLayoutName, bootDev, diskList):
         HandyUtil._mcCheckHddOrDiskList(storageLayoutName, diskList)
         espParti = HandyUtil._mcCheckAndGetEspParti(storageLayoutName, diskList, mustHave=True)
         if espParti != bootDev:
@@ -156,7 +156,7 @@ class HandyMd:
         return PartiUtil.partiToDisk(espParti)
 
     @staticmethod
-    def checkAndGetBootDiskFromDiskList(storageLayoutName, diskList):
+    def checkAndGetBootDisk(storageLayoutName, diskList):
         HandyUtil._mcCheckHddOrDiskList(storageLayoutName, diskList)
         espParti = HandyUtil._mcCheckAndGetEspParti(storageLayoutName, diskList)
         return PartiUtil.partiToDisk(espParti) if espParti is not None else None

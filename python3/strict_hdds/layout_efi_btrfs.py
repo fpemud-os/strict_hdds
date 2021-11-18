@@ -152,7 +152,7 @@ def parse(boot_dev, root_dev):
 
     # disk_list, boot_disk
     diskList = BtrfsUtil.getSlaveDevPathList(root_dev)
-    bootHdd = HandyMd.checkAndGetBootDiskFromBootDevAndDiskList(boot_dev, diskList)
+    bootHdd = HandyMd.checkAndGetBootDiskFromBootDev(boot_dev, diskList)
 
     # return
     ret = StorageLayoutImpl()
