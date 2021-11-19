@@ -103,10 +103,12 @@ class BootDirRwController(abc.ABC):
 
 
 def get_supported_storage_layouts():
+    selfDir = os.path.dirname(os.path.realpath(__file__))
     ret = []
-    for mod in pkgutil.iter_modules(["."]):
-        if mod.name.startswith("layout_"):
-            ret.append(Util.modName2layoutName(mod.name))
+    for fn in os.listdir(selfDir):
+        if fn.startswith("layout_"):
+            assert fn.endswith(".py")
+            ret.append(Util.modName2layoutName(fn.replace(".py", "")))
     return ret
 
 
