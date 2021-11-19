@@ -53,6 +53,7 @@ class StorageLayoutImpl(StorageLayout):
 
     def __init__(self):
         self._cg = None                     # EfiCacheGroup
+        self._hddDict = None                # <hdd,bcacheDevPath>
         self._mnt = None                    # MountEfi
 
     @property
@@ -90,6 +91,7 @@ class StorageLayoutImpl(StorageLayout):
             del self._mnt
         if True:
             # FIXME: stop and unregister bcache
+            del self._hddDict
             del self._cg
 
     @MountEfi.proxy
@@ -156,6 +158,9 @@ class StorageLayoutImpl(StorageLayout):
     def get_hdd_data_partition(self, disk):
         pass
 
+    def get_hdd_bcache_dev(self, disk):
+        return self._hddDict[disk]
+
     def add_disk(self, disk):
         assert disk is not None
 
@@ -169,19 +174,19 @@ class StorageLayoutImpl(StorageLayout):
 
             # ssd partition 3: make it as cache device
             parti = self._cg.get_ssd_cache_partition()
-            bcacheDevPathList = [BcacheUtil.findByBackingDevice(self._cg.get_hdd_data_partition(x)) for x in self._cg.get_hdd_list()]
             BcacheUtil.makeAndRegisterCacheDevice(parti)
-            BcacheUtil.attachCacheDevice(bcacheDevPathList, parti)
+            BcacheUtil.attachCacheDevice(self._hddDict.values(), parti)
         else:
             self._cg.add_hdd(disk)
 
             # hdd partition 2: make it as backing device and add it to btrfs filesystem
             parti = self._cg.get_hdd_data_partition(disk)
             BcacheUtil.makeAndRegisterBackingDevice(parti)
-            bcacheDev = BcacheUtil.findByBackingDevice(parti)
+            bcacheDevPath = BcacheUtil.findByBackingDevice(parti)
             if self._cg.get_ssd() is not None:
-                BcacheUtil.attachCacheDevice([bcacheDev], self._cg.get_ssd_cache_partition())
-            Util.cmdCall("/sbin/btrfs", "device", "add", bcacheDev, self._mnt.mount_point)
+                BcacheUtil.attachCacheDevice([bcacheDevPath], self._cg.get_ssd_cache_partition())
+            Util.cmdCall("/sbin/btrfs", "device", "add", bcacheDevPath, self._mnt.mount_point)
+            self._hddDict[disk] = bcacheDevPath
 
         # return True means boot disk is changed
         return lastBootHdd != self._cg.boot_disk
@@ -207,9 +212,9 @@ class StorageLayoutImpl(StorageLayout):
                 raise errors.StorageLayoutRemoveDiskError(errors.CAN_NOT_REMOVE_LAST_HDD)
 
             # hdd partition 2: remove from btrfs and bcache
-            bcacheDev = BcacheUtil.findByBackingDevice(self._cg.get_hdd_data_partition(disk))
-            Util.cmdCall("/sbin/btrfs", "device", "delete", bcacheDev, self._mnt.mount_point)
-            BcacheUtil.stopBackingDevice(bcacheDev)
+            Util.cmdCall("/sbin/btrfs", "device", "delete", self._hddDict[disk], self._mnt.mount_point)
+            BcacheUtil.stopBackingDevice(self._hddDict[disk])
+            del self._hddDict[disk]
 
             # remove
             self._cg.remove_hdd(disk)
@@ -240,6 +245,7 @@ def parse(boot_dev, root_dev):
     # return
     ret = StorageLayoutImpl()
     ret._cg = EfiCacheGroup(ssd=ssd, ssdEspParti=ssdEspParti, ssdSwapParti=ssdSwapParti, ssdCacheParti=ssdCacheParti, hddList=hddList, bootHdd=bootHdd)
+    ret._hddDict = Util.keyValueListToDict(hddList, slaveDevPathList)
     ret._mnt = MountEfi("/")
     return ret
 
@@ -260,6 +266,7 @@ def detect_and_mount(disk_list, mount_dir):
     # return
     ret = StorageLayoutImpl()
     ret._cg = EfiCacheGroup(ssd=ssd, ssdEspParti=ssdEspParti, ssdSwapParti=ssdSwapParti, ssdCacheParti=ssdCacheParti, hddList=hddList, bootHdd=bootHdd)
+    ret._hddDict = Util.keyValueListToDict(hddList, bcacheDevPathList)
     ret._mnt = MountEfi(mount_dir)
 
     # mount
@@ -292,6 +299,7 @@ def create_and_mount(disk_list, mount_dir):
     # return
     ret = StorageLayoutImpl()
     ret._cg = cg
+    ret._hddDict = Util.keyValueListToDict(cg.get_hdd_list(), bcacheDevPathList)
     ret._mnt = MountEfi(mount_dir)
 
     # mount

@@ -58,6 +58,14 @@ class Util:
             pass
 
     @staticmethod
+    def keyValueListToDict(keyList, valueList):
+        assert len(keyList) == len(valueList)
+        ret = dict()
+        for i in range(0, len(keyList)):
+            ret[keyList[i]] = valueList[i]
+        return ret
+
+    @staticmethod
     def anyIn(list1, list2):
         for i in list1:
             if i in list2:
@@ -905,10 +913,11 @@ class BcacheUtil:
 
     @staticmethod
     def attachCacheDevice(backingDevPathList, cacheDevPath):
-        setUuid = BcacheUtil.getSetUuid(cacheDevPath)
-        for backingDevPath in backingDevPathList:
-            with open("/sys/block/%s/bcache/attach" % (os.path.basename(backingDevPath)), "w") as f:
-                f.write(str(setUuid))
+        if len(backingDevPathList) > 0:
+            setUuid = BcacheUtil.getSetUuid(cacheDevPath)
+            for backingDevPath in backingDevPathList:
+                with open("/sys/block/%s/bcache/attach" % (os.path.basename(backingDevPath)), "w") as f:
+                    f.write(str(setUuid))
 
     @staticmethod
     def stopBackingDevice(devPath):
