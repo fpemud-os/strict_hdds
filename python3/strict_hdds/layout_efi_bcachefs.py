@@ -66,18 +66,18 @@ class StorageLayoutImpl(StorageLayout):
             tlist.append(self.get_hdd_data_partition(hdd))
         return ":".join(tlist)
 
-    @property
     @EfiCacheGroup.proxy
+    @property
     def dev_boot(self):
         pass
 
-    @property
     @EfiCacheGroup.proxy
+    @property
     def dev_swap(self):
         pass
 
-    @property
     @EfiCacheGroup.proxy
+    @property
     def boot_disk(self):
         pass
 

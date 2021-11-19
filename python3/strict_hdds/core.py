@@ -36,8 +36,8 @@ class StorageLayout(abc.ABC):
     BOOT_MODE_BIOS = 1
     BOOT_MODE_EFI = 2
 
-    @property
     @classmethod
+    @property
     def name(cls):
         fn = sys.modules.get(cls.__module__).__file__
         fn = os.path.basename(fn).replace(".py", "")

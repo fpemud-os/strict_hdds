@@ -55,8 +55,8 @@ class StorageLayoutImpl(StorageLayout):
     def dev_boot(self):
         assert False
 
-    @property
     @SwapFile.proxy
+    @property
     def dev_swap(self):
         pass
 

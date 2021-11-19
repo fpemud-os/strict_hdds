@@ -56,8 +56,8 @@ class StorageLayoutImpl(StorageLayout):
     def dev_rootfs(self):
         return self.get_disk_data_partition(self.get_disk_list()[0])
 
-    @property
     @EfiMultiDisk.proxy
+    @property
     def dev_boot(self):
         pass
 

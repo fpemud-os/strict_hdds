@@ -64,18 +64,18 @@ class StorageLayoutImpl(StorageLayout):
     def dev_rootfs(self):
         return LvmUtil.rootLvDevPath
 
-    @property
     @EfiCacheGroup.proxy
+    @property
     def dev_boot(self):
         pass
 
-    @property
     @EfiCacheGroup.proxy
+    @property
     def dev_swap(self):
         pass
 
-    @property
     @EfiCacheGroup.proxy
+    @property
     def boot_disk(self):
         pass
 

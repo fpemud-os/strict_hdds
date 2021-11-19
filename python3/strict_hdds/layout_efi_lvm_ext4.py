@@ -59,13 +59,13 @@ class StorageLayoutImpl(StorageLayout):
     def dev_rootfs(self):
         return LvmUtil.rootLvDevPath
 
-    @property
     @EfiMultiDisk.proxy
+    @property
     def dev_boot(self):
         pass
 
-    @property
     @SwapLvmLv.proxy
+    @property
     def dev_swap(self):
         pass
 
