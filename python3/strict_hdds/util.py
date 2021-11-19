@@ -1117,6 +1117,7 @@ class EfiMultiDisk:
         if isinstance(func, property):
             def f_get(self):
                 return getattr(self._md, func.fget.__name__)
+            f_get.__name__ = func.fget.__name__
             return property(f_get)
         else:
             def f(self, *args):
@@ -1238,6 +1239,7 @@ class EfiCacheGroup:
         if isinstance(func, property):
             def f_get(self):
                 return getattr(self._cg, func.fget.__name__)
+            f_get.__name__ = func.fget.__name__
             return property(f_get)
         else:
             def f(self, *args):
@@ -1474,6 +1476,7 @@ class SwapLvmLv:
         if isinstance(func, property):
             def f_get(self):
                 return getattr(self._swap, func.fget.__name__)
+            f_get.__name__ = func.fget.__name__
             return property(f_get)
         else:
             def f(self, *args):
@@ -1508,6 +1511,7 @@ class SwapFile:
         if isinstance(func, property):
             def f_get(self):
                 return getattr(self._swap, func.fget.__name__)
+            f_get.__name__ = func.fget.__name__
             return property(f_get)
         else:
             def f(self, *args):
