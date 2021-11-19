@@ -105,7 +105,7 @@ class StorageLayoutImpl(StorageLayout):
         pass
 
     @EfiMultiDisk.proxy
-    def get_suggest_esp_size(self):
+    def get_suggestted_esp_size(self):
         pass
 
     @EfiMultiDisk.proxy
@@ -170,7 +170,7 @@ class StorageLayoutImpl(StorageLayout):
         return lastBootHdd != self._md.get_boot_hdd()     # boot disk may change
 
     @SwapLvmLv.proxy
-    def get_suggest_swap_size(self):
+    def get_suggestted_swap_size(self):
         pass
 
     @SwapLvmLv.proxy

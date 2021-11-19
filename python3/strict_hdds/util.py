@@ -1159,7 +1159,7 @@ class EfiMultiDisk:
         assert dst is not None and dst in self.get_pending_esp_list()
         Util.syncBlkDev(self.get_esp(), dst, mountPoint1=Util.bootDir)
 
-    def get_suggest_esp_size(self):
+    def get_suggestted_esp_size(self):
         return Util.getEspSize()
 
     def get_disk_list(self):
@@ -1302,7 +1302,7 @@ class EfiCacheGroup:
         assert dst is not None and dst in self.get_pending_esp_list()
         Util.syncBlkDev(self.get_esp(), dst, mountPoint1=Util.bootDir)
 
-    def get_suggest_esp_size(self):
+    def get_suggestted_esp_size(self):
         return Util.getEspSize()
 
     def get_disk_list(self):
@@ -1331,7 +1331,7 @@ class EfiCacheGroup:
         assert self._bootHdd is None
         return self._ssdCacheParti
 
-    def get_suggest_swap_size(self):
+    def get_suggestted_swap_size(self):
         return Util.getSwapSize()
 
     def get_hdd_list(self):
@@ -1471,7 +1471,7 @@ class SwapLvmLv:
     def get_swap_devname(self):
         return LvmUtil.swapLvDevPath if self._bSwapLv else None
 
-    def get_suggest_swap_size(self):
+    def get_suggestted_swap_size(self):
         return Util.getSwapSize()
 
     def create_swap_lv(self):
@@ -1500,7 +1500,7 @@ class SwapFile:
     def dev_swap(self):
         return Util.swapFilepath if self._bSwapFile else None
 
-    def get_suggest_swap_size(self):
+    def get_suggestted_swap_size(self):
         return Util.getSwapSize()
 
     def create_swap_file(self):

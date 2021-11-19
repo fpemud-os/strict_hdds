@@ -87,7 +87,7 @@ class StorageLayoutImpl(StorageLayout):
         return self._hddEspParti
 
     @SwapFile.proxy
-    def get_suggest_swap_size(self):
+    def get_suggestted_swap_size(self):
         pass
 
     @SwapFile.proxy

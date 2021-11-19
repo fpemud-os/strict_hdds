@@ -112,7 +112,7 @@ class StorageLayoutImpl(StorageLayout):
         pass
 
     @EfiCacheGroup.proxy
-    def get_suggest_esp_size(self):
+    def get_suggestted_esp_size(self):
         pass
 
     @EfiCacheGroup.proxy
@@ -136,7 +136,7 @@ class StorageLayoutImpl(StorageLayout):
         pass
 
     @EfiCacheGroup.proxy
-    def get_suggest_swap_size(self):
+    def get_suggestted_swap_size(self):
         pass
 
     @EfiCacheGroup.proxy

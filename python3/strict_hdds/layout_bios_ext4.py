@@ -86,7 +86,7 @@ class StorageLayoutImpl(StorageLayout):
         pass
 
     @SwapFile.proxy
-    def get_suggest_swap_size(self):
+    def get_suggestted_swap_size(self):
         pass
 
     @SwapFile.proxy
