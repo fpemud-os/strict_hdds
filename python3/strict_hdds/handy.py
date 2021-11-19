@@ -55,7 +55,7 @@ class MountBios:
 
     def __init__(self, mountDir):
         self._mountDir = mountDir
-        self._rwCtrl = self.BootDirRwController()
+        self._rwCtrl = self.BootDirRwController(self._mountDir)
 
     @property
     def mount_point(self):
@@ -108,7 +108,7 @@ class MountEfi:
 
     def __init__(self, mountDir):
         self._mountDir = mountDir
-        self._rwCtrl = self.BootDirRwController()
+        self._rwCtrl = self.BootDirRwController(self._mountDir)
 
     @property
     def mount_point(self):
