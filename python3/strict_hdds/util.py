@@ -210,13 +210,31 @@ class Util:
         """Returns (vg-name, lv-name)
             Returns None if the device is not lvm"""
 
-        rc, ret = Util.cmdCallWithRetCode("/sbin/dmsetup", "info", devPath)
-        if rc == 0:
-            m = re.search("^Name: *(\\S+)$", ret, re.M)
-            assert m is not None
-            return m.group(1).split(".")
+        # FIXME
+        if "-" in devPath:
+            splitter = "-"
+            if not os.path.exists(devPath):
+                devPath = devPath.replace("-", ".")
+                splitter = "."
+                if not os.path.exists(devPath):
+                    return None
+        elif "." in devPath:
+            splitter = "."
+            if not os.path.exists(devPath):
+                splitter = "-"
+                devPath = devPath.replace(".", "-")
+                if not os.path.exists(devPath):
+                    return None
         else:
             return None
+
+        rc, ret = Util.cmdCallWithRetCode("/sbin/dmsetup", "info", devPath)
+        if rc != 0:
+            return None
+
+        m = re.search("^Name: *(\\S+)$", ret, re.M)
+        assert m is not None
+        return m.group(1).split(splitter)
 
     @staticmethod
     def getBlkDevCapacity(devPath):
