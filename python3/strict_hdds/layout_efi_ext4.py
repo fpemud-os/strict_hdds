@@ -112,7 +112,7 @@ def parse(boot_dev, root_dev):
     ret._hdd = PartiUtil.partiToDisk(boot_dev)
     ret._hddEspParti = boot_dev
     ret._hddRootParti = root_dev
-    ret._swap = HandyUtil.swapFileDetectAndNew("/")
+    ret._swap = HandyUtil.swapFileDetectAndNew(StorageLayoutImpl.name, "/")
     ret._mnt = MountEfi("/")
     return ret
 
@@ -145,7 +145,7 @@ def detect_and_mount(disk_list, mount_dir):
     ret._hdd = espAndRootPartitionList[0][0]
     ret._hddEspParti = espAndRootPartitionList[0][1]
     ret._hddRootParti = espAndRootPartitionList[0][2]
-    ret._swap = HandyUtil.swapFileDetectAndNew(mount_dir)
+    ret._swap = HandyUtil.swapFileDetectAndNew(StorageLayoutImpl.name, mount_dir)
     ret._mnt = MountEfi(mount_dir)
     return ret
 
