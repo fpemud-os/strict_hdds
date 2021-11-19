@@ -62,6 +62,11 @@ class StorageLayoutImpl(StorageLayout):
     def dev_swap(self):
         pass
 
+    @MountEfi.proxy
+    @property
+    def mount_point(self):
+        pass
+
     @property
     def boot_disk(self):
         return self._hdd
