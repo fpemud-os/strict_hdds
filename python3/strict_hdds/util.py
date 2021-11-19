@@ -1116,7 +1116,7 @@ class EfiMultiDisk:
     def proxy(func):
         if isinstance(func, property):
             def f_get(self):
-                return getattr(self._md, func.__name__)
+                return getattr(self._md, func.fget.__name__)
             return property(f_get)
         else:
             def f(self, *args):
@@ -1237,7 +1237,7 @@ class EfiCacheGroup:
     def proxy(func):
         if isinstance(func, property):
             def f_get(self):
-                return getattr(self._cg, func.__name__)
+                return getattr(self._cg, func.fget.__name__)
             return property(f_get)
         else:
             def f(self, *args):
@@ -1473,7 +1473,7 @@ class SwapLvmLv:
     def proxy(func):
         if isinstance(func, property):
             def f_get(self):
-                return getattr(self._swap, func.__name__)
+                return getattr(self._swap, func.fget.__name__)
             return property(f_get)
         else:
             def f(self, *args):
@@ -1507,7 +1507,7 @@ class SwapFile:
     def proxy(func):
         if isinstance(func, property):
             def f_get(self):
-                return getattr(self._swap, func.__name__)
+                return getattr(self._swap, func.fget.__name__)
             return property(f_get)
         else:
             def f(self, *args):
