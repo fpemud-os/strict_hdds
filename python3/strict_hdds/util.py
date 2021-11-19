@@ -1114,9 +1114,14 @@ class EfiMultiDisk:
 
     @staticmethod
     def proxy(func):
-        def f(self, *args):
-            return getattr(self._md, func.__name__)(*args)
-        return f
+        if isinstance(func, property):
+            def f_get(self):
+                return getattr(self._md, func.__name__)
+            return property(f_get)
+        else:
+            def f(self, *args):
+                return getattr(self._md, func.__name__)(*args)
+            return f
 
     def __init__(self, diskList=[], bootHdd=None):
         # assign self._hddList
@@ -1230,9 +1235,14 @@ class EfiCacheGroup:
 
     @staticmethod
     def proxy(func):
-        def f(self, *args):
-            return getattr(self._cg, func.__name__)(*args)
-        return f
+        if isinstance(func, property):
+            def f_get(self):
+                return getattr(self._cg, func.__name__)
+            return property(f_get)
+        else:
+            def f(self, *args):
+                return getattr(self._cg, func.__name__)(*args)
+            return f
 
     def __init__(self, ssd=None, ssdEspParti=None, ssdSwapParti=None, ssdCacheParti=None, hddList=[], bootHdd=None):
         # assign self._ssd and friends
@@ -1461,14 +1471,20 @@ class SwapLvmLv:
 
     @staticmethod
     def proxy(func):
-        def f(self, *args):
-            return getattr(self._swap, func.__name__)(*args)
-        return f
+        if isinstance(func, property):
+            def f_get(self):
+                return getattr(self._swap, func.__name__)
+            return property(f_get)
+        else:
+            def f(self, *args):
+                return getattr(self._swap, func.__name__)(*args)
+            return f
 
     def __init__(self, bSwapLv):
         self._bSwapLv = bSwapLv
 
-    def get_swap_devname(self):
+    @property
+    def dev_swap(self):
         return LvmUtil.swapLvDevPath if self._bSwapLv else None
 
     def get_suggestted_swap_size(self):
@@ -1489,9 +1505,14 @@ class SwapFile:
 
     @staticmethod
     def proxy(func):
-        def f(self, *args):
-            return getattr(self._swap, func.__name__)(*args)
-        return f
+        if isinstance(func, property):
+            def f_get(self):
+                return getattr(self._swap, func.__name__)
+            return property(f_get)
+        else:
+            def f(self, *args):
+                return getattr(self._swap, func.__name__)(*args)
+            return f
 
     def __init__(self, bSwapFile):
         self._bSwapFile = bSwapFile
