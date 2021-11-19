@@ -285,17 +285,19 @@ class HandyBcache:
             if len(tlist) == 0:
                 assert False
             elif len(tlist) == 1:
-                if len(backingPartiList) > 0 and cacheParti is not None:
-                    raise errors.StorageLayoutParseError(storageLayoutName, "%s(%s) has no cache device" % (tlist[0], bcacheDev))
+                if len(backingPartiList) > 0:
+                    if cacheParti is not None:
+                        raise errors.StorageLayoutParseError(storageLayoutName, "%s(%s) has no cache device" % (tlist[0], bcacheDev))
                 cacheParti = None
                 backingPartiList.append(tlist[0])
                 newBcacheDevPathList.append(bcacheDevPath)
                 newBcacheDevList.append(bcacheDev)
             elif len(tlist) == 2:
-                if len(backingPartiList) > 0 and cacheParti is None:
-                    raise errors.StorageLayoutParseError(storageLayoutName, "%s(%s) has no cache device" % (backingPartiList[-1], newBcacheDevList[-1]))
-                if cacheParti != tlist[0]:
-                    raise errors.StorageLayoutParseError(storageLayoutName, "%s(%s) has a different cache device" % (tlist[1], bcacheDev))
+                if len(backingPartiList) > 0:
+                    if cacheParti is None:
+                        raise errors.StorageLayoutParseError(storageLayoutName, "%s(%s) has no cache device" % (backingPartiList[-1], newBcacheDevList[-1]))
+                    if cacheParti != tlist[0]:
+                        raise errors.StorageLayoutParseError(storageLayoutName, "%s(%s) has a different cache device" % (tlist[1], bcacheDev))
                 cacheParti = tlist[0]
                 backingPartiList.append(tlist[1])
                 newBcacheDevPathList.append(bcacheDevPath)
