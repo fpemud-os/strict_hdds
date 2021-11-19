@@ -210,21 +210,10 @@ class Util:
         """Returns (vg-name, lv-name)
             Returns None if the device is not lvm"""
 
-        # FIXME
         if "-" in devPath:
             splitter = "-"
-            if not os.path.exists(devPath):
-                devPath = devPath.replace("-", ".")
-                splitter = "."
-                if not os.path.exists(devPath):
-                    return None
         elif "." in devPath:
             splitter = "."
-            if not os.path.exists(devPath):
-                splitter = "-"
-                devPath = devPath.replace(".", "-")
-                if not os.path.exists(devPath):
-                    return None
         else:
             return None
 
@@ -1067,10 +1056,10 @@ class LvmUtil:
     vgName = "hdd"
 
     rootLvName = "root"
-    rootLvDevPath = "/dev/mapper/hdd.root"
+    rootLvDevPath = "/dev/mapper/hdd-root"      # FIXME
 
     swapLvName = "swap"
-    swapLvDevPath = "/dev/mapper/hdd.swap"
+    swapLvDevPath = "/dev/mapper/hdd-swap"      # FIXME
 
     @staticmethod
     def getSlaveDevPathList(vgName):
