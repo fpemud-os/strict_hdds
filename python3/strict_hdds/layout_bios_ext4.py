@@ -60,8 +60,8 @@ class StorageLayoutImpl(StorageLayout):
     def dev_swap(self):
         pass
 
-    @property
     @MountBios.proxy
+    @property
     def mount_point(self):
         pass
 
