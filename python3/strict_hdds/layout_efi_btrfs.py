@@ -128,7 +128,7 @@ class StorageLayoutImpl(StorageLayout):
         self._md.add_disk(disk)
 
         # hdd partition 2: make it as backing device and add it to btrfs filesystem
-        Util.cmdCall("/sbin/btrfs", "device", "add", self._md.get_disk_data_partition(disk), "/")
+        Util.cmdCall("/sbin/btrfs", "device", "add", self._md.get_disk_data_partition(disk), self._mnt.mount_point)
 
         return lastBootDisk != self._md.boot_disk     # boot disk may change
 
@@ -142,7 +142,7 @@ class StorageLayoutImpl(StorageLayout):
         lastBootHdd = self._md.boot_disk
 
         # hdd partition 2: remove from btrfs and bcache
-        Util.cmdCall("/sbin/btrfs", "device", "delete", self._md.get_disk_data_partition(disk), "/")
+        Util.cmdCall("/sbin/btrfs", "device", "delete", self._md.get_disk_data_partition(disk), self._mnt.mount_point)
 
         # remove
         self._md.remove_disk(disk)

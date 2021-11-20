@@ -176,7 +176,7 @@ class StorageLayoutImpl(StorageLayout):
             # hdd partition 2: make it as backing device and add it to bcachefs
             parti = self._cg.get_hdd_data_partition(disk)
             BcachefsUtil.makeDevice(parti)
-            Util.cmdCall("/sbin/bcachefs", "device", "add", parti, "/")
+            Util.cmdCall("/sbin/bcachefs", "device", "add", parti, self._mnt.mount_point)
 
             return lastBootHdd != self._cg.boot_disk     # boot disk may change
 

@@ -62,7 +62,6 @@ class StorageLayoutImpl(StorageLayout):
 
     @property
     def dev_rootfs(self):
-        # FIXME
         return self.get_hdd_data_partition(self.get_hdd_list()[0])
 
     @EfiCacheGroup.proxy
