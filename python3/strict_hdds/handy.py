@@ -125,9 +125,7 @@ class SnapshotBtrfs:
             return ["subvol=@"]
         else:
             assert kwargsDict["snapshot"] in self.get_snapshot_list()
-            ret = ["subvol=@%s" % (kwargsDict["snapshot"])]
-            del kwargsDict["snapshot"]
-            return ret
+            return ["subvol=@%s" % (kwargsDict["snapshot"])]
 
     def get_snapshot_list(self):
         out = Util.cmdCall("/sbin/btrfs", "subvolume", "list", self._mountDir)

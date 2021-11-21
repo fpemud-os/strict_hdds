@@ -99,7 +99,7 @@ class StorageLayoutImpl(StorageLayout):
         pass
 
     def get_mntopt_list_for_mount(self, **kwargs):
-        return ["subvol=@"]
+        return []
 
     @EfiCacheGroup.proxy
     def get_esp(self):

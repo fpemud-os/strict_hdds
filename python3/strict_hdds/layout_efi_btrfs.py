@@ -87,10 +87,8 @@ class StorageLayoutImpl(StorageLayout):
         pass
 
     def get_mntopt_list_for_mount(self, **kwargs):
-        kwargsDict = kwargs.copy()
         retList = []
-        retList += self._snapshot.get_mntopt_list_for_mount(kwargsDict)
-        assert len(kwargsDict) == 0
+        retList += self._snapshot.get_mntopt_list_for_mount(kwargs)
         return retList
 
     @EfiMultiDisk.proxy
