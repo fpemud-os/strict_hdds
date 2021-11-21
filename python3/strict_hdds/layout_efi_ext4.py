@@ -21,8 +21,8 @@
 # THE SOFTWARE.
 
 
-from .util import Util, PartiUtil, GptUtil, SwapFile
-from .handy import MountEfi, HandyUtil
+from .util import Util, PartiUtil, GptUtil
+from .handy import SwapFile, MountEfi, HandyUtil
 from . import errors
 from . import StorageLayout
 

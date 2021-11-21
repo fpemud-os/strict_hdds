@@ -22,7 +22,8 @@
 
 
 import re
-from .util import Util, PartiUtil, MbrUtil, LvmUtil, SwapLvmLv
+from .util import Util, PartiUtil, MbrUtil, LvmUtil
+from .handy import SwapLvmLv
 from . import errors
 from . import StorageLayout
 

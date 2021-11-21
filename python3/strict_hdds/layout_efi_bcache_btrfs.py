@@ -21,8 +21,8 @@
 # THE SOFTWARE.
 
 
-from .util import Util, BcacheUtil, BtrfsUtil, EfiCacheGroup, SnapshotBtrfs
-from .handy import MountEfi, HandyCg, HandyBcache, HandyUtil
+from .util import Util, BcacheUtil, BtrfsUtil, EfiCacheGroup
+from .handy import SnapshotBtrfs, MountEfi, HandyCg, HandyBcache, HandyUtil
 from . import errors
 from . import StorageLayout
 

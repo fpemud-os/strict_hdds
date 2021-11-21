@@ -21,8 +21,8 @@
 # THE SOFTWARE.
 
 
-from .util import Util, PartiUtil, LvmUtil, EfiMultiDisk, SwapLvmLv
-from .handy import MountEfi, HandyMd, HandyUtil
+from .util import Util, PartiUtil, LvmUtil, EfiMultiDisk
+from .handy import SwapLvmLv, MountEfi, HandyMd, HandyUtil
 from . import errors
 from . import StorageLayout
 

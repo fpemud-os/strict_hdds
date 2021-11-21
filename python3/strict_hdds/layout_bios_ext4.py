@@ -21,8 +21,8 @@
 # THE SOFTWARE.
 
 
-from .util import Util, PartiUtil, MbrUtil, SwapFile
-from .handy import MountBios, HandyUtil
+from .util import Util, PartiUtil, MbrUtil
+from .handy import SwapFile, MountBios, HandyUtil
 from . import errors
 from . import StorageLayout
 
