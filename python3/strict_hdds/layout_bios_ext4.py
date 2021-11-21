@@ -117,7 +117,7 @@ def parse(boot_dev, root_dev):
     return ret
 
 
-def detect_and_mount(disk_list, mount_dir):
+def detect_and_mount(disk_list, mount_dir, mnt_opt_list):
     # scan for root partition
     rootPartitionList = []
     for disk in disk_list:
@@ -139,7 +139,8 @@ def detect_and_mount(disk_list, mount_dir):
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.ROOT_PARTITIONS_TOO_MANY)
 
     # mount
-    MountBios.mount(rootPartitionList[0], mount_dir, "")
+    HandyUtil.checkMntOptList(mnt_opt_list)
+    MountBios.mount(rootPartitionList[0], mount_dir, mnt_opt_list)
 
     # return
     ret = StorageLayoutImpl()
@@ -150,16 +151,19 @@ def detect_and_mount(disk_list, mount_dir):
     return ret
 
 
-def create_and_mount(disk_list, mount_dir):
+def create_and_mount(disk_list, mount_dir, mnt_opt_list):
     # create partitions
     hdd = HandyUtil.checkAndGetHdd(disk_list)
     Util.initializeDisk(hdd, Util.diskPartTableMbr, [
         ("*", Util.fsTypeExt4),
     ])
 
-    # mount
+    # root partition
     rootParti = PartiUtil.diskToParti(hdd, 1)
-    MountBios.mount(rootParti, mount_dir, "")
+
+    # mount
+    HandyUtil.checkMntOptList(mnt_opt_list)
+    MountBios.mount(rootParti, mount_dir, mnt_opt_list)
 
     # return
     ret = StorageLayoutImpl(mount_dir)

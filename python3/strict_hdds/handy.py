@@ -448,6 +448,19 @@ class HandyUtil:
         return storageLayout.dev_swap is not None and Util.systemdFindSwapService(storageLayout.dev_swap) is not None
 
     @staticmethod
+    def checkMntOptList(mntOptList):
+        tset = set()
+        for mo in mntOptList:
+            idx = mo.find("=")
+            if idx >= 0:
+                mo2 = mo[0:idx]
+            else:
+                mo2 = mo
+            if mo2 in tset:
+                raise errors.StorageLayoutMountError("duplicate mount option \"%s\"" % (mo))
+            tset.add(mo)
+
+    @staticmethod
     def checkAndGetHdd(diskList):
         if len(diskList) == 0:
             raise errors.StorageLayoutCreateError(errors.NO_DISK_WHEN_CREATE)

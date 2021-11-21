@@ -29,6 +29,10 @@ class StorageLayoutCreateError(StorageLayoutError):
     pass
 
 
+class StorageLayoutMountError(StorageLayoutError):
+    pass
+
+
 class StorageLayoutAddDiskError(StorageLayoutError):
 
     def __init__(self, disk_devpath, message):

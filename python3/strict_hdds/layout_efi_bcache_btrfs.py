@@ -271,7 +271,7 @@ def parse(boot_dev, root_dev):
     return ret
 
 
-def detect_and_mount(disk_list, mount_dir):
+def detect_and_mount(disk_list, mount_dir, mnt_opt_list):
     # scan
     bcacheDevPathList = BcacheUtil.scanAndRegisterAll()
     bcacheDevPathList = [x for x in bcacheDevPathList if Util.getBlkDevFsType(x) == Util.fsTypeBtrfs]
@@ -292,12 +292,13 @@ def detect_and_mount(disk_list, mount_dir):
     ret._mnt = MountEfi(mount_dir)
 
     # mount
-    MountEfi.mount(ret.dev_rootfs, ret.dev_boot, mount_dir, ret.get_mntopt_list_for_mount())
-
+    tlist = mnt_opt_list + ret.get_mntopt_list_for_mount()
+    HandyUtil.checkMntOptList(tlist)
+    MountEfi.mount(ret.dev_rootfs, ret.dev_boot, mount_dir, tlist)
     return ret
 
 
-def create_and_mount(disk_list, mount_dir):
+def create_and_mount(disk_list, mount_dir, mnt_opt_list):
     # add disks to cache group
     cg = EfiCacheGroup()
     HandyCg.checkAndAddDisks(cg, *Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list))
@@ -331,5 +332,7 @@ def create_and_mount(disk_list, mount_dir):
     Util.cmdCall("/bin/umount", ret.dev_rootfs)
 
     # mount
-    MountEfi.mount(ret.dev_rootfs, ret.dev_boot, mount_dir, ret.get_mntopt_list_for_mount())
+    tlist = mnt_opt_list + ret.get_mntopt_list_for_mount()
+    HandyUtil.checkMntOptList(tlist)
+    MountEfi.mount(ret.dev_rootfs, ret.dev_boot, mount_dir, tlist)
     return ret

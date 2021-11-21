@@ -254,7 +254,7 @@ def parse(boot_dev, root_dev):
     return ret
 
 
-def detect_and_mount(disk_list, mount_dir):
+def detect_and_mount(disk_list, mount_dir, mnt_opt_list):
     BcacheUtil.scanAndRegisterAll()
     LvmUtil.activateAll()
 
@@ -274,7 +274,8 @@ def detect_and_mount(disk_list, mount_dir):
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.ROOT_PARTITION_FS_SHOULD_BE(Util.fsTypeExt4))
 
     # mount
-    MountEfi.mount(LvmUtil.rootLvDevPath, bootDev, mount_dir, "")
+    HandyUtil.checkMntOptList(mnt_opt_list)
+    MountEfi.mount(LvmUtil.rootLvDevPath, bootDev, mount_dir, mnt_opt_list)
 
     # return
     ret = StorageLayoutImpl()
@@ -284,7 +285,7 @@ def detect_and_mount(disk_list, mount_dir):
     return ret
 
 
-def create_and_mount(disk_list, mount_dir):
+def create_and_mount(disk_list, mount_dir, mnt_opt_list):
     # add disks to cache group
     cg = EfiCacheGroup()
     HandyCg.checkAndAddDisks(cg, *Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list))
@@ -308,7 +309,8 @@ def create_and_mount(disk_list, mount_dir):
     LvmUtil.createLvWithDefaultSize(LvmUtil.vgName, LvmUtil.rootLvName)
 
     # mount
-    MountEfi.mount(LvmUtil.rootLvDevPath, cg.dev_boot, mount_dir, "")
+    HandyUtil.checkMntOptList(mnt_opt_list)
+    MountEfi.mount(LvmUtil.rootLvDevPath, cg.dev_boot, mount_dir, mnt_opt_list)
 
     # return
     ret = StorageLayoutImpl()

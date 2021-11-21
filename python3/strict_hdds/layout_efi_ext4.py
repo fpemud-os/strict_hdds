@@ -121,7 +121,7 @@ def parse(boot_dev, root_dev):
     return ret
 
 
-def detect_and_mount(disk_list, mount_dir):
+def detect_and_mount(disk_list, mount_dir, mnt_opt_list):
     # scan for ESP and root partition
     espAndRootPartitionList = []
     for disk in disk_list:
@@ -142,7 +142,8 @@ def detect_and_mount(disk_list, mount_dir):
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.DISK_TOO_MANY)
 
     # mount
-    MountEfi.mount(espAndRootPartitionList[0][2], espAndRootPartitionList[0][1], mount_dir, "")
+    HandyUtil.checkMntOptList(mnt_opt_list)
+    MountEfi.mount(espAndRootPartitionList[0][2], espAndRootPartitionList[0][1], mount_dir, mnt_opt_list)
 
     # return
     ret = StorageLayoutImpl()
@@ -154,7 +155,7 @@ def detect_and_mount(disk_list, mount_dir):
     return ret
 
 
-def create_and_mount(disk_list, mount_dir):
+def create_and_mount(disk_list, mount_dir, mnt_opt_list):
     # create partitions
     hdd = HandyUtil.checkAndGetHdd(disk_list)
     Util.initializeDisk(hdd, Util.diskPartTableGpt, [
@@ -167,7 +168,8 @@ def create_and_mount(disk_list, mount_dir):
     rootParti = PartiUtil.diskToParti(hdd, 2)
 
     # mount
-    MountEfi.mount(rootParti, espParti, mount_dir, "")
+    HandyUtil.checkMntOptList(mnt_opt_list)
+    MountEfi.mount(rootParti, espParti, mount_dir, mnt_opt_list)
 
     # return
     ret = StorageLayoutImpl()
