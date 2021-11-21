@@ -292,7 +292,7 @@ def detect_and_mount(disk_list, mount_dir):
     ret._mnt = MountEfi(mount_dir)
 
     # mount
-    MountEfi.mount(ret.dev_rootfs, ret.dev_boot, mount_dir)
+    MountEfi.mount(ret.dev_rootfs, ret.dev_boot, mount_dir, ret.get_mntopts_for_mount())
 
     return ret
 
@@ -331,5 +331,5 @@ def create_and_mount(disk_list, mount_dir):
     Util.cmdCall("/bin/umount", ret.dev_rootfs)
 
     # mount
-    MountEfi.mount(ret.dev_rootfs, ret.dev_boot, mount_dir)
+    MountEfi.mount(ret.dev_rootfs, ret.dev_boot, mount_dir, ret.get_mntopts_for_mount())
     return ret

@@ -274,7 +274,7 @@ def detect_and_mount(disk_list, mount_dir):
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.ROOT_PARTITION_FS_SHOULD_BE(Util.fsTypeExt4))
 
     # mount
-    MountEfi.mount(LvmUtil.rootLvDevPath, bootDev, mount_dir)
+    MountEfi.mount(LvmUtil.rootLvDevPath, bootDev, mount_dir, "")
 
     # return
     ret = StorageLayoutImpl()
@@ -308,7 +308,7 @@ def create_and_mount(disk_list, mount_dir):
     LvmUtil.createLvWithDefaultSize(LvmUtil.vgName, LvmUtil.rootLvName)
 
     # mount
-    MountEfi.mount(LvmUtil.rootLvDevPath, cg.dev_boot, mount_dir)
+    MountEfi.mount(LvmUtil.rootLvDevPath, cg.dev_boot, mount_dir, "")
 
     # return
     ret = StorageLayoutImpl()

@@ -156,8 +156,8 @@ class MountBios:
             pass
 
     @staticmethod
-    def mount(rootParti, mountDir):
-        Util.cmdCall("/bin/mount", rootParti, mountDir)
+    def mount(rootParti, mountDir, mountOptions):
+        Util.cmdCall("/bin/mount", rootParti, mountDir, "-o", mountOptions)
 
     @staticmethod
     def proxy(func):
@@ -190,34 +190,34 @@ class MountEfi:
 
     class BootDirRwController(BootDirRwController):
 
-        def __init__(self, bootMountDir):
-            self._mountDir = bootMountDir
+        def __init__(self, bootMntDir):
+            self._mntDir = bootMntDir
 
         @property
         def is_writable(self):
             for pobj in psutil.disk_partitions():
-                if pobj.mountpoint == MountEfi._getBootMountDir(self._mountDir):
+                if pobj.mountpoint == MountEfi._getBootMountDir(self._mntDir):
                     return ("rw" in pobj.opts.split(","))
             assert False
 
         def to_read_write(self):
             assert not self.is_writable
             assert self._isRootfsWritable()
-            Util.cmdCall("/bin/mount", MountEfi._getBootMountDir(self._mountDir), "-o", "rw,remount")
+            Util.cmdCall("/bin/mount", MountEfi._getBootMountDir(self._mntDir), "-o", "rw,remount")
 
         def to_read_only(self):
             assert self.is_writable
-            Util.cmdCall("/bin/mount", MountEfi._getBootMountDir(self._mountDir), "-o", "ro,remount")
+            Util.cmdCall("/bin/mount", MountEfi._getBootMountDir(self._mntDir), "-o", "ro,remount")
 
         def _isRootfsWritable(self):
             for pobj in psutil.disk_partitions():
-                if pobj.mountpoint == self._mountDir:
+                if pobj.mountpoint == self._mntDir:
                     return ("rw" in pobj.opts.split(","))
 
     @staticmethod
-    def mount(rootParti, espParti, rootMountDir, rootMountOptions):
-        Util.cmdCall("/bin/mount", rootParti, rootMountDir, "-o", rootMountOptions)
-        bootDir = MountEfi._getBootMountDir(rootMountDir)
+    def mount(rootParti, espParti, rootMntDir, rootMntOpts):
+        Util.cmdCall("/bin/mount", rootParti, rootMntDir, "-o", rootMntOpts)
+        bootDir = MountEfi._getBootMountDir(rootMntDir)
         os.makedirs(bootDir, exist_ok=True)
         Util.cmdCall("/bin/mount", espParti, bootDir, "-o", "ro")
 
@@ -234,16 +234,16 @@ class MountEfi:
             return f
 
     def __init__(self, mountDir):
-        self._mountDir = mountDir
-        self._rwCtrl = self.BootDirRwController(self._mountDir)
+        self._mntDir = mountDir
+        self._rwCtrl = self.BootDirRwController(self._mntDir)
 
     @property
     def mount_point(self):
-        return self._mountDir
+        return self._mntDir
 
     def umount(self):
-        Util.cmdCall("/bin/umount", MountEfi._getBootMountDir(self._mountDir))
-        Util.cmdCall("/bin/umount", self._mountDir)
+        Util.cmdCall("/bin/umount", MountEfi._getBootMountDir(self._mntDir))
+        Util.cmdCall("/bin/umount", self._mntDir)
 
     def get_bootdir_rw_controller(self):
         return self._rwCtrl

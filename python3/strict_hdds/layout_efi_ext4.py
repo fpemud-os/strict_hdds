@@ -142,7 +142,7 @@ def detect_and_mount(disk_list, mount_dir):
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.DISK_TOO_MANY)
 
     # mount
-    MountEfi.mount(espAndRootPartitionList[0][2], espAndRootPartitionList[0][1], mount_dir)
+    MountEfi.mount(espAndRootPartitionList[0][2], espAndRootPartitionList[0][1], mount_dir, "")
 
     # return
     ret = StorageLayoutImpl()
@@ -167,7 +167,7 @@ def create_and_mount(disk_list, mount_dir):
     rootParti = PartiUtil.diskToParti(hdd, 2)
 
     # mount
-    MountEfi.mount(rootParti, espParti, mount_dir)
+    MountEfi.mount(rootParti, espParti, mount_dir, "")
 
     # return
     ret = StorageLayoutImpl()
