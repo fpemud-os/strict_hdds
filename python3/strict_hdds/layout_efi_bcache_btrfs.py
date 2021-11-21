@@ -21,7 +21,7 @@
 # THE SOFTWARE.
 
 
-from .util import Util, BcacheUtil, BtrfsUtil, EfiCacheGroup
+from .util import Util, BcacheUtil, BtrfsUtil, EfiCacheGroup, SnapshotBtrfs
 from .handy import MountEfi, HandyCg, HandyBcache, HandyUtil
 from . import errors
 from . import StorageLayout
@@ -54,6 +54,7 @@ class StorageLayoutImpl(StorageLayout):
     def __init__(self):
         self._cg = None                     # EfiCacheGroup
         self._hddDict = None                # <hdd,bcacheDevPath>
+        self._snapshot = None               # SnapshotBtrfs
         self._mnt = None                    # MountEfi
 
     @property
@@ -74,14 +75,19 @@ class StorageLayoutImpl(StorageLayout):
     def dev_swap(self):
         pass
 
+    @EfiCacheGroup.proxy
+    @property
+    def boot_disk(self):
+        pass
+
     @MountEfi.proxy
     @property
     def mount_point(self):
         pass
 
-    @EfiCacheGroup.proxy
+    @SnapshotBtrfs.proxy
     @property
-    def boot_disk(self):
+    def snapshot(self):
         pass
 
     def umount_and_dispose(self):
@@ -100,6 +106,13 @@ class StorageLayoutImpl(StorageLayout):
     @MountEfi.proxy
     def get_bootdir_rw_controller(self):
         pass
+
+    def get_mount_options(self, **kwargs):
+        kwargsDict = kwargs.copy()
+        retList = []
+        retList.append(self._snapshot.get_mount_options(kwargsDict))
+        assert len(kwargsDict) == 0
+        return ",".join(retList)
 
     def optimize_rootdev(self):
         # FIXME: btrfs balance
@@ -159,6 +172,10 @@ class StorageLayoutImpl(StorageLayout):
 
     def get_hdd_bcache_dev(self, disk):
         return self._hddDict[disk]
+
+    @SnapshotBtrfs.proxy
+    def get_snapshot_list(self):
+        pass
 
     def add_disk(self, disk):
         assert disk is not None
@@ -223,15 +240,11 @@ class StorageLayoutImpl(StorageLayout):
         # return True means boot disk is changed
         return lastBootHdd != self._cg.boot_disk
 
-    def get_current_snapshot(self):
-        pass
-
-    def get_snapshot_list(self):
-        pass
-
+    @SnapshotBtrfs.proxy
     def create_snapshot(self, snapshot_name):
         pass
 
+    @SnapshotBtrfs.proxy
     def remove_snapshot(self, snapshot_name):
         pass
 
@@ -257,6 +270,7 @@ def parse(boot_dev, root_dev):
     ret = StorageLayoutImpl()
     ret._cg = EfiCacheGroup(ssd=ssd, ssdEspParti=ssdEspParti, ssdSwapParti=ssdSwapParti, ssdCacheParti=ssdCacheParti, hddList=hddList, bootHdd=bootHdd)
     ret._hddDict = Util.keyValueListToDict(hddList, slaveDevPathList)
+    ret._snapshot = SnapshotBtrfs("/")
     ret._mnt = MountEfi("/")
     return ret
 
@@ -278,6 +292,7 @@ def detect_and_mount(disk_list, mount_dir):
     ret = StorageLayoutImpl()
     ret._cg = EfiCacheGroup(ssd=ssd, ssdEspParti=ssdEspParti, ssdSwapParti=ssdSwapParti, ssdCacheParti=ssdCacheParti, hddList=hddList, bootHdd=bootHdd)
     ret._hddDict = Util.keyValueListToDict(hddList, bcacheDevPathList)
+    ret._snapshot = SnapshotBtrfs(mount_dir)
     ret._mnt = MountEfi(mount_dir)
 
     # mount
@@ -311,6 +326,7 @@ def create_and_mount(disk_list, mount_dir):
     ret = StorageLayoutImpl()
     ret._cg = cg
     ret._hddDict = Util.keyValueListToDict(cg.get_hdd_list(), bcacheDevPathList)
+    ret._snapshot = SnapshotBtrfs(mount_dir)
     ret._mnt = MountEfi(mount_dir)
 
     # mount

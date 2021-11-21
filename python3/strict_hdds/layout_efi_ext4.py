@@ -62,14 +62,14 @@ class StorageLayoutImpl(StorageLayout):
     def dev_swap(self):
         pass
 
+    @property
+    def boot_disk(self):
+        return self._hdd
+
     @MountEfi.proxy
     @property
     def mount_point(self):
         pass
-
-    @property
-    def boot_disk(self):
-        return self._hdd
 
     def umount_and_dispose(self):
         if True:
@@ -87,6 +87,9 @@ class StorageLayoutImpl(StorageLayout):
     @MountEfi.proxy
     def get_bootdir_rw_controller(self):
         pass
+
+    def get_mount_options(self, **kwargs):
+        return ""
 
     def get_esp(self):
         return self._hddEspParti

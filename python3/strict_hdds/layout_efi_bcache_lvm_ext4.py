@@ -75,14 +75,14 @@ class StorageLayoutImpl(StorageLayout):
     def dev_swap(self):
         pass
 
-    @MountEfi.proxy
-    @property
-    def mount_point(self):
-        pass
-
     @EfiCacheGroup.proxy
     @property
     def boot_disk(self):
+        pass
+
+    @MountEfi.proxy
+    @property
+    def mount_point(self):
         pass
 
     def umount_and_dispose(self):
@@ -101,6 +101,9 @@ class StorageLayoutImpl(StorageLayout):
     @MountEfi.proxy
     def get_bootdir_rw_controller(self):
         pass
+
+    def get_mount_options(self, **kwargs):
+        return ""
 
     def optimize_rootdev(self):
         LvmUtil.autoExtendLv(LvmUtil.rootLvDevPath)

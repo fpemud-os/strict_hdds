@@ -60,17 +60,12 @@ class StorageLayout(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def dev_swap(self):
+    def boot_disk(self):
         pass
 
     @property
     @abc.abstractmethod
     def mount_point(self):
-        pass
-
-    @property
-    @abc.abstractmethod
-    def boot_disk(self):
         pass
 
     @abc.abstractmethod
@@ -83,6 +78,10 @@ class StorageLayout(abc.ABC):
 
     @abc.abstractmethod
     def get_bootdir_rw_controller(self):
+        pass
+
+    @abc.abstractmethod
+    def get_mount_options(self, **kwargs):
         pass
 
 

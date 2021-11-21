@@ -21,7 +21,7 @@
 # THE SOFTWARE.
 
 
-from .util import Util, EfiMultiDisk, BtrfsUtil
+from .util import Util, BtrfsUtil, EfiMultiDisk, SnapshotBtrfs
 from .handy import MountEfi, HandyMd
 from . import errors
 from . import StorageLayout
@@ -46,6 +46,7 @@ class StorageLayoutImpl(StorageLayout):
 
     def __init__(self):
         self._md = None              # MultiDisk
+        self._snapshot = None        # SnapshotBtrfs
         self._mnt = None             # MountEfi
 
     @property
@@ -61,17 +62,18 @@ class StorageLayoutImpl(StorageLayout):
     def dev_boot(self):
         pass
 
+    @EfiMultiDisk.proxy
+    def boot_disk(self):
+        pass
+
+    @SnapshotBtrfs.proxy
     @property
-    def dev_swap(self):
-        assert False
+    def snapshot(self):
+        pass
 
     @MountEfi.proxy
     @property
     def mount_point(self):
-        pass
-
-    @EfiMultiDisk.proxy
-    def boot_disk(self):
         pass
 
     def umount_and_dispose(self):
@@ -87,6 +89,13 @@ class StorageLayoutImpl(StorageLayout):
     @MountEfi.proxy
     def get_bootdir_rw_controller(self):
         pass
+
+    def get_mount_options(self, **kwargs):
+        kwargsDict = kwargs.copy()
+        retList = []
+        retList.append(self._snapshot.get_mount_options(kwargsDict))
+        assert len(kwargsDict) == 0
+        return ",".join(retList)
 
     @EfiMultiDisk.proxy
     def get_esp(self):
@@ -114,6 +123,10 @@ class StorageLayoutImpl(StorageLayout):
 
     @EfiMultiDisk.proxy
     def get_disk_data_partition(self, disk):
+        pass
+
+    @SnapshotBtrfs.proxy
+    def get_snapshot_list(self):
         pass
 
     def add_disk(self, disk):
@@ -149,6 +162,14 @@ class StorageLayoutImpl(StorageLayout):
 
         return lastBootHdd != self._md.boot_disk     # boot disk may change
 
+    @SnapshotBtrfs.proxy
+    def create_snapshot(self, snapshot_name):
+        pass
+
+    @SnapshotBtrfs.proxy
+    def remove_snapshot(self, snapshot_name):
+        pass
+
 
 def parse(boot_dev, root_dev):
     if boot_dev is None:
@@ -163,6 +184,7 @@ def parse(boot_dev, root_dev):
     # return
     ret = StorageLayoutImpl()
     ret._md = EfiMultiDisk(diskList=diskList, bootHdd=bootHdd)
+    ret._snapshot = SnapshotBtrfs("/")
     ret._mnt = MountEfi("/")
     return ret
 
@@ -179,6 +201,7 @@ def detect_and_mount(disk_list, mount_dir):
     # return
     ret = StorageLayoutImpl()
     ret._md = EfiMultiDisk(diskList=diskList, bootHdd=bootHdd)
+    ret._snapshot = SnapshotBtrfs(mount_dir)
     ret._mnt = MountEfi(mount_dir)
 
     # mount
@@ -197,6 +220,7 @@ def create_and_mount(disk_list, mount_dir):
     # return
     ret = StorageLayoutImpl()
     ret._md = md
+    ret._snapshot = SnapshotBtrfs(mount_dir)
     ret._mnt = MountEfi(mount_dir)
 
     # mnount

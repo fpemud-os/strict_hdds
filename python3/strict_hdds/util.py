@@ -1555,6 +1555,48 @@ class SwapFile:
         self._bSwapFile = False
 
 
+class SnapshotBtrfs:
+
+    @staticmethod
+    def proxy(func):
+        if isinstance(func, property):
+            def f_get(self):
+                return getattr(self._snapshot, func.fget.__name__)
+            f_get.__name__ = func.fget.__name__
+            return property(f_get)
+        else:
+            def f(self, *args):
+                return getattr(self._snapshot, func.__name__)(*args)
+            return f
+
+    def __init__(self, mountDir):
+        self._mountDir = mountDir
+
+    @property
+    def snapshot(self):
+        return None
+
+    def get_mount_options(self, kwargsDict):
+        if "snapshot" not in kwargsDict:
+            return "subvol=@"
+        else:
+            assert kwargsDict["snapshot"] in self.get_snapshot_list()
+            ret = "subvol=@%s" % (kwargsDict["snapshot"])
+            del kwargsDict["snapshot"]
+            return ret
+
+    def get_snapshot_list(self):
+        out = Util.cmdCall("/sbin/btrfs", "subvolume", "list", self._mountDir)
+        # FIXME: parse out
+        return []
+
+    def create_snapshot(self, snapshot_name):
+        Util.cmdCall("/sbin/btrfs", "subvolume", "snapshot", "/@", "/@%s" % (snapshot_name))
+
+    def remove_snapshot(self, snapshot_name):
+        Util.cmdCall("/sbin/btrfs", "subvolume", "delete", "/@%s" % (snapshot_name))
+
+
 class TmpMount:
 
     def __init__(self, path, options=None):

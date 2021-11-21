@@ -49,9 +49,15 @@ class MountBios:
 
     @staticmethod
     def proxy(func):
-        def f(self, *args):
-            return getattr(self._mnt, func.__name__)(*args)
-        return f
+        if isinstance(func, property):
+            def f_get(self):
+                return getattr(self._mnt, func.fget.__name__)
+            f_get.__name__ = func.fget.__name__
+            return property(f_get)
+        else:
+            def f(self, *args):
+                return getattr(self._mnt, func.__name__)(*args)
+            return f
 
     def __init__(self, mountDir):
         self._mountDir = mountDir
@@ -102,9 +108,15 @@ class MountEfi:
 
     @staticmethod
     def proxy(func):
-        def f(self, *args):
-            return getattr(self._mnt, func.__name__)(*args)
-        return f
+        if isinstance(func, property):
+            def f_get(self):
+                return getattr(self._mnt, func.fget.__name__)
+            f_get.__name__ = func.fget.__name__
+            return property(f_get)
+        else:
+            def f(self, *args):
+                return getattr(self._mnt, func.__name__)(*args)
+            return f
 
     def __init__(self, mountDir):
         self._mountDir = mountDir
