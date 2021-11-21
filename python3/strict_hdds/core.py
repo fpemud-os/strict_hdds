@@ -77,7 +77,7 @@ class StorageLayout(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def get_mntopts_for_mount(self, **kwargs):
+    def get_mntopt_list_for_mount(self, **kwargs):
         pass
 
 

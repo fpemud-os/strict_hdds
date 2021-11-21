@@ -103,12 +103,12 @@ class StorageLayoutImpl(StorageLayout):
     def get_bootdir_rw_controller(self):
         pass
 
-    def get_mntopts_for_mount(self, **kwargs):
+    def get_mntopt_list_for_mount(self, **kwargs):
         kwargsDict = kwargs.copy()
         retList = []
-        retList.append(self._snapshot.get_mntopts_for_mount(kwargsDict))
+        retList += self._snapshot.get_mntopt_list_for_mount(kwargsDict)
         assert len(kwargsDict) == 0
-        return ",".join(retList)
+        return retList
 
     def optimize_rootdev(self):
         # FIXME: btrfs balance
@@ -292,7 +292,7 @@ def detect_and_mount(disk_list, mount_dir):
     ret._mnt = MountEfi(mount_dir)
 
     # mount
-    MountEfi.mount(ret.dev_rootfs, ret.dev_boot, mount_dir, ret.get_mntopts_for_mount())
+    MountEfi.mount(ret.dev_rootfs, ret.dev_boot, mount_dir, ret.get_mntopt_list_for_mount())
 
     return ret
 
@@ -331,5 +331,5 @@ def create_and_mount(disk_list, mount_dir):
     Util.cmdCall("/bin/umount", ret.dev_rootfs)
 
     # mount
-    MountEfi.mount(ret.dev_rootfs, ret.dev_boot, mount_dir, ret.get_mntopts_for_mount())
+    MountEfi.mount(ret.dev_rootfs, ret.dev_boot, mount_dir, ret.get_mntopt_list_for_mount())
     return ret

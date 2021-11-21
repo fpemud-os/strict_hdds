@@ -120,12 +120,12 @@ class SnapshotBtrfs:
     def snapshot(self):
         return None
 
-    def get_mntopts_for_mount(self, kwargsDict):
+    def get_mntopt_list_for_mount(self, kwargsDict):
         if "snapshot" not in kwargsDict:
-            return "subvol=@"
+            return ["subvol=@"]
         else:
             assert kwargsDict["snapshot"] in self.get_snapshot_list()
-            ret = "subvol=@%s" % (kwargsDict["snapshot"])
+            ret = ["subvol=@%s" % (kwargsDict["snapshot"])]
             del kwargsDict["snapshot"]
             return ret
 
@@ -156,8 +156,8 @@ class MountBios:
             pass
 
     @staticmethod
-    def mount(rootParti, mountDir, mountOptions):
-        Util.cmdCall("/bin/mount", rootParti, mountDir, "-o", mountOptions)
+    def mount(rootParti, mountDir, mntOptList):
+        Util.cmdCall("/bin/mount", rootParti, mountDir, "-o", ",".join(mntOptList))
 
     @staticmethod
     def proxy(func):
@@ -171,16 +171,16 @@ class MountBios:
                 return getattr(self._mnt, func.__name__)(*args)
             return f
 
-    def __init__(self, mountDir):
-        self._mountDir = mountDir
-        self._rwCtrl = self.BootDirRwController(self._mountDir)
+    def __init__(self, mntDir):
+        self._mntDir = mntDir
+        self._rwCtrl = self.BootDirRwController(self._mntDir)
 
     @property
     def mount_point(self):
-        return self._mountDir
+        return self._mntDir
 
     def umount(self):
-        Util.cmdCall("/bin/umount", self._mountDir)
+        Util.cmdCall("/bin/umount", self._mntDir)
 
     def get_bootdir_rw_controller(self):
         return self._rwCtrl
@@ -215,8 +215,8 @@ class MountEfi:
                     return ("rw" in pobj.opts.split(","))
 
     @staticmethod
-    def mount(rootParti, espParti, rootMntDir, rootMntOpts):
-        Util.cmdCall("/bin/mount", rootParti, rootMntDir, "-o", rootMntOpts)
+    def mount(rootParti, espParti, rootMntDir, rootMntOptList):
+        Util.cmdCall("/bin/mount", rootParti, rootMntDir, "-o", ",".join(rootMntOptList))
         bootDir = MountEfi._getBootMountDir(rootMntDir)
         os.makedirs(bootDir, exist_ok=True)
         Util.cmdCall("/bin/mount", espParti, bootDir, "-o", "ro")
