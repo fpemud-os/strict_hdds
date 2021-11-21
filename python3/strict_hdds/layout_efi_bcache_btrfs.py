@@ -223,6 +223,18 @@ class StorageLayoutImpl(StorageLayout):
         # return True means boot disk is changed
         return lastBootHdd != self._cg.boot_disk
 
+    def get_current_snapshot(self):
+        pass
+
+    def get_snapshot_list(self):
+        pass
+
+    def create_snapshot(self, snapshot_name):
+        pass
+
+    def remove_snapshot(self, snapshot_name):
+        pass
+
 
 def parse(boot_dev, root_dev):
     if boot_dev is None:
