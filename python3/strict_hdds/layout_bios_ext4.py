@@ -78,10 +78,6 @@ class StorageLayoutImpl(StorageLayout):
         del self._hdd
 
     @MountBios.proxy
-    def remount_rootfs(self, mount_options):
-        pass
-
-    @MountBios.proxy
     def get_bootdir_rw_controller(self):
         pass
 

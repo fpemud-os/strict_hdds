@@ -86,10 +86,6 @@ class StorageLayoutImpl(StorageLayout):
         del self._md
 
     @MountEfi.proxy
-    def remount_rootfs(self, mount_options):
-        pass
-
-    @MountEfi.proxy
     def get_bootdir_rw_controller(self):
         pass
 

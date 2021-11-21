@@ -73,10 +73,6 @@ class StorageLayout(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def remount_rootfs(self, mount_options):
-        pass
-
-    @abc.abstractmethod
     def get_bootdir_rw_controller(self):
         pass
 

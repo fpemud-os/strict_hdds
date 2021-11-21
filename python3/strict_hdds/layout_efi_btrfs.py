@@ -83,10 +83,6 @@ class StorageLayoutImpl(StorageLayout):
         del self._md
 
     @MountEfi.proxy
-    def remount_rootfs(self, mount_options):
-        pass
-
-    @MountEfi.proxy
     def get_bootdir_rw_controller(self):
         pass
 
@@ -222,6 +218,11 @@ def create_and_mount(disk_list, mount_dir):
     ret._md = md
     ret._snapshot = SnapshotBtrfs(mount_dir)
     ret._mnt = MountEfi(mount_dir)
+
+    # mount temporarily to create the initial subvolume
+    Util.cmdCall("/bin/mount", ret.dev_rootfs, mount_dir)
+    Util.cmdCall("/sbin/btrfs", "subvolume", "create", "/@")
+    Util.cmdCall("/bin/umount", ret.dev_rootfs)
 
     # mnount
     MountEfi.mount(ret.dev_rootfs, ret.dev_boot, mount_dir)
