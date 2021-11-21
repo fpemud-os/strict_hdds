@@ -113,12 +113,18 @@ class SnapshotBtrfs:
                 return getattr(self._snapshot, func.__name__)(*args)
             return f
 
-    def __init__(self, mountDir):
-        self._mountDir = mountDir
+    def __init__(self, mntDir):
+        self._mntDir = mntDir
+        for sv in self._getSubVolList():
+            if not sv.startswith("@"):
+                raise errors.StorageLayoutParseError("sub-volume \"%s\" is not supported" % (sv))
 
     @property
     def snapshot(self):
-        return None
+        ret = Util.mountGetSubVol(self._mntDir)
+        if not ret.startswith("@"):
+            raise errors.StorageLayoutParseError("sub-volume \"%s\" is not supported" % (ret))
+        return ret[1:]
 
     def get_mntopt_list_for_mount(self, kwargsDict):
         if "snapshot" not in kwargsDict:
@@ -128,15 +134,23 @@ class SnapshotBtrfs:
             return ["subvol=@%s" % (kwargsDict["snapshot"])]
 
     def get_snapshot_list(self):
-        out = Util.cmdCall("/sbin/btrfs", "subvolume", "list", self._mountDir)
-        # FIXME: parse out
-        return []
+        ret = []
+        for sv in self._getSubVolList():
+            if not sv.startswith("@"):
+                raise errors.StorageLayoutParseError("sub-volume \"%s\" is not supported" % (sv))
+            ret.append(sv[1:])
+        return ret
 
     def create_snapshot(self, snapshot_name):
-        Util.cmdCall("/sbin/btrfs", "subvolume", "snapshot", "/@", "/@%s" % (snapshot_name))
+        Util.cmdCall("/sbin/btrfs", "subvolume", "snapshot", os.path.join(self._mntDir, "@"), os.path.join(self._mntDir, "@%s" % (snapshot_name)))
 
     def remove_snapshot(self, snapshot_name):
-        Util.cmdCall("/sbin/btrfs", "subvolume", "delete", "/@%s" % (snapshot_name))
+        Util.cmdCall("/sbin/btrfs", "subvolume", "delete", os.path.join(self._mntDir, "@%s" % (snapshot_name)))
+
+    def _getSubVolList(self):
+        out = Util.cmdCall("/sbin/btrfs", "subvolume", "list", self._mntDir)
+        # FIXME: parse out
+        return out
 
 
 class MountBios:

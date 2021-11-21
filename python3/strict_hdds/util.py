@@ -27,6 +27,7 @@ import glob
 import uuid
 import time
 import stat
+import psutil
 import crcmod
 import parted
 import struct
@@ -80,6 +81,17 @@ class Util:
     @staticmethod
     def layoutName2modName(layoutName):
         return "layout_" + layoutName.replace("-", "_")
+
+    @staticmethod
+    def mountGetSubVol(mountPoint):
+        for pobj in psutil.disk_partitions():
+            if pobj.mountpoint == mountPoint:
+                for mo in pobj.opts.split(","):
+                    m = re.fullmatch("subvol=(.+)", mo)
+                    if m is not None:
+                        return m.group(1)
+                return None
+        return None
 
     @staticmethod
     def getPhysicalMemorySizeInGb():
