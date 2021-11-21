@@ -84,7 +84,7 @@ class StorageLayoutImpl(StorageLayout):
     def get_bootdir_rw_controller(self):
         pass
 
-    def get_mount_options(self, **kwargs):
+    def get_mntopts_for_mount(self, **kwargs):
         return ""
 
     def get_esp(self):

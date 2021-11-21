@@ -120,7 +120,7 @@ class SnapshotBtrfs:
     def snapshot(self):
         return None
 
-    def get_mount_options(self, kwargsDict):
+    def get_mntopts_for_mount(self, kwargsDict):
         if "snapshot" not in kwargsDict:
             return "subvol=@"
         else:

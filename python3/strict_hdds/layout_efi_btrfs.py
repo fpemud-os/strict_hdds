@@ -86,10 +86,10 @@ class StorageLayoutImpl(StorageLayout):
     def get_bootdir_rw_controller(self):
         pass
 
-    def get_mount_options(self, **kwargs):
+    def get_mntopts_for_mount(self, **kwargs):
         kwargsDict = kwargs.copy()
         retList = []
-        retList.append(self._snapshot.get_mount_options(kwargsDict))
+        retList.append(self._snapshot.get_mntopts_for_mount(kwargsDict))
         assert len(kwargsDict) == 0
         return ",".join(retList)
 
