@@ -177,9 +177,12 @@ class StorageLayoutImpl(StorageLayout):
     def remove_swap_lv(self):
         pass
 
-    def _check_impl(self, auto_fix=False, error_callback=None):
-        self._md.check_esp(auto_fix, error_callback)
-        self._swap.check(auto_fix, error_callback)
+    def _check_impl(self, check_item, auto_fix=False, error_callback=None):
+        if check_item == Util.checkItemBasic:
+            self._md.check_esp(auto_fix, error_callback)
+            self._swap.check(auto_fix, error_callback)
+        else:
+            assert False
 
 
 def parse(boot_dev, root_dev):

@@ -92,8 +92,11 @@ class StorageLayoutImpl(StorageLayout):
     def remove_swap_file(self):
         pass
 
-    def _check_impl(self, auto_fix=False, error_callback=None):
-        self._swap.check(auto_fix, error_callback)
+    def _check_impl(self, check_item, auto_fix=False, error_callback=None):
+        if check_item == Util.checkItemBasic:
+            self._swap.check(auto_fix, error_callback)
+        else:
+            assert False
 
 
 def parse(boot_dev, root_dev):

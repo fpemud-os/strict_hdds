@@ -51,6 +51,8 @@ class Util:
     fsTypeBcachefs = "bcachefs"
     fsTypeSwap = "swap"
 
+    checkItemBasic = "basic"
+
     @staticmethod
     def listRemoveNoValueError(tlist, value):
         try:
