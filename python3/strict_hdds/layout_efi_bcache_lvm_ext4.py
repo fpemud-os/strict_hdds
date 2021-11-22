@@ -163,13 +163,9 @@ class StorageLayoutImpl(StorageLayout):
 
         if Util.isBlkDevSsdOrHdd(disk):
             self._cg.add_ssd(disk)
-
-            # ssd partition 3: make it as cache device
             self._bcache.add_cache(self._cg.get_ssd_cache_partition())
         else:
             self._cg.add_hdd(disk)
-
-            # hdd partition 2: make it as backing device, create lvm physical volume on bcache device and add it to volume group
             self._bcache.add_backing(self._cg.get_ssd_cache_partition(), disk, self._cg.get_hdd_data_partition(disk))
             LvmUtil.addPvToVg(self._bcache.get_bcache_dev(disk), LvmUtil.vgName)
 
@@ -187,24 +183,20 @@ class StorageLayoutImpl(StorageLayout):
                 if Util.isSwapFileOrPartitionBusy(self._cg.get_ssd_swap_partition()):
                     raise errors.StorageLayoutRemoveDiskError(errors.SWAP_IS_IN_USE)
 
-            # ssd partition 3: remove from cache
-            self._bcache.remove_cache(self._cg.get_ssd_cache_partition())
-
             # remove
+            self._bcache.remove_cache(self._cg.get_ssd_cache_partition())
             self._cg.remove_ssd()
         elif disk in self._cg.get_hdd_list():
             # check for last hdd
             if len(self._cg.get_hdd_list()) <= 1:
                 raise errors.StorageLayoutRemoveDiskError(errors.CAN_NOT_REMOVE_LAST_HDD)
 
-            # hdd partition 2: remove from volume group and bcache
+            # remove
             rc, out = Util.cmdCallWithRetCode("/sbin/lvm", "pvmove", self._bcache.get_bcache_dev(disk))
             if rc != 5:
                 raise errors.StorageLayoutRemoveDiskError("failed")
             Util.cmdCall("/sbin/lvm", "vgreduce", LvmUtil.vgName, self._bcache.get_bcache_dev(disk))
             self._bcache.remove_backing(disk)
-
-            # remove
             self._cg.remove_hdd(disk)
         else:
             assert False
