@@ -42,6 +42,8 @@ from .core import get_current_storage_layout
 from .core import detect_and_mount_storage_layout
 from .core import create_and_mount_storage_layout
 
+from .errors import CheckCode
+
 from .errors import StorageLayoutError
 from .errors import StorageLayoutCreateError
 from .errors import StorageLayoutAddDiskError

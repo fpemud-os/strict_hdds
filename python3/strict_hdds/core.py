@@ -82,7 +82,7 @@ class StorageLayout(abc.ABC):
         pass
 
     def check(self, auto_fix=False, error_callback=None):
-        self._check_impl(auto_fix, functools.partial(checkErrorCallback, error_callback))
+        self._check_impl(auto_fix, functools.partial(errors.checkErrorCallback, error_callback))
 
     @abc.abstractmethod
     def _check_impl(self, auto_fix=False, error_callback=None):
