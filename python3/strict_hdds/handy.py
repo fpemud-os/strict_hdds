@@ -420,6 +420,9 @@ class BcacheGroup:
     def get_bcache_dev(self, key):
         return self._backingDict[key]
 
+    def get_all_bcache_dev_list(self):
+        return self._backingDict.values()
+
     def add_cache(self, cacheDevPath):
         BcacheUtil.makeAndRegisterCacheDevice(cacheDevPath)
         BcacheUtil.attachCacheDevice(self._backingDict.values(), cacheDevPath)

@@ -297,25 +297,20 @@ def create_and_mount(disk_list, mount_dir, mnt_opt_list):
     HandyCg.checkAndAddDisks(cg, *Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list))
 
     # hdd partition 2: make them as backing device
-    bcacheDevPathList = []
-    for hdd in cg.get_hdd_list():
-        parti = cg.get_hdd_data_partition(hdd)
-        BcacheUtil.makeAndRegisterBackingDevice(parti)
-        bcacheDevPathList.append(BcacheUtil.findByBackingDevice(parti))
-
     # ssd partition 3: make it as cache device
+    bcache = BcacheGroup()
+    for hdd in cg.get_hdd_list():
+        bcache.add_backing(None, hdd, cg.get_hdd_data_partition(hdd))
     if cg.get_ssd() is not None:
-        parti = cg.get_ssd_cache_partition()
-        BcacheUtil.makeAndRegisterCacheDevice(parti)
-        BcacheUtil.attachCacheDevice(bcacheDevPathList, parti)
+        bcache.add_cache(cg.get_ssd_cache_partition())
 
     # create btrfs
-    Util.cmdCall("/usr/sbin/mkfs.btrfs", "-d", "single", "-m", "single", *bcacheDevPathList)
+    Util.cmdCall("/usr/sbin/mkfs.btrfs", "-d", "single", "-m", "single", *bcache.get_all_bcache_dev_list())
 
     # return
     ret = StorageLayoutImpl()
     ret._cg = cg
-    ret._bcache = BcacheGroup(keyList=cg.get_hdd_list(), bcacheDevPathList=bcacheDevPathList)
+    ret._bcache = bcache
     ret._snapshot = SnapshotBtrfs(mount_dir)
     ret._mnt = MountEfi(mount_dir)
 
