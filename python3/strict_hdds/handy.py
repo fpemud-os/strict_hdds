@@ -185,7 +185,7 @@ class MountBios:
 
     def __init__(self, mntDir):
         self._mntDir = mntDir
-        self._rwCtrl = self.BootDirRwController(self._mntDir)
+        self._rwCtrl = self.BootDirRwController()
 
     @property
     def mount_point(self):
