@@ -121,7 +121,7 @@ class SnapshotBtrfs:
 
     @property
     def snapshot(self):
-        ret = Util.mountGetSubVol(self._mntDir)
+        ret = Util.mntGetSubVol(self._mntDir)
         if not ret.startswith("@"):
             raise errors.StorageLayoutParseError("sub-volume \"%s\" is not supported" % (ret))
         return ret[1:]
@@ -169,7 +169,7 @@ class MountBios:
 
     @staticmethod
     def mount(rootParti, mountDir, mntOptList):
-        Util.cmdCall("/bin/mount", rootParti, mountDir, "-o", ",".join(mntOptList))
+        Util.cmdCall("/bin/mount", rootParti, mountDir, "-o", Util.mntOptsListToStr(mntOptList))
 
     @staticmethod
     def proxy(func):
@@ -209,7 +209,7 @@ class MountEfi:
         def is_writable(self):
             for pobj in psutil.disk_partitions():
                 if pobj.mountpoint == MountEfi._getBootMountDir(self._mntDir):
-                    return ("rw" in pobj.opts.split(","))
+                    return ("rw" in Util.mntOptsStrToList(pobj.opts))
             assert False
 
         def to_read_write(self):
@@ -224,11 +224,11 @@ class MountEfi:
         def _isRootfsWritable(self):
             for pobj in psutil.disk_partitions():
                 if pobj.mountpoint == self._mntDir:
-                    return ("rw" in pobj.opts.split(","))
+                    return ("rw" in Util.mntOptsStrToList(pobj.opts))
 
     @staticmethod
     def mount(rootParti, espParti, rootMntDir, rootMntOptList):
-        Util.cmdCall("/bin/mount", rootParti, rootMntDir, "-o", ",".join(rootMntOptList))
+        Util.cmdCall("/bin/mount", rootParti, rootMntDir, "-o", Util.mntOptsListToStr(rootMntOptList))
         bootDir = MountEfi._getBootMountDir(rootMntDir)
         os.makedirs(bootDir, exist_ok=True)
         Util.cmdCall("/bin/mount", espParti, bootDir, "-o", "ro")

@@ -83,7 +83,21 @@ class Util:
         return "layout_" + layoutName.replace("-", "_")
 
     @staticmethod
-    def mountGetSubVol(mountPoint):
+    def mntOptsStrToList(mntOptsStr):
+        if mntOptsStr == "":
+            return [] 
+        else:
+            return mntOptsStr.split(",")
+
+    @staticmethod
+    def mntOptsListToStr(mntOptsList):
+        if len(mntOptsList) == 0:
+            return ""
+        else:
+            return ",".join(mntOptsList)
+
+    @staticmethod
+    def mntGetSubVol(mountPoint):
         for pobj in psutil.disk_partitions():
             if pobj.mountpoint == mountPoint:
                 for mo in pobj.opts.split(","):

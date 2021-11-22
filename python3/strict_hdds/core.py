@@ -221,7 +221,7 @@ def create_and_mount_storage_layout(layout_name, mount_dir, mount_options=""):
     for mod in pkgutil.iter_modules(["."]):
         if mod.name.startswith("layout_"):
             if layout_name == Util.modName2layoutName(mod.name):
-                return mod.create_and_mount(Util.getDevPathListForFixedDisk(), mount_dir, mount_options.split(","))
+                return mod.create_and_mount(Util.getDevPathListForFixedDisk(), mount_dir, Util.mntOptsStrToList(mount_options))
     raise errors.StorageLayoutCreateError("layout \"%s\" not supported" % (layout_name))
 
 
@@ -240,6 +240,6 @@ def _detectAndMountOneStorageLayout(layoutName, diskList, mountDir, mountOptions
     try:
         exec("import strict_hdds.%s" % (modname))
         f = eval("strict_hdds.%s.detect_and_mount" % (modname))
-        return f(diskList, mountDir, mountOptions.split(","))
+        return f(diskList, mountDir, Util.mntOptsStrToList(mountOptions))
     except ModuleNotFoundError:
         raise errors.StorageLayoutParseError("", "unknown storage layout")
