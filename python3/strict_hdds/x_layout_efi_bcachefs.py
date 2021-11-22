@@ -21,8 +21,8 @@
 # THE SOFTWARE.
 
 
-from .util import Util, BcachefsUtil, EfiCacheGroup
-from .handy import MountEfi, HandyCg, HandyUtil
+from .util import Util, BcachefsUtil
+from .handy import EfiCacheGroup, MountEfi, HandyCg, HandyUtil
 from . import errors
 from . import StorageLayout
 
@@ -134,10 +134,6 @@ class StorageLayoutImpl(StorageLayout):
 
     @EfiCacheGroup.proxy
     def get_ssd_cache_partition(self):
-        pass
-
-    @EfiCacheGroup.proxy
-    def get_suggestted_swap_size(self):
         pass
 
     @EfiCacheGroup.proxy

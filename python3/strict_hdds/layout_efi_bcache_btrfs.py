@@ -21,8 +21,8 @@
 # THE SOFTWARE.
 
 
-from .util import Util, BcacheUtil, BtrfsUtil, EfiCacheGroup
-from .handy import SnapshotBtrfs, MountEfi, HandyCg, HandyBcache, HandyUtil
+from .util import Util, BcacheUtil, BtrfsUtil
+from .handy import EfiCacheGroup, SnapshotBtrfs, MountEfi, HandyCg, HandyBcache, HandyUtil
 from . import errors
 from . import StorageLayout
 
@@ -151,10 +151,6 @@ class StorageLayoutImpl(StorageLayout):
         pass
 
     @EfiCacheGroup.proxy
-    def get_suggestted_swap_size(self):
-        pass
-
-    @EfiCacheGroup.proxy
     def get_hdd_list(self):
         pass
 
@@ -245,7 +241,7 @@ class StorageLayoutImpl(StorageLayout):
         pass
 
     def check(self, auto_fix=False, error_callback=None):
-        pass
+        self._swap.check_swap_size(auto_fix, error_callback)
 
 
 def parse(boot_dev, root_dev):

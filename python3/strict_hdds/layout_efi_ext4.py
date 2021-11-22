@@ -91,10 +91,6 @@ class StorageLayoutImpl(StorageLayout):
         return self._hddEspParti
 
     @SwapFile.proxy
-    def get_suggestted_swap_size(self):
-        pass
-
-    @SwapFile.proxy
     def create_swap_file(self):
         pass
 
@@ -103,7 +99,7 @@ class StorageLayoutImpl(StorageLayout):
         pass
 
     def check(self, auto_fix=False, error_callback=None):
-        pass
+        self._swap.check_swap_size(auto_fix, error_callback)
 
 
 def parse(boot_dev, root_dev):

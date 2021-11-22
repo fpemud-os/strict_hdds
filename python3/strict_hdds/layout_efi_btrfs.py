@@ -21,8 +21,8 @@
 # THE SOFTWARE.
 
 
-from .util import Util, BtrfsUtil, EfiMultiDisk
-from .handy import SnapshotBtrfs, MountEfi, HandyMd, HandyUtil
+from .util import Util, BtrfsUtil
+from .handy import EfiMultiDisk, SnapshotBtrfs, MountEfi, HandyMd, HandyUtil
 from . import errors
 from . import StorageLayout
 

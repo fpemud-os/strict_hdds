@@ -21,8 +21,8 @@
 # THE SOFTWARE.
 
 
-from .util import Util, BcacheUtil, LvmUtil, EfiCacheGroup
-from .handy import MountEfi, HandyCg, HandyBcache, HandyUtil
+from .util import Util, BcacheUtil, LvmUtil
+from .handy import EfiCacheGroup, MountEfi, HandyCg, HandyBcache, HandyUtil
 from . import errors
 from . import StorageLayout
 
@@ -144,7 +144,7 @@ class StorageLayoutImpl(StorageLayout):
         pass
 
     @EfiCacheGroup.proxy
-    def get_suggestted_swap_size(self):
+    def check_swap_size(self):
         pass
 
     @EfiCacheGroup.proxy
