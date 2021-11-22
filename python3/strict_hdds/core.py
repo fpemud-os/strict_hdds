@@ -27,6 +27,7 @@ import abc
 import glob
 import psutil
 import pkgutil
+import functools
 from .util import BcacheUtil, Util, GptUtil, BtrfsUtil, LvmUtil
 from . import errors
 
@@ -80,8 +81,11 @@ class StorageLayout(abc.ABC):
     def get_mntopt_list_for_mount(self, **kwargs):
         pass
 
-    @abc.abstractmethod
     def check(self, auto_fix=False, error_callback=None):
+        self._check_impl(auto_fix, functools.partial(checkErrorCallback, error_callback))
+
+    @abc.abstractmethod
+    def _check_impl(self, auto_fix=False, error_callback=None):
         pass
 
 

@@ -142,7 +142,7 @@ class EfiMultiDisk:
             parti = self.get_disk_esp_partition(hdd)
             if Util.getBlkDevSize(parti) != Util.getEspSize():
                 # no way to auto fix
-                error_callback(errors.CheckCode.ESP_SIZE_TOO_SMALL, "Invalid size for ESP partition \"%s\"." % (parti))
+                error_callback(errors.CheckCode.ESP_SIZE_TOO_SMALL, parti)
 
     def _mountFirstHddAsBootHdd(self):
         self._bootHdd = self._hddList[0]
@@ -378,7 +378,7 @@ class EfiCacheGroup:
     def check_ssd(self, auto_fix, error_callback):
         if self._ssd is None:
             # no way to auto fix
-            error_callback("It would be better to add a cache device.")
+            error_callback(errors.CheckCode.CACHE_DEVICE_NOT_FOUND)
 
     def check_esp(self, auto_fix, error_callback):
         if self._ssd is not None:
@@ -391,15 +391,15 @@ class EfiCacheGroup:
             parti = self.get_disk_esp_partition(hdd)
             if Util.getBlkDevSize(parti) != Util.getEspSize():
                 # no way to auto fix
-                error_callback(errors.CheckCode.ESP_SIZE_TOO_SMALL, "Invalid size for ESP partition \"%s\"." % (parti))
+                error_callback(errors.CheckCode.ESP_SIZE_TOO_SMALL)
 
     def check_swap(self, auto_fix, error_callback):
         if self._ssdSwapParti is None:
-            error_callback(errors.CheckCode.SWAP_NOT_ENABLED, "Swap is not enabled.")
+            error_callback(errors.CheckCode.SWAP_NOT_ENABLED)
         else:
             if Util.getBlkDevSize(self._ssdSwapParti) >= Util.getSwapSize():
                 # no way to auto fix
-                error_callback(errors.CheckCode.SWAP_SIZE_TOO_SMALL, "Swap partition size is too small.")
+                error_callback(errors.CheckCode.SWAP_SIZE_TOO_SMALL, "partition")
 
     def _mountFirstHddAsBootHdd(self):
         self._bootHdd = self._hddList[0]
@@ -445,7 +445,7 @@ class SwapLvmLv:
 
     def check(self, auto_fix, error_callback):
         if not self._bSwapLv:
-            error_callback(errors.CheckCode.SWAP_NOT_ENABLED, "Swap is not enabled.")
+            error_callback(errors.CheckCode.SWAP_NOT_ENABLED)
         else:
             if Util.getBlkDevSize(LvmUtil.swapLvDevPath) < Util.getSwapSize():
                 if auto_fix:
@@ -453,7 +453,7 @@ class SwapLvmLv:
                         self.remove_swap_lv()
                         self.create_swap_lv()
                         return
-                error_callback(errors.CheckCode.SWAP_SIZE_TOO_SMALL, "Swap LV size is too small.")
+                error_callback(errors.CheckCode.SWAP_SIZE_TOO_SMALL, "LV")
 
 
 class SwapFile:
@@ -489,7 +489,7 @@ class SwapFile:
 
     def check(self, auto_fix, error_callback):
         if not self._bSwapFile:
-            error_callback(errors.CheckCode.SWAP_NOT_ENABLED, "Swap is not enabled.")
+            error_callback(errors.CheckCode.SWAP_NOT_ENABLED)
         else:
             if os.path.getsize(Util.swapFilepath) < Util.getSwapSize():
                 if auto_fix:
@@ -497,7 +497,7 @@ class SwapFile:
                         self.remove_swap_file()
                         self.create_swap_file()
                         return
-                error_callback(errors.CheckCode.SWAP_SIZE_TOO_SMALL, "Swap file size is too small.")
+                error_callback(errors.CheckCode.SWAP_SIZE_TOO_SMALL, "file")
 
 
 class SnapshotBtrfs:

@@ -220,7 +220,7 @@ class StorageLayoutImpl(StorageLayout):
 
         return lastBootHdd != self._cg.boot_disk     # boot disk may change
 
-    def check(self, auto_fix=False, error_callback=None):
+    def _check_impl(self, auto_fix=False, error_callback=None):
         self._cg.check_ssd(auto_fix, error_callback)
         self._cg.check_esp(auto_fix, error_callback)
         self._cg.check_swap(auto_fix, error_callback)

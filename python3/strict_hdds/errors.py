@@ -23,10 +23,25 @@
 
 class CheckCode:
 
+    CACHE_DEVICE_NOT_FOUND = 100
+
     ESP_SIZE_TOO_SMALL = 1
 
     SWAP_NOT_ENABLED = 10
     SWAP_SIZE_TOO_SMALL = 11
+
+
+def checkErrorCallback(error_callback, check_code, *kargs):
+    errDict = {
+        CheckCode.CACHE_DEVICE_NOT_FOUND: (0, "It would be better to add a cache device."),
+        CheckCode.ESP_SIZE_TOO_SMALL: (1, "Invalid size for ESP partition \"{0}\"."),
+        CheckCode.SWAP_NOT_ENABLED: (0, "Swap is not enabled."),
+        CheckCode.SWAP_SIZE_TOO_SMALL: (1, "Swap {0} size is too small."),
+    }
+
+    argNum, fstr = errDict[check_code]
+    assert len(kargs) == argNum
+    error_callback(check_code, fstr % kargs)
 
 
 class StorageLayoutError(Exception):

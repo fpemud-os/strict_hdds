@@ -160,7 +160,7 @@ class StorageLayoutImpl(StorageLayout):
     def remove_snapshot(self, snapshot_name):
         pass
 
-    def check(self, auto_fix=False, error_callback=None):
+    def _check_impl(self, auto_fix=False, error_callback=None):
         self._md.check_esp(auto_fix, error_callback)
 
 

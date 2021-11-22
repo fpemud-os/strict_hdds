@@ -92,7 +92,7 @@ class StorageLayoutImpl(StorageLayout):
     def remove_swap_file(self):
         pass
 
-    def check(self, auto_fix=False, error_callback=None):
+    def _check_impl(self, auto_fix=False, error_callback=None):
         self._swap.check(auto_fix, error_callback)
 
 
