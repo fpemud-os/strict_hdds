@@ -170,8 +170,8 @@ class StorageLayoutImpl(StorageLayout):
             self._cg.add_hdd(disk)
 
             # hdd partition 2: make it as backing device, create lvm physical volume on bcache device and add it to volume group
-            bcacheDevPath = self._bcache.add_backing(self._cg.get_ssd_cache_partition(), disk, self._cg.get_hdd_data_partition(disk))
-            LvmUtil.addPvToVg(bcacheDevPath, LvmUtil.vgName)
+            self._bcache.add_backing(self._cg.get_ssd_cache_partition(), disk, self._cg.get_hdd_data_partition(disk))
+            LvmUtil.addPvToVg(self._bcache.get_bcache_dev(disk), LvmUtil.vgName)
 
         # return True means boot disk is changed
         return lastBootHdd != self._cg.boot_disk

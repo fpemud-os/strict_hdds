@@ -181,8 +181,8 @@ class StorageLayoutImpl(StorageLayout):
             self._cg.add_hdd(disk)
 
             # hdd partition 2: make it as backing device and add it to btrfs filesystem
-            bcacheDevPath = self._bcache.add_backing(self._cg.get_ssd_cache_partition(), disk, self._cg.get_hdd_data_partition(disk))
-            Util.cmdCall("/sbin/btrfs", "device", "add", bcacheDevPath, self._mnt.mount_point)
+            self._bcache.add_backing(self._cg.get_ssd_cache_partition(), disk, self._cg.get_hdd_data_partition(disk))
+            Util.cmdCall("/sbin/btrfs", "device", "add", self._bcache.get_bcache_dev(disk), self._mnt.mount_point)
 
         # return True means boot disk is changed
         return lastBootHdd != self._cg.boot_disk
