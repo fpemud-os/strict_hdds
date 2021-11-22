@@ -414,30 +414,30 @@ class EfiCacheGroup:
 
 class BcacheGroup:
 
-    def __init__(self, devPathList=[], bcacheDevPathList=[]):
-        self._backingDict = Util.keyValueListToDict(devPathList, bcacheDevPathList)
+    def __init__(self, keyList=[], bcacheDevPathList=[]):
+        self._backingDict = Util.keyValueListToDict(keyList, bcacheDevPathList)
 
-    def get_bcache_dev(self, devPath):
-        return self._backingDict[devPath]
+    def get_bcache_dev(self, key):
+        return self._backingDict[key]
 
     def add_cache(self, cacheDevPath):
         BcacheUtil.makeAndRegisterCacheDevice(cacheDevPath)
         BcacheUtil.attachCacheDevice(self._backingDict.values(), cacheDevPath)
 
-    def add_backing(self, cacheDevPath, devPath):
+    def add_backing(self, cacheDevPath, key, devPath):
         BcacheUtil.makeAndRegisterBackingDevice(devPath)
         bcacheDevPath = BcacheUtil.findByBackingDevice(devPath)
         if cacheDevPath is not None:
             BcacheUtil.attachCacheDevice([bcacheDevPath], cacheDevPath)
-        self._backingDict[devPath] = bcacheDevPath
+        self._backingDict[key] = bcacheDevPath
         return bcacheDevPath
 
     def remove_cache(self, cacheDevPath):
         BcacheUtil.unregisterCacheDevice(cacheDevPath)
 
-    def remove_backing(self, devPath):
-        BcacheUtil.stopBackingDevice(self._backingDict[devPath])
-        del self._backingDict[devPath]
+    def remove_backing(self, key):
+        BcacheUtil.stopBackingDevice(self._backingDict[key])
+        del self._backingDict[key]
 
     def stop_all(self):
         for bcacheDevPath in self._backingDict.values():

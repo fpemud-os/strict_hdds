@@ -151,7 +151,7 @@ class StorageLayoutImpl(StorageLayout):
         pass
 
     def get_hdd_bcache_dev(self, disk):
-        return self._bcache.get_bcache_dev(self.get_hdd_data_partition(disk))
+        return self._bcache.get_bcache_dev(disk)
 
     def add_disk(self, disk):
         assert disk is not None
@@ -170,7 +170,7 @@ class StorageLayoutImpl(StorageLayout):
             self._cg.add_hdd(disk)
 
             # hdd partition 2: make it as backing device, create lvm physical volume on bcache device and add it to volume group
-            bcacheDevPath = self._bcache.add_backing(self._cg.get_ssd_cache_partition(), self._cg.get_hdd_data_partition(disk))
+            bcacheDevPath = self._bcache.add_backing(self._cg.get_ssd_cache_partition(), disk, self._cg.get_hdd_data_partition(disk))
             LvmUtil.addPvToVg(bcacheDevPath, LvmUtil.vgName)
 
         # return True means boot disk is changed
@@ -198,12 +198,11 @@ class StorageLayoutImpl(StorageLayout):
                 raise errors.StorageLayoutRemoveDiskError(errors.CAN_NOT_REMOVE_LAST_HDD)
 
             # hdd partition 2: remove from volume group and bcache
-            parti = self.get_hdd_data_partition(disk)
-            rc, out = Util.cmdCallWithRetCode("/sbin/lvm", "pvmove", self._bcache.get_bcache_dev(parti))
+            rc, out = Util.cmdCallWithRetCode("/sbin/lvm", "pvmove", self._bcache.get_bcache_dev(disk))
             if rc != 5:
                 raise errors.StorageLayoutRemoveDiskError("failed")
-            Util.cmdCall("/sbin/lvm", "vgreduce", LvmUtil.vgName, self._bcache.get_bcache_dev(parti))
-            self._bcache.remove_backing(parti)
+            Util.cmdCall("/sbin/lvm", "vgreduce", LvmUtil.vgName, self._bcache.get_bcache_dev(disk))
+            self._bcache.remove_backing(disk)
 
             # remove
             self._cg.remove_hdd(disk)
@@ -244,7 +243,7 @@ def parse(boot_dev, root_dev):
     # return
     ret = StorageLayoutImpl()
     ret._cg = EfiCacheGroup(ssd=ssd, ssdEspParti=ssdEspParti, ssdSwapParti=ssdSwapParti, ssdCacheParti=ssdCacheParti, hddList=hddList, bootHdd=bootHdd)
-    ret._bcache = BcacheGroup(devPathList=[ret._cg.get_hdd_data_partition(x) for x in hddList], bcacheDevPathList=pvDevPathList)
+    ret._bcache = BcacheGroup(keyList=hddList, bcacheDevPathList=pvDevPathList)
     ret._mnt = MountEfi("/")
     return ret
 
@@ -275,7 +274,7 @@ def detect_and_mount(disk_list, mount_dir, mnt_opt_list):
     # return
     ret = StorageLayoutImpl()
     ret._cg = EfiCacheGroup(ssd=ssd, ssdEspParti=ssdEspParti, ssdSwapParti=ssdSwapParti, ssdCacheParti=ssdCacheParti, hddList=hddList, bootHdd=bootHdd)
-    ret._bcache = BcacheGroup(devPathList=[ret._cg.get_hdd_data_partition(x) for x in hddList], bcacheDevPathList=pvDevPathList)
+    ret._bcache = BcacheGroup(keyList=hddList, bcacheDevPathList=pvDevPathList)
     ret._mnt = MountEfi(mount_dir)
     return ret
 
@@ -310,6 +309,6 @@ def create_and_mount(disk_list, mount_dir, mnt_opt_list):
     # return
     ret = StorageLayoutImpl()
     ret._cg = cg
-    ret._bcache = BcacheGroup(devPathList=[ret._cg.get_hdd_data_partition(x) for x in cg.get_hdd_list()], bcacheDevPathList=bcacheDevPathList)
+    ret._bcache = BcacheGroup(keyList=cg.get_hdd_list(), bcacheDevPathList=bcacheDevPathList)
     ret._mnt = MountEfi(mount_dir)
     return ret
