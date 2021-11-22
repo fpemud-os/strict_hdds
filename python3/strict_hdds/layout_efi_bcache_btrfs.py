@@ -202,8 +202,9 @@ class StorageLayoutImpl(StorageLayout):
 
         if self._cg.get_ssd() is not None and disk == self._cg.get_ssd():
             # check if swap is in use
-            if HandyUtil.isSwapEnabled(self):
-                raise errors.StorageLayoutRemoveDiskError(errors.SWAP_IS_IN_USE)
+            if self._cg.get_ssd_swap_partition() is not None:
+                if Util.isSwapFileOrPartitionBusy(self._cg.get_ssd_swap_partition()):
+                    raise errors.StorageLayoutRemoveDiskError(errors.SWAP_IS_IN_USE)
 
             # ssd partition 3: remove from cache
             BcacheUtil.unregisterCacheDevice(self._cg.get_ssd_cache_partition())

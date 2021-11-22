@@ -857,10 +857,6 @@ class HandyBcache:
 class HandyUtil:
 
     @staticmethod
-    def isSwapEnabled(storageLayout):
-        return storageLayout.dev_swap is not None and Util.systemdFindSwapService(storageLayout.dev_swap) is not None
-
-    @staticmethod
     def checkMntOptList(mntOptList):
         tset = set()
         for mo in mntOptList:
@@ -959,3 +955,12 @@ class HandyUtil:
             return espPartiList[0]
         else:
             raise errors.StorageLayoutParseError(storageLayoutName, "multiple ESP partitions found")
+
+
+class CommonChecks:
+
+    def check_swap_enablement(layout, auto_fix, error_callback):
+        if layout.dev_swap is None:
+            error_callback(errors.CheckCode.SWAP_NOT_ENABLED, "Swap is not enabled.")
+
+

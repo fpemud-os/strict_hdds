@@ -24,7 +24,9 @@
 class CheckCode:
 
     ESP_SIZE_TOO_SMALL = 1
-    SWAP_SIZE_TOO_SMALL = 2
+
+    SWAP_NOT_ENABLED = 10
+    SWAP_SIZE_TOO_SMALL = 11
 
 
 class StorageLayoutError(Exception):

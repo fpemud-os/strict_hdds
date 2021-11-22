@@ -192,7 +192,7 @@ class StorageLayoutImpl(StorageLayout):
         if self._cg.get_ssd() is not None and disk == self._cg.get_ssd():
             # check if swap is in use
             if self._cg.get_ssd_swap_partition() is not None:
-                if Util.systemdFindSwapService(self._cg.get_ssd_swap_partition()) is not None:
+                if Util.isSwapFileOrPartitionBusy(self._cg.get_ssd_swap_partition()):
                     raise errors.StorageLayoutRemoveDiskError(errors.SWAP_IS_IN_USE)
 
             # ssd partition 3: remove from cache

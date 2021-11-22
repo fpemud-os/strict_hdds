@@ -472,22 +472,6 @@ class Util:
         return (ssdList, hddList)
 
     @staticmethod
-    def swapServiceName2Path(serviceName):
-        serviceName = serviceName[:-5]                          # item[:-5] is to remove ".swap"
-        path = Util.cmdCall("/bin/systemd-escape", "-u", serviceName)
-        path = os.path.join("/", path)
-        return path
-
-    @staticmethod
-    def systemdFindSwapService(path):
-        for f in os.listdir("/etc/systemd/system"):
-            fullf = os.path.join("/etc/systemd/system", f)
-            if os.path.isfile(fullf) and fullf.endswith(".swap"):
-                if os.path.realpath(path) == os.path.realpath(Util.swapServiceName2Path(f)):
-                    return f
-        return None
-
-    @staticmethod
     def swapDeviceIsBusy(path):
         buf = pathlib.Path(path).read_text()
         for line in buf.split("\n")[1:]:
