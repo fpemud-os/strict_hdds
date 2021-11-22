@@ -85,7 +85,7 @@ class Util:
     @staticmethod
     def mntOptsStrToList(mntOptsStr):
         if mntOptsStr == "":
-            return [] 
+            return []
         else:
             return mntOptsStr.split(",")
 
