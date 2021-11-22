@@ -99,7 +99,7 @@ class StorageLayoutImpl(StorageLayout):
         pass
 
     def check(self, auto_fix=False, error_callback=None):
-        self._swap.check_swap_size(auto_fix, error_callback)
+        self._swap.check(auto_fix, error_callback)
 
 
 def parse(boot_dev, root_dev):

@@ -137,7 +137,7 @@ class EfiMultiDisk:
         # wipe disk
         Util.wipeHarddisk(hdd)
 
-    def check_esp_size(self, auto_fix, error_callback):
+    def check_esp(self, auto_fix, error_callback):
         for hdd in self._hddList:
             parti = self.get_disk_esp_partition(hdd)
             if Util.getBlkDevSize(parti) != Util.getEspSize():
@@ -380,7 +380,7 @@ class EfiCacheGroup:
             # no way to auto fix
             error_callback("It would be better to add a cache device.")
 
-    def check_esp_size(self, auto_fix, error_callback):
+    def check_esp(self, auto_fix, error_callback):
         if self._ssd is not None:
             tlist = [self._ssdEspParti]
         else:
@@ -393,8 +393,10 @@ class EfiCacheGroup:
                 # no way to auto fix
                 error_callback(errors.CheckCode.ESP_SIZE_TOO_SMALL, "Invalid size for ESP partition \"%s\"." % (parti))
 
-    def check_swap_size(self, auto_fix, error_callback):
-        if self._ssdSwapParti is not None:
+    def check_swap(self, auto_fix, error_callback):
+        if self._ssdSwapParti is None:
+            error_callback(errors.CheckCode.SWAP_NOT_ENABLED, "Swap is not enabled.")
+        else:
             if Util.getBlkDevSize(self._ssdSwapParti) >= Util.getSwapSize():
                 # no way to auto fix
                 error_callback(errors.CheckCode.SWAP_SIZE_TOO_SMALL, "Swap partition size is too small.")
@@ -441,18 +443,17 @@ class SwapLvmLv:
         Util.cmdCall("/sbin/lvm", "lvremove", LvmUtil.swapLvDevPath)
         self._bSwapLv = False
 
-    def check_swap_size(self, auto_fix, error_callback):
+    def check(self, auto_fix, error_callback):
         if not self._bSwapLv:
-            return
-        if Util.getBlkDevSize(LvmUtil.swapLvDevPath) >= Util.getSwapSize():
-            return
-
-        if auto_fix:
-            if not Util.isSwapFileOrPartitionBusy(LvmUtil.swapLvDevPath):
-                self.remove_swap_lv()
-                self.create_swap_lv()
-                return
-        error_callback(errors.CheckCode.SWAP_SIZE_TOO_SMALL, "Swap LV size is too small.")
+            error_callback(errors.CheckCode.SWAP_NOT_ENABLED, "Swap is not enabled.")
+        else:
+            if Util.getBlkDevSize(LvmUtil.swapLvDevPath) < Util.getSwapSize():
+                if auto_fix:
+                    if not Util.isSwapFileOrPartitionBusy(LvmUtil.swapLvDevPath):
+                        self.remove_swap_lv()
+                        self.create_swap_lv()
+                        return
+                error_callback(errors.CheckCode.SWAP_SIZE_TOO_SMALL, "Swap LV size is too small.")
 
 
 class SwapFile:
@@ -486,18 +487,17 @@ class SwapFile:
         os.remove(Util.swapFilepath)
         self._bSwapFile = False
 
-    def check_swap_size(self, auto_fix, error_callback):
+    def check(self, auto_fix, error_callback):
         if not self._bSwapFile:
-            return
-        if os.path.getsize(Util.swapFilepath) >= Util.getSwapSize():
-            return
-
-        if auto_fix:
-            if not Util.isSwapFileOrPartitionBusy(Util.swapFilepath):
-                self.remove_swap_file()
-                self.create_swap_file()
-                return
-        error_callback(errors.CheckCode.SWAP_SIZE_TOO_SMALL, "Swap file size is too small.")
+            error_callback(errors.CheckCode.SWAP_NOT_ENABLED, "Swap is not enabled.")
+        else:
+            if os.path.getsize(Util.swapFilepath) < Util.getSwapSize():
+                if auto_fix:
+                    if not Util.isSwapFileOrPartitionBusy(Util.swapFilepath):
+                        self.remove_swap_file()
+                        self.create_swap_file()
+                        return
+                error_callback(errors.CheckCode.SWAP_SIZE_TOO_SMALL, "Swap file size is too small.")
 
 
 class SnapshotBtrfs:
@@ -955,12 +955,3 @@ class HandyUtil:
             return espPartiList[0]
         else:
             raise errors.StorageLayoutParseError(storageLayoutName, "multiple ESP partitions found")
-
-
-class CommonChecks:
-
-    def check_swap_enablement(layout, auto_fix, error_callback):
-        if layout.dev_swap is None:
-            error_callback(errors.CheckCode.SWAP_NOT_ENABLED, "Swap is not enabled.")
-
-
