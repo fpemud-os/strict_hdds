@@ -412,6 +412,38 @@ class EfiCacheGroup:
         self._bootHdd = None
 
 
+class BcacheGroup:
+
+    def __init__(self, devPathList=[], bcacheDevPathList=[]):
+        self._backingDict = Util.keyValueListToDict(devPathList, bcacheDevPathList)
+
+    def get_bcache_dev(self, devPath):
+        return self._backingDict[devPath]
+
+    def add_cache(self, cacheDevPath):
+        BcacheUtil.makeAndRegisterCacheDevice(cacheDevPath)
+        BcacheUtil.attachCacheDevice(self._backingDict.values(), cacheDevPath)
+
+    def add_backing(self, cacheDevPath, devPath):
+        BcacheUtil.makeAndRegisterBackingDevice(devPath)
+        bcacheDevPath = BcacheUtil.findByBackingDevice(devPath)
+        if cacheDevPath is not None:
+            BcacheUtil.attachCacheDevice([bcacheDevPath], cacheDevPath)
+        self._backingDict[devPath] = bcacheDevPath
+        return bcacheDevPath
+
+    def remove_cache(self, cacheDevPath):
+        BcacheUtil.unregisterCacheDevice(cacheDevPath)
+
+    def remove_backing(self, devPath):
+        BcacheUtil.stopBackingDevice(self._backingDict[devPath])
+        del self._backingDict[devPath]
+
+    def stop_all(self):
+        for bcacheDevPath in self._backingDict.values():
+            BcacheUtil.stopBackingDevice(bcacheDevPath)
+
+
 class SwapLvmLv:
 
     @staticmethod
