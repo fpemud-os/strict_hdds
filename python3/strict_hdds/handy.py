@@ -375,6 +375,11 @@ class EfiCacheGroup:
         # wipe disk
         Util.wipeHarddisk(hdd)
 
+    def check_ssd(self, auto_fix, error_callback):
+        if self._ssd is None:
+            # no way to auto fix
+            error_callback("It would be better to add a cache device.")
+
     def check_esp_size(self, auto_fix, error_callback):
         if self._ssd is not None:
             tlist = [self._ssdEspParti]
