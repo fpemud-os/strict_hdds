@@ -109,10 +109,6 @@ class StorageLayoutImpl(StorageLayout):
         pass
 
     @EfiMultiDisk.proxy
-    def get_suggestted_esp_size(self):
-        pass
-
-    @EfiMultiDisk.proxy
     def get_disk_list(self):
         pass
 
@@ -182,6 +178,7 @@ class StorageLayoutImpl(StorageLayout):
         pass
 
     def check(self, auto_fix=False, error_callback=None):
+        self._md.check_esp_size(auto_fix, error_callback)
         self._swap.check_swap_size(auto_fix, error_callback)
 
 

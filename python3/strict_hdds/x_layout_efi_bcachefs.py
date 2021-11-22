@@ -113,10 +113,6 @@ class StorageLayoutImpl(StorageLayout):
         pass
 
     @EfiCacheGroup.proxy
-    def get_suggestted_esp_size(self):
-        pass
-
-    @EfiCacheGroup.proxy
     def get_disk_list(self):
         pass
 

@@ -120,10 +120,6 @@ class StorageLayoutImpl(StorageLayout):
         pass
 
     @EfiCacheGroup.proxy
-    def get_suggestted_esp_size(self):
-        pass
-
-    @EfiCacheGroup.proxy
     def get_disk_list(self):
         pass
 
@@ -141,10 +137,6 @@ class StorageLayoutImpl(StorageLayout):
 
     @EfiCacheGroup.proxy
     def get_ssd_cache_partition(self):
-        pass
-
-    @EfiCacheGroup.proxy
-    def check_swap_size(self):
         pass
 
     @EfiCacheGroup.proxy
@@ -229,7 +221,8 @@ class StorageLayoutImpl(StorageLayout):
         return lastBootHdd != self._cg.boot_disk     # boot disk may change
 
     def check(self, auto_fix=False, error_callback=None):
-        pass
+        self._cg.check_esp_size(auto_fix, error_callback)
+        self._cg.check_swap_size(auto_fix, error_callback)
 
 
 def parse(boot_dev, root_dev):

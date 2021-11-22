@@ -84,9 +84,6 @@ class EfiMultiDisk:
         assert dst is not None and dst in self.get_pending_esp_list()
         Util.syncBlkDev(self.get_esp(), dst, mountPoint1=Util.bootDir)
 
-    def get_suggestted_esp_size(self):
-        return Util.getEspSize()
-
     def get_disk_list(self):
         return self._hddList
 
@@ -240,9 +237,6 @@ class EfiCacheGroup:
         assert dst is not None and dst in self.get_pending_esp_list()
         Util.syncBlkDev(self.get_esp(), dst, mountPoint1=Util.bootDir)
 
-    def get_suggestted_esp_size(self):
-        return Util.getEspSize()
-
     def get_disk_list(self):
         if self._ssd is not None:
             return [self._ssd] + self._hddList
@@ -393,6 +387,12 @@ class EfiCacheGroup:
             if Util.getBlkDevSize(parti) != Util.getEspSize():
                 # no way to auto fix
                 error_callback(errors.CheckCode.ESP_SIZE_TOO_SMALL, "Invalid size for ESP partition \"%s\"." % (parti))
+
+    def check_swap_size(self, auto_fix, error_callback):
+        if self._ssdSwapParti is not None:
+            if Util.getBlkDevSize(self._ssdSwapParti) >= Util.getSwapSize():
+                # no way to auto fix
+                error_callback(errors.CheckCode.SWAP_SIZE_TOO_SMALL, "Swap partition size is too small.")
 
     def _mountFirstHddAsBootHdd(self):
         self._bootHdd = self._hddList[0]
