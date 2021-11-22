@@ -235,7 +235,7 @@ class StorageLayoutImpl(StorageLayout):
             self._bcache.check(auto_fix, error_callback)
         elif check_item == "swap":
             self._cg.check_swap(auto_fix, error_callback)
-        elif check_item == "bcache_write_mode":
+        elif check_item == "bcache-write-mode":
             self._bcache.check_write_mode(kargs[0], auto_fix, error_callback)
         else:
             assert False
