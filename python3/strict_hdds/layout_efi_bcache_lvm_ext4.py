@@ -22,7 +22,7 @@
 
 
 from .util import Util, BcacheUtil, LvmUtil
-from .handy import EfiCacheGroup, BcacheGroup, MountEfi, HandyCg, HandyBcache, HandyUtil
+from .handy import EfiCacheGroup, BcacheRaid, MountEfi, HandyCg, HandyBcache, HandyUtil
 from . import errors
 from . import StorageLayout
 
@@ -54,7 +54,7 @@ class StorageLayoutImpl(StorageLayout):
 
     def __init__(self):
         self._cg = None                     # EfiCacheGroup
-        self._bcache = None                 # BcacheGroup
+        self._bcache = None                 # BcacheRaid
         self._mnt = None                    # MountEfi
 
     @property
@@ -211,12 +211,15 @@ class StorageLayoutImpl(StorageLayout):
 
         return lastBootHdd != self._cg.boot_disk     # boot disk may change
 
-    def _check_impl(self, check_item, auto_fix=False, error_callback=None):
+    def _check_impl(self, check_item, *kargs, auto_fix=False, error_callback=None):
         if check_item == Util.checkItemBasic:
             self._cg.check_ssd(auto_fix, error_callback)
             self._cg.check_esp(auto_fix, error_callback)
+            self._bcache.check(auto_fix, error_callback)
         elif check_item == "swap":
             self._cg.check_swap(auto_fix, error_callback)
+        elif check_item == "bcache_write_mode":
+            self._bcache.check_write_mode(kargs[0], auto_fix, error_callback)
         else:
             assert False
 
@@ -250,7 +253,7 @@ def parse(boot_dev, root_dev):
     # return
     ret = StorageLayoutImpl()
     ret._cg = EfiCacheGroup(ssd=ssd, ssdEspParti=ssdEspParti, ssdSwapParti=ssdSwapParti, ssdCacheParti=ssdCacheParti, hddList=hddList, bootHdd=bootHdd)
-    ret._bcache = BcacheGroup(keyList=hddList, bcacheDevPathList=pvDevPathList)
+    ret._bcache = BcacheRaid(keyList=hddList, bcacheDevPathList=pvDevPathList)
     ret._mnt = MountEfi("/")
     return ret
 
@@ -281,7 +284,7 @@ def detect_and_mount(disk_list, mount_dir, mnt_opt_list):
     # return
     ret = StorageLayoutImpl()
     ret._cg = EfiCacheGroup(ssd=ssd, ssdEspParti=ssdEspParti, ssdSwapParti=ssdSwapParti, ssdCacheParti=ssdCacheParti, hddList=hddList, bootHdd=bootHdd)
-    ret._bcache = BcacheGroup(keyList=hddList, bcacheDevPathList=pvDevPathList)
+    ret._bcache = BcacheRaid(keyList=hddList, bcacheDevPathList=pvDevPathList)
     ret._mnt = MountEfi(mount_dir)
     return ret
 
@@ -291,7 +294,7 @@ def create_and_mount(disk_list, mount_dir, mnt_opt_list):
     cg = EfiCacheGroup()
     HandyCg.checkAndAddDisks(cg, *Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list))
 
-    bcache = BcacheGroup()
+    bcache = BcacheRaid()
     for hdd in cg.get_hdd_list():
         # hdd partition 2: make them as backing device
         bcache.add_backing(None, hdd, cg.get_hdd_data_partition(hdd))

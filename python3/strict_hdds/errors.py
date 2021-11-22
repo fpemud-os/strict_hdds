@@ -23,6 +23,8 @@
 
 class CheckCode:
 
+    TRIVIAL = 1000
+
     CACHE_DEVICE_NOT_FOUND = 100
 
     ESP_SIZE_TOO_SMALL = 1
@@ -33,6 +35,7 @@ class CheckCode:
 
 def checkErrorCallback(error_callback, check_code, *kargs):
     errDict = {
+        CheckCode.TRIVIAL: (1, "{0}"),
         CheckCode.CACHE_DEVICE_NOT_FOUND: (0, "It would be better to add a cache device."),
         CheckCode.ESP_SIZE_TOO_SMALL: (1, "Invalid size for ESP partition \"{0}\"."),
         CheckCode.SWAP_NOT_ENABLED: (0, "Swap is not enabled."),

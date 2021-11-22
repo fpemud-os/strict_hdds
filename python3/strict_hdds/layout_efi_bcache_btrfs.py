@@ -22,7 +22,7 @@
 
 
 from .util import Util, BcacheUtil, BtrfsUtil
-from .handy import EfiCacheGroup, BcacheGroup, SnapshotBtrfs, MountEfi, HandyCg, HandyBcache, HandyUtil
+from .handy import EfiCacheGroup, BcacheRaid, Snapshot, SnapshotBtrfs, MountEfi, HandyCg, HandyBcache, HandyUtil
 from . import errors
 from . import StorageLayout
 
@@ -53,7 +53,7 @@ class StorageLayoutImpl(StorageLayout):
 
     def __init__(self):
         self._cg = None                     # EfiCacheGroup
-        self._bcache = None                 # BcacheGroup
+        self._bcache = None                 # BcacheRaid
         self._snapshot = None               # SnapshotBtrfs
         self._mnt = None                    # MountEfi
 
@@ -80,14 +80,14 @@ class StorageLayoutImpl(StorageLayout):
     def boot_disk(self):
         pass
 
+    @Snapshot.proxy
+    @property
+    def snapshot(self):
+        pass
+
     @MountEfi.proxy
     @property
     def mount_point(self):
-        pass
-
-    @SnapshotBtrfs.proxy
-    @property
-    def snapshot(self):
         pass
 
     def umount_and_dispose(self):
@@ -160,7 +160,7 @@ class StorageLayoutImpl(StorageLayout):
     def get_hdd_bcache_dev(self, disk):
         return self._bcache.get_bcache_dev(disk)
 
-    @SnapshotBtrfs.proxy
+    @Snapshot.proxy
     def get_snapshot_list(self):
         pass
 
@@ -220,20 +220,23 @@ class StorageLayoutImpl(StorageLayout):
         # return True means boot disk is changed
         return lastBootHdd != self._cg.boot_disk
 
-    @SnapshotBtrfs.proxy
+    @Snapshot.proxy
     def create_snapshot(self, snapshot_name):
         pass
 
-    @SnapshotBtrfs.proxy
+    @Snapshot.proxy
     def remove_snapshot(self, snapshot_name):
         pass
 
-    def _check_impl(self, check_item, auto_fix=False, error_callback=None):
+    def _check_impl(self, check_item, *kargs, auto_fix=False, error_callback=None):
         if check_item == Util.checkItemBasic:
             self._cg.check_ssd(auto_fix, error_callback)
             self._cg.check_esp(auto_fix, error_callback)
+            self._bcache.check(auto_fix, error_callback)
         elif check_item == "swap":
             self._cg.check_swap(auto_fix, error_callback)
+        elif check_item == "bcache_write_mode":
+            self._bcache.check_write_mode(kargs[0], auto_fix, error_callback)
         else:
             assert False
 
@@ -255,10 +258,13 @@ def parse(boot_dev, root_dev):
     ssdEspParti, ssdSwapParti, ssdCacheParti = HandyCg.checkAndGetSsdPartitions(StorageLayoutImpl.name, ssd)
     bootHdd = HandyCg.checkAndGetBootHddFromBootDev(StorageLayoutImpl.name, boot_dev, ssdEspParti, hddList)
 
+    # FIXME: check mount options
+    pass
+
     # return
     ret = StorageLayoutImpl()
     ret._cg = EfiCacheGroup(ssd=ssd, ssdEspParti=ssdEspParti, ssdSwapParti=ssdSwapParti, ssdCacheParti=ssdCacheParti, hddList=hddList, bootHdd=bootHdd)
-    ret._bcache = BcacheGroup(keyList=hddList, bcacheDevPathList=slaveDevPathList)
+    ret._bcache = BcacheRaid(keyList=hddList, bcacheDevPathList=slaveDevPathList)
     ret._snapshot = SnapshotBtrfs("/")
     ret._mnt = MountEfi("/")
     return ret
@@ -280,7 +286,7 @@ def detect_and_mount(disk_list, mount_dir, mnt_opt_list):
     # return
     ret = StorageLayoutImpl()
     ret._cg = EfiCacheGroup(ssd=ssd, ssdEspParti=ssdEspParti, ssdSwapParti=ssdSwapParti, ssdCacheParti=ssdCacheParti, hddList=hddList, bootHdd=bootHdd)
-    ret._bcache = BcacheGroup(keyList=hddList, bcacheDevPathList=bcacheDevPathList)
+    ret._bcache = BcacheRaid(keyList=hddList, bcacheDevPathList=bcacheDevPathList)
     ret._snapshot = SnapshotBtrfs(mount_dir)
     ret._mnt = MountEfi(mount_dir)
 
@@ -296,7 +302,7 @@ def create_and_mount(disk_list, mount_dir, mnt_opt_list):
     cg = EfiCacheGroup()
     HandyCg.checkAndAddDisks(cg, *Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list))
 
-    bcache = BcacheGroup()
+    bcache = BcacheRaid()
     for hdd in cg.get_hdd_list():
         # hdd partition 2: make them as backing device
         bcache.add_backing(None, hdd, cg.get_hdd_data_partition(hdd))

@@ -944,6 +944,21 @@ class BcacheUtil:
             return uuid.UUID(bytes=buf)
 
     @staticmethod
+    def getMode(devPath):
+        assert re.fullmatch("/dev/bcache[0-9]+", devPath)
+        buf = pathlib.Path(os.path.join("/sys", "block", os.path.basename(devPath), "bcache", "cache_mode")).read_text()
+        mode = re.search("\\[(.*)\\]", buf).group(1)
+        assert mode in ["writethrough", "writeback"]
+        return mode
+
+    @staticmethod
+    def setMode(devPath, mode):
+        assert re.fullmatch("/dev/bcache[0-9]+", devPath)
+        assert mode in ["writethrough", "writeback"]
+        with open(os.path.join("/sys", "block", os.path.basename(devPath), "bcache", "cache_mode"), "w") as f:
+            f.write(mode)
+
+    @staticmethod
     def getSlaveDevPathList(bcacheDevPath):
         """Last element in the returned list is the backing device, others are cache device"""
 

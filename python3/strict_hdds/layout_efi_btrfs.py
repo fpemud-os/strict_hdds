@@ -22,7 +22,7 @@
 
 
 from .util import Util, BtrfsUtil
-from .handy import EfiMultiDisk, SnapshotBtrfs, MountEfi, HandyMd, HandyUtil
+from .handy import EfiMultiDisk, Snapshot, SnapshotBtrfs, MountEfi, HandyMd, HandyUtil
 from . import errors
 from . import StorageLayout
 
@@ -66,7 +66,7 @@ class StorageLayoutImpl(StorageLayout):
     def boot_disk(self):
         pass
 
-    @SnapshotBtrfs.proxy
+    @Snapshot.proxy
     @property
     def snapshot(self):
         pass
@@ -115,7 +115,7 @@ class StorageLayoutImpl(StorageLayout):
     def get_disk_data_partition(self, disk):
         pass
 
-    @SnapshotBtrfs.proxy
+    @Snapshot.proxy
     def get_snapshot_list(self):
         pass
 
@@ -152,15 +152,15 @@ class StorageLayoutImpl(StorageLayout):
 
         return lastBootHdd != self._md.boot_disk     # boot disk may change
 
-    @SnapshotBtrfs.proxy
+    @Snapshot.proxy
     def create_snapshot(self, snapshot_name):
         pass
 
-    @SnapshotBtrfs.proxy
+    @Snapshot.proxy
     def remove_snapshot(self, snapshot_name):
         pass
 
-    def _check_impl(self, check_item, auto_fix=False, error_callback=None):
+    def _check_impl(self, check_item, *kargs, auto_fix=False, error_callback=None):
         if check_item == Util.checkItemBasic:
             self._md.check_esp(auto_fix, error_callback)
         else:
@@ -176,6 +176,9 @@ def parse(boot_dev, root_dev):
     # disk_list, boot_disk
     diskList = BtrfsUtil.getSlaveDevPathList(root_dev)
     bootHdd = HandyMd.checkAndGetBootDiskFromBootDev(StorageLayoutImpl.name, boot_dev, diskList)
+
+    # FIXME: check mount options
+    pass
 
     # return
     ret = StorageLayoutImpl()

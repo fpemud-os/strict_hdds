@@ -177,7 +177,7 @@ class StorageLayoutImpl(StorageLayout):
     def remove_swap_lv(self):
         pass
 
-    def _check_impl(self, check_item, auto_fix=False, error_callback=None):
+    def _check_impl(self, check_item, *kargs, auto_fix=False, error_callback=None):
         if check_item == Util.checkItemBasic:
             self._md.check_esp(auto_fix, error_callback)
         elif check_item == "swap":

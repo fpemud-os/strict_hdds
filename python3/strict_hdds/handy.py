@@ -23,6 +23,7 @@
 
 import os
 import re
+import abc
 import psutil
 from .util import Util, PartiUtil, GptUtil, BcacheUtil, LvmUtil
 from . import errors
@@ -412,7 +413,7 @@ class EfiCacheGroup:
         self._bootHdd = None
 
 
-class BcacheGroup:
+class BcacheRaid:
 
     def __init__(self, keyList=[], bcacheDevPathList=[]):
         self._backingDict = Util.keyValueListToDict(keyList, bcacheDevPathList)
@@ -445,6 +446,28 @@ class BcacheGroup:
     def stop_all(self):
         for bcacheDevPath in self._backingDict.values():
             BcacheUtil.stopBackingDevice(bcacheDevPath)
+
+    def check(self, auto_fix=False, error_callback=None):
+        # check mode is consistent
+        lastDevPath = None
+        lastMode = None
+        for bcacheDevPath in self._backingDict.values():
+            mode = BcacheUtil.getMode(bcacheDevPath)
+            if lastMode is not None:
+                if mode != lastMode:
+                    error_callback(errors.CheckCode.TRIVIAL, "BCACHE device %s and %s have inconsistent write mode." % (lastDevPath, bcacheDevPath))
+            else:
+                lastDevPath = bcacheDevPath
+                lastMode = mode
+
+    def check_write_mode(self, mode, auto_fix=False, error_callback=None):
+        assert mode in ["writethrough", "writeback"]
+        for bcacheDevPath in self._backingDict.values():
+            if BcacheUtil.getMode(bcacheDevPath) != mode:
+                if auto_fix:
+                    BcacheRaid.setMode(mode)
+                else:
+                    error_callback(errors.CheckCode.TRIVIAL, "BCACHE device %s should be configured as writeback mode." % (bcacheDevPath))
 
 
 class SwapLvmLv:
@@ -535,7 +558,7 @@ class SwapFile:
                 error_callback(errors.CheckCode.SWAP_SIZE_TOO_SMALL, "file")
 
 
-class SnapshotBtrfs:
+class Snapshot(abc.ABC):
 
     @staticmethod
     def proxy(func):
@@ -576,6 +599,21 @@ class SnapshotBtrfs:
                 raise errors.StorageLayoutParseError("sub-volume \"%s\" is not supported" % (sv))
             ret.append(sv[1:])
         return ret
+
+    @abc.abstractclassmethod
+    def create_snapshot(self, snapshot_name):
+        pass
+
+    @abc.abstractclassmethod
+    def remove_snapshot(self, snapshot_name):
+        pass
+
+    @abc.abstractclassmethod
+    def _getSubVolList(self):
+        pass
+
+
+class SnapshotBtrfs(Snapshot):
 
     def create_snapshot(self, snapshot_name):
         Util.cmdCall("/sbin/btrfs", "subvolume", "snapshot", os.path.join(self._mntDir, "@"), os.path.join(self._mntDir, "@%s" % (snapshot_name)))
@@ -589,47 +627,7 @@ class SnapshotBtrfs:
         return out
 
 
-class SnapshotBcachefs:
-
-    @staticmethod
-    def proxy(func):
-        if isinstance(func, property):
-            def f_get(self):
-                return getattr(self._snapshot, func.fget.__name__)
-            f_get.__name__ = func.fget.__name__
-            return property(f_get)
-        else:
-            def f(self, *args):
-                return getattr(self._snapshot, func.__name__)(*args)
-            return f
-
-    def __init__(self, mntDir):
-        self._mntDir = mntDir
-        for sv in self._getSubVolList():
-            if not sv.startswith("@"):
-                raise errors.StorageLayoutParseError("sub-volume \"%s\" is not supported" % (sv))
-
-    @property
-    def snapshot(self):
-        ret = Util.mntGetSubVol(self._mntDir)
-        if not ret.startswith("@"):
-            raise errors.StorageLayoutParseError("sub-volume \"%s\" is not supported" % (ret))
-        return ret[1:]
-
-    def get_mntopt_list_for_mount(self, kwargsDict):
-        if "snapshot" not in kwargsDict:
-            return ["subvol=/@"]
-        else:
-            assert kwargsDict["snapshot"] in self.get_snapshot_list()
-            return ["subvol=/@snapshots/%s" % (kwargsDict["snapshot"])]
-
-    def get_snapshot_list(self):
-        ret = []
-        for sv in self._getSubVolList():
-            if not sv.startswith("@"):
-                raise errors.StorageLayoutParseError("sub-volume \"%s\" is not supported" % (sv))
-            ret.append(sv[1:])
-        return ret
+class SnapshotBcachefs(Snapshot):
 
     def create_snapshot(self, snapshot_name):
         assert False

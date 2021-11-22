@@ -22,7 +22,7 @@
 
 
 from .util import Util, BcachefsUtil
-from .handy import EfiCacheGroup, SnapshotBcachefs, MountEfi, HandyCg, HandyUtil
+from .handy import EfiCacheGroup, Snapshot, SnapshotBcachefs, MountEfi, HandyCg, HandyUtil
 from . import errors
 from . import StorageLayout
 
@@ -51,6 +51,7 @@ class StorageLayoutImpl(StorageLayout):
 
     def __init__(self, mount_dir):
         self._cg = None                     # EfiCacheGroup
+        self._snapshot = None               # SnapshotBcachefs
         self._mnt = None                    # MountEfi
 
     @property
@@ -103,7 +104,9 @@ class StorageLayoutImpl(StorageLayout):
         pass
 
     def get_mntopt_list_for_mount(self, **kwargs):
-        return []
+        retList = []
+        retList += self._snapshot.get_mntopt_list_for_mount(kwargs)
+        return retList
 
     @EfiCacheGroup.proxy
     def get_esp(self):
@@ -149,7 +152,7 @@ class StorageLayoutImpl(StorageLayout):
     def get_hdd_data_partition(self, disk):
         pass
 
-    @SnapshotBcachefs.proxy
+    @Snapshot.proxy
     def get_snapshot_list(self):
         pass
 
@@ -210,15 +213,15 @@ class StorageLayoutImpl(StorageLayout):
 
             return lastBootHdd != self._cg.boot_disk     # boot disk may change
 
-    @SnapshotBcachefs.proxy
+    @Snapshot.proxy
     def create_snapshot(self, snapshot_name):
         pass
 
-    @SnapshotBcachefs.proxy
+    @Snapshot.proxy
     def remove_snapshot(self, snapshot_name):
         pass
 
-    def _check_impl(self, check_item, auto_fix=False, error_callback=None):
+    def _check_impl(self, check_item, *kargs, auto_fix=False, error_callback=None):
         if check_item == Util.checkItemBasic:
             self._cg.check_esp(auto_fix, error_callback)
         elif check_item == "ssd":
@@ -240,9 +243,13 @@ def parse(boot_dev, root_dev):
     ssdEspParti, ssdSwapParti, ssdCacheParti = HandyCg.checkAndGetSsdPartitions(StorageLayoutImpl.name, ssd)
     bootHdd = HandyCg.checkAndGetBootHddFromBootDev(StorageLayoutImpl.name, boot_dev, ssdEspParti, hddList)
 
+    # FIXME: check mount options
+    pass
+
     # return
     ret = StorageLayoutImpl()
     ret._cg = EfiCacheGroup(ssd=ssd, ssdEspParti=ssdEspParti, ssdSwapParti=ssdSwapParti, ssdCacheParti=ssdCacheParti, hddList=hddList, bootHdd=bootHdd)
+    ret._snapshot = SnapshotBcachefs("/")
     ret._mnt = MountEfi("/")
     return ret
 
@@ -261,6 +268,7 @@ def detect_and_mount(disk_list, mount_dir, mnt_opt_list):
     # return
     ret = StorageLayoutImpl()
     ret._cg = EfiCacheGroup(ssd=ssd, ssdEspParti=ssdEspParti, ssdSwapParti=ssdSwapParti, ssdCacheParti=ssdCacheParti, hddList=hddList, bootHdd=bootHdd)
+    ret._snapshot = SnapshotBcachefs(mount_dir)
     ret._mnt = MountEfi(mount_dir)
 
     # mount
@@ -286,6 +294,7 @@ def create_and_mount(disk_list, mount_dir, mnt_opt_list):
     # return
     ret = StorageLayoutImpl()
     ret._cg = cg
+    ret._snapshot = SnapshotBcachefs(mount_dir)
     ret._mnt = MountEfi(mount_dir)
 
     # mount
