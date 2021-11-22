@@ -1071,10 +1071,10 @@ class LvmUtil:
     vgName = "hdd"
 
     rootLvName = "root"
-    rootLvDevPath = "/dev/mapper/hdd-root"      # FIXME
+    rootLvDevPath = "/dev/mapper/hdd.root"
 
     swapLvName = "swap"
-    swapLvDevPath = "/dev/mapper/hdd-swap"      # FIXME
+    swapLvDevPath = "/dev/mapper/hdd.swap"
 
     @staticmethod
     def getSlaveDevPathList(vgName):

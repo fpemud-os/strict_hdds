@@ -90,8 +90,10 @@ class StorageLayoutImpl(StorageLayout):
             self._mnt.umount()
             del self._mnt
         if True:
-            # FIXME: stop and unregister bcache
+            for bcacheDevPath in self._hddDict.values():
+                BcacheUtil.stopBackingDevice(bcacheDevPath)
             del self._hddDict
+        if True:
             del self._cg
 
     @MountEfi.proxy

@@ -91,7 +91,6 @@ class StorageLayoutImpl(StorageLayout):
             self._mnt.umount()
             del self._mnt
         if True:
-            # FIXME: stop and unregister bcache
             del self._cg
 
     @MountEfi.proxy

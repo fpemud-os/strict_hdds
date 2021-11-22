@@ -121,8 +121,6 @@ def get_current_storage_layout():
             bootDev = pobj.device
     assert rootDev is not None
 
-    rootDev = rootDev.replace(".", "-")     # FIXME
-
     if bootDev is not None:
         # bcachefs related
         if Util.anyIn(["efi-bcachefs"], allLayoutNames):
