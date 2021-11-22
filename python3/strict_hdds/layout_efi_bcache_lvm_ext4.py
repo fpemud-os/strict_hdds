@@ -228,6 +228,7 @@ def parse(boot_dev, root_dev):
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.ROOT_DEV_MUST_BE(LvmUtil.rootLvDevPath))
 
     # FIXME
+    import os
     if os.path.exists(LvmUtil.rootLvDevPath):
         t = LvmUtil.rootLvDevPath
     else:
