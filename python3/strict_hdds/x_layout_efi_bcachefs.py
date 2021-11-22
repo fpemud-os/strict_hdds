@@ -22,7 +22,7 @@
 
 
 from .util import Util, BcachefsUtil
-from .handy import EfiCacheGroup, MountEfi, HandyCg, HandyUtil
+from .handy import EfiCacheGroup, SnapshotBcachefs, MountEfi, HandyCg, HandyUtil
 from . import errors
 from . import StorageLayout
 
@@ -79,6 +79,11 @@ class StorageLayoutImpl(StorageLayout):
     @EfiCacheGroup.proxy
     @property
     def boot_disk(self):
+        pass
+
+    @SnapshotBcachefs.proxy
+    @property
+    def snapshot(self):
         pass
 
     @MountEfi.proxy
@@ -144,6 +149,10 @@ class StorageLayoutImpl(StorageLayout):
     def get_hdd_data_partition(self, disk):
         pass
 
+    @SnapshotBcachefs.proxy
+    def get_snapshot_list(self):
+        pass
+
     def add_disk(self, disk):
         assert disk is not None
 
@@ -200,6 +209,24 @@ class StorageLayoutImpl(StorageLayout):
             self._cg.remove_hdd(disk)
 
             return lastBootHdd != self._cg.boot_disk     # boot disk may change
+
+    @SnapshotBcachefs.proxy
+    def create_snapshot(self, snapshot_name):
+        pass
+
+    @SnapshotBcachefs.proxy
+    def remove_snapshot(self, snapshot_name):
+        pass
+
+    def _check_impl(self, check_item, auto_fix=False, error_callback=None):
+        if check_item == Util.checkItemBasic:
+            self._cg.check_esp(auto_fix, error_callback)
+        elif check_item == "ssd":
+            self._cg.check_ssd(auto_fix, error_callback)
+        elif check_item == "swap":
+            self._cg.check_swap(auto_fix, error_callback)
+        else:
+            assert False
 
 
 def parse(boot_dev, root_dev):

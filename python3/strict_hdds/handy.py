@@ -589,6 +589,10 @@ class SnapshotBtrfs:
         return out
 
 
+class SnapshotBcachefs:
+    pass
+
+
 class MountBios:
 
     class BootDirRwController(BootDirRwController):
