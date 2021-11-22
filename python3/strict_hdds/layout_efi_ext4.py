@@ -102,6 +102,9 @@ class StorageLayoutImpl(StorageLayout):
     def remove_swap_file(self):
         pass
 
+    def check(self, auto_fix=False, error_callback=None):
+        pass
+
 
 def parse(boot_dev, root_dev):
     if PartiUtil.partiToDisk(boot_dev) != PartiUtil.partiToDisk(root_dev):

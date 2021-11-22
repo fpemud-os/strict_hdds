@@ -164,6 +164,9 @@ class StorageLayoutImpl(StorageLayout):
     def remove_snapshot(self, snapshot_name):
         pass
 
+    def check(self, auto_fix=False, error_callback=None):
+        pass
+
 
 def parse(boot_dev, root_dev):
     if boot_dev is None:

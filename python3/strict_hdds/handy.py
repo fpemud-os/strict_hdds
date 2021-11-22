@@ -128,10 +128,10 @@ class SnapshotBtrfs:
 
     def get_mntopt_list_for_mount(self, kwargsDict):
         if "snapshot" not in kwargsDict:
-            return ["subvol=@"]
+            return ["subvol=/@"]
         else:
             assert kwargsDict["snapshot"] in self.get_snapshot_list()
-            return ["subvol=@%s" % (kwargsDict["snapshot"])]
+            return ["subvol=/@snapshots/%s" % (kwargsDict["snapshot"])]
 
     def get_snapshot_list(self):
         ret = []

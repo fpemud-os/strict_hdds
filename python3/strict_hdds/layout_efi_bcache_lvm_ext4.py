@@ -228,6 +228,9 @@ class StorageLayoutImpl(StorageLayout):
 
         return lastBootHdd != self._cg.boot_disk     # boot disk may change
 
+    def check(self, auto_fix=False, error_callback=None):
+        pass
+
 
 def parse(boot_dev, root_dev):
     if boot_dev is None:

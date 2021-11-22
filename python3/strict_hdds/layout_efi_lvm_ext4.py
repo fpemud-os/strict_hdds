@@ -185,6 +185,9 @@ class StorageLayoutImpl(StorageLayout):
     def remove_swap_lv(self):
         pass
 
+    def check(self, auto_fix=False, error_callback=None):
+        pass
+
 
 def parse(boot_dev, root_dev):
     if boot_dev is None:

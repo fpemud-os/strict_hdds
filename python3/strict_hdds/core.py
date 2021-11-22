@@ -80,6 +80,10 @@ class StorageLayout(abc.ABC):
     def get_mntopt_list_for_mount(self, **kwargs):
         pass
 
+    @abc.abstractmethod
+    def check(self, auto_fix=False, error_callback=None):
+        pass
+
 
 class BootDirRwController(abc.ABC):
 
