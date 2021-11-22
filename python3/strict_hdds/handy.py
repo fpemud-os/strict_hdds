@@ -590,7 +590,55 @@ class SnapshotBtrfs:
 
 
 class SnapshotBcachefs:
-    pass
+
+    @staticmethod
+    def proxy(func):
+        if isinstance(func, property):
+            def f_get(self):
+                return getattr(self._snapshot, func.fget.__name__)
+            f_get.__name__ = func.fget.__name__
+            return property(f_get)
+        else:
+            def f(self, *args):
+                return getattr(self._snapshot, func.__name__)(*args)
+            return f
+
+    def __init__(self, mntDir):
+        self._mntDir = mntDir
+        for sv in self._getSubVolList():
+            if not sv.startswith("@"):
+                raise errors.StorageLayoutParseError("sub-volume \"%s\" is not supported" % (sv))
+
+    @property
+    def snapshot(self):
+        ret = Util.mntGetSubVol(self._mntDir)
+        if not ret.startswith("@"):
+            raise errors.StorageLayoutParseError("sub-volume \"%s\" is not supported" % (ret))
+        return ret[1:]
+
+    def get_mntopt_list_for_mount(self, kwargsDict):
+        if "snapshot" not in kwargsDict:
+            return ["subvol=/@"]
+        else:
+            assert kwargsDict["snapshot"] in self.get_snapshot_list()
+            return ["subvol=/@snapshots/%s" % (kwargsDict["snapshot"])]
+
+    def get_snapshot_list(self):
+        ret = []
+        for sv in self._getSubVolList():
+            if not sv.startswith("@"):
+                raise errors.StorageLayoutParseError("sub-volume \"%s\" is not supported" % (sv))
+            ret.append(sv[1:])
+        return ret
+
+    def create_snapshot(self, snapshot_name):
+        assert False
+
+    def remove_snapshot(self, snapshot_name):
+        assert False
+
+    def _getSubVolList(self):
+        assert False
 
 
 class MountBios:
