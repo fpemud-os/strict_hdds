@@ -240,26 +240,6 @@ class Util:
             return ""
 
     @staticmethod
-    def getBlkDevLvmInfo(devPath):
-        """Returns (vg-name, lv-name)
-            Returns None if the device is not lvm"""
-
-        if "-" in devPath:
-            splitter = "-"
-        elif "." in devPath:
-            splitter = "."
-        else:
-            return None
-
-        rc, ret = Util.cmdCallWithRetCode("/sbin/dmsetup", "info", devPath)
-        if rc != 0:
-            return None
-
-        m = re.search("^Name: *(\\S+)$", ret, re.M)
-        assert m is not None
-        return m.group(1).split(splitter)
-
-    @staticmethod
     def getBlkDevCapacity(devPath):
         ret = Util.cmdCall("/bin/df", "-BM", devPath)
         m = re.search("%s +(\\d+)M +(\\d+)M +\\d+M", ret, re.M)
