@@ -296,12 +296,12 @@ def create_and_mount(disk_list, mount_dir, mnt_opt_list):
     cg = EfiCacheGroup()
     HandyCg.checkAndAddDisks(cg, *Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list))
 
-    # hdd partition 2: make them as backing device
-    # ssd partition 3: make it as cache device
     bcache = BcacheGroup()
     for hdd in cg.get_hdd_list():
+        # hdd partition 2: make them as backing device
         bcache.add_backing(None, hdd, cg.get_hdd_data_partition(hdd))
     if cg.get_ssd() is not None:
+        # ssd partition 3: make it as cache device
         bcache.add_cache(cg.get_ssd_cache_partition())
 
     # create btrfs
