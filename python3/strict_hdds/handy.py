@@ -637,7 +637,7 @@ class Snapshot(abc.ABC):
 
     @staticmethod
     @abc.abstractmethod
-    def _getSubVolList(self):
+    def _getSubVolList(mntDir):
         pass
 
 
