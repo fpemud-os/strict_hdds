@@ -24,7 +24,7 @@
 from .util import Util, PartiUtil, GptUtil
 from .handy import SwapFile, MountEfi, HandyUtil
 from . import errors
-from . import StorageLayout
+from . import StorageLayout, StorageLayoutMountParam
 
 
 class StorageLayoutImpl(StorageLayout):
@@ -84,8 +84,11 @@ class StorageLayoutImpl(StorageLayout):
     def get_bootdir_rw_controller(self):
         pass
 
-    def get_mntopt_list_for_mount(self, **kwargs):
-        return []
+    def get_params_for_mount(self, **kwargs):
+        return [
+            StorageLayoutMountParam(self.dev_rootfs, "/", ""),
+            StorageLayoutMountParam(self.dev_boot, "/boot", "ro"),
+        ]
 
     def get_esp(self):
         return self._hddEspParti
@@ -125,7 +128,7 @@ def parse(boot_dev, root_dev):
     return ret
 
 
-def detect_and_mount(disk_list, mount_dir, mnt_opt_list):
+def detect_and_mount(disk_list, mount_dir, mount_options):
     # scan for ESP and root partition
     espAndRootPartitionList = []
     for disk in disk_list:
@@ -145,10 +148,6 @@ def detect_and_mount(disk_list, mount_dir, mnt_opt_list):
     if len(espAndRootPartitionList) > 1:
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.DISK_TOO_MANY)
 
-    # mount
-    HandyUtil.checkMntOptList(mnt_opt_list)
-    MountEfi.mount(espAndRootPartitionList[0][2], espAndRootPartitionList[0][1], mount_dir, mnt_opt_list)
-
     # return
     ret = StorageLayoutImpl()
     ret._hdd = espAndRootPartitionList[0][0]
@@ -156,10 +155,13 @@ def detect_and_mount(disk_list, mount_dir, mnt_opt_list):
     ret._hddRootParti = espAndRootPartitionList[0][2]
     ret._swap = HandyUtil.swapFileDetectAndNew(StorageLayoutImpl.name, mount_dir)
     ret._mnt = MountEfi(mount_dir)
+
+    # mount
+    Util.mntMount(mount_dir, Util.optimizeMntParamList(ret.get_params_for_mount(), mount_options))
     return ret
 
 
-def create_and_mount(disk_list, mount_dir, mnt_opt_list):
+def create_and_mount(disk_list, mount_dir, mount_options):
     # create partitions
     hdd = HandyUtil.checkAndGetHdd(disk_list)
     Util.initializeDisk(hdd, Util.diskPartTableGpt, [
@@ -171,10 +173,6 @@ def create_and_mount(disk_list, mount_dir, mnt_opt_list):
     espParti = PartiUtil.diskToParti(hdd, 1)
     rootParti = PartiUtil.diskToParti(hdd, 2)
 
-    # mount
-    HandyUtil.checkMntOptList(mnt_opt_list)
-    MountEfi.mount(rootParti, espParti, mount_dir, mnt_opt_list)
-
     # return
     ret = StorageLayoutImpl()
     ret._hdd = hdd
@@ -182,4 +180,7 @@ def create_and_mount(disk_list, mount_dir, mnt_opt_list):
     ret._hddRootParti = rootParti
     ret._swap = SwapFile(False)
     ret._mnt = MountEfi(mount_dir)
+
+    # mount
+    Util.mntMount(mount_dir, Util.optimizeMntParamList(ret.get_params_for_mount(), mount_options))
     return ret

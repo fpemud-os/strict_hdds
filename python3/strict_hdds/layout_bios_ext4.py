@@ -24,7 +24,7 @@
 from .util import Util, PartiUtil, MbrUtil
 from .handy import SwapFile, MountBios, HandyUtil
 from . import errors
-from . import StorageLayout
+from . import StorageLayout, StorageLayoutMountParam
 
 
 class StorageLayoutImpl(StorageLayout):
@@ -81,8 +81,8 @@ class StorageLayoutImpl(StorageLayout):
     def get_bootdir_rw_controller(self):
         pass
 
-    def get_mntopt_list_for_mount(self, **kwargs):
-        return []
+    def get_params_for_mount(self, **kwargs):
+        return [StorageLayoutMountParam(self.dev_rootfs, "/", "")]
 
     @SwapFile.proxy
     def create_swap_file(self):
@@ -121,7 +121,7 @@ def parse(boot_dev, root_dev):
     return ret
 
 
-def detect_and_mount(disk_list, mount_dir, mnt_opt_list):
+def detect_and_mount(disk_list, mount_dir, mount_options):
     # scan for root partition
     rootPartitionList = []
     for disk in disk_list:
@@ -142,20 +142,19 @@ def detect_and_mount(disk_list, mount_dir, mnt_opt_list):
     if len(rootPartitionList) > 1:
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.ROOT_PARTITIONS_TOO_MANY)
 
-    # mount
-    HandyUtil.checkMntOptList(mnt_opt_list)
-    MountBios.mount(rootPartitionList[0], mount_dir, mnt_opt_list)
-
     # return
     ret = StorageLayoutImpl()
     ret._hdd = PartiUtil.partiToDisk(rootPartitionList[0])
     ret._hddRootParti = rootPartitionList[0]
     ret._swap = HandyUtil.swapFileDetectAndNew(StorageLayoutImpl.name, mount_dir)
     ret._mnt = MountBios(mount_dir)
+
+    # mount
+    Util.mntMount(mount_dir, [StorageLayoutMountParam(ret.dev_rootfs, "/", mount_options)])
     return ret
 
 
-def create_and_mount(disk_list, mount_dir, mnt_opt_list):
+def create_and_mount(disk_list, mount_dir, mount_options):
     # create partitions
     hdd = HandyUtil.checkAndGetHdd(disk_list)
     Util.initializeDisk(hdd, Util.diskPartTableMbr, [
@@ -165,14 +164,13 @@ def create_and_mount(disk_list, mount_dir, mnt_opt_list):
     # root partition
     rootParti = PartiUtil.diskToParti(hdd, 1)
 
-    # mount
-    HandyUtil.checkMntOptList(mnt_opt_list)
-    MountBios.mount(rootParti, mount_dir, mnt_opt_list)
-
     # return
     ret = StorageLayoutImpl(mount_dir)
     ret._hdd = hdd
     ret._hddRootParti = rootParti
     ret._swap = SwapFile(False)
     ret._mnt = MountBios(mount_dir)
+
+    # mount
+    Util.mntMount(mount_dir, [StorageLayoutMountParam(ret.dev_rootfs, "/", mount_options)])
     return ret

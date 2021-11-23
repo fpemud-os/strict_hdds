@@ -226,11 +226,11 @@ def parse(booDev, rootDev):
     return ret
 
 
-def detect_and_mount(disk_list, mount_dir, mnt_opt_list):
+def detect_and_mount(disk_list, mount_dir, mount_options):
     LvmUtil.activateAll()
     Util.cmdCall("/bin/mount", LvmUtil.rootLvName, mount_dir)
     return parse(None, LvmUtil.rootLvName)
 
 
-def create_and_mount(disk_list, mount_dir, mnt_opt_list):
+def create_and_mount(disk_list, mount_dir, mount_options):
     assert False

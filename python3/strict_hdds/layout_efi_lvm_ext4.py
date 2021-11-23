@@ -24,7 +24,7 @@
 from .util import Util, PartiUtil, LvmUtil
 from .handy import EfiMultiDisk, SwapLvmLv, MountEfi, HandyMd, HandyUtil
 from . import errors
-from . import StorageLayout
+from . import StorageLayout, StorageLayoutMountParam
 
 
 class StorageLayoutImpl(StorageLayout):
@@ -89,8 +89,11 @@ class StorageLayoutImpl(StorageLayout):
     def get_bootdir_rw_controller(self):
         pass
 
-    def get_mntopt_list_for_mount(self, **kwargs):
-        return []
+    def get_params_for_mount(self, **kwargs):
+        return [
+            StorageLayoutMountParam(self.dev_rootfs, "/", ""),
+            StorageLayoutMountParam(self.dev_boot, "/boot", "ro"),
+        ]
 
     def optimize_rootdev(self):
         LvmUtil.autoExtendLv(LvmUtil.rootLvDevPath)
@@ -207,7 +210,7 @@ def parse(boot_dev, root_dev):
     return ret
 
 
-def detect_and_mount(disk_list, mount_dir, mnt_opt_list):
+def detect_and_mount(disk_list, mount_dir, mount_options):
     LvmUtil.activateAll()
 
     # pv list
@@ -220,19 +223,18 @@ def detect_and_mount(disk_list, mount_dir, mnt_opt_list):
     if Util.getBlkDevFsType(LvmUtil.rootLvDevPath) != Util.fsTypeExt4:
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.ROOT_PARTITION_FS_SHOULD_BE(Util.fsTypeExt4))
 
-    # mount
-    HandyUtil.checkMntOptList(mnt_opt_list)
-    MountEfi.mount(LvmUtil.rootLvDevPath, bootDev, mount_dir, mnt_opt_list)
-
     # return
     ret = StorageLayoutImpl()
     ret._md = EfiMultiDisk(diskList=diskList, bootHdd=bootHdd)
     ret._swap = HandyUtil.swapLvDetectAndNew(StorageLayoutImpl.name)
     ret._mnt = MountEfi(mount_dir)
+
+    # mount
+    Util.mntMount(mount_dir, Util.optimizeMntParamList(ret.get_params_for_mount(), mount_options))
     return ret
 
 
-def create_and_mount(disk_list, mount_dir, mnt_opt_list):
+def create_and_mount(disk_list, mount_dir, mount_options):
     # add disks
     md = EfiMultiDisk()
     HandyMd.checkAndAddDisks(disk_list)
@@ -242,13 +244,12 @@ def create_and_mount(disk_list, mount_dir, mnt_opt_list):
         LvmUtil.addPvToVg(md.get_disk_data_partition(disk), LvmUtil.vgName)
     LvmUtil.createLvWithDefaultSize(LvmUtil.vgName, LvmUtil.rootLvName)
 
-    # mount
-    HandyUtil.checkMntOptList(mnt_opt_list)
-    MountEfi.mount(LvmUtil.rootLvDevPath, md.dev_boot, mount_dir, mnt_opt_list)
-
     # return
     ret = StorageLayoutImpl()
     ret._md = md
     ret._swap = SwapLvmLv(False)
     ret._mnt = MountEfi(mount_dir)
+
+    # mount
+    Util.mntMount(mount_dir, Util.optimizeMntParamList(ret.get_params_for_mount(), mount_options))
     return ret

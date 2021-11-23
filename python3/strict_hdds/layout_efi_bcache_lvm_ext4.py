@@ -24,7 +24,7 @@
 from .util import Util, BcacheUtil, LvmUtil
 from .handy import EfiCacheGroup, BcacheRaid, MountEfi, HandyCg, HandyBcache, HandyUtil
 from . import errors
-from . import StorageLayout
+from . import StorageLayout, StorageLayoutMountParam
 
 
 class StorageLayoutImpl(StorageLayout):
@@ -99,8 +99,11 @@ class StorageLayoutImpl(StorageLayout):
     def get_bootdir_rw_controller(self):
         pass
 
-    def get_mntopt_list_for_mount(self, **kwargs):
-        return []
+    def get_params_for_mount(self, **kwargs):
+        return [
+            StorageLayoutMountParam(self.dev_rootfs, "/", ""),
+            StorageLayoutMountParam(self.dev_boot, "/boot", "ro"),
+        ]
 
     def optimize_rootdev(self):
         LvmUtil.autoExtendLv(LvmUtil.rootLvDevPath)
@@ -250,7 +253,7 @@ def parse(boot_dev, root_dev):
     return ret
 
 
-def detect_and_mount(disk_list, mount_dir, mnt_opt_list):
+def detect_and_mount(disk_list, mount_dir, mount_options):
     BcacheUtil.scanAndRegisterAll()
     LvmUtil.activateAll()
 
@@ -269,19 +272,18 @@ def detect_and_mount(disk_list, mount_dir, mnt_opt_list):
     if Util.getBlkDevFsType(LvmUtil.rootLvDevPath) != Util.fsTypeExt4:
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.ROOT_PARTITION_FS_SHOULD_BE(Util.fsTypeExt4))
 
-    # mount
-    HandyUtil.checkMntOptList(mnt_opt_list)
-    MountEfi.mount(LvmUtil.rootLvDevPath, bootDev, mount_dir, mnt_opt_list)
-
     # return
     ret = StorageLayoutImpl()
     ret._cg = EfiCacheGroup(ssd=ssd, ssdEspParti=ssdEspParti, ssdSwapParti=ssdSwapParti, ssdCacheParti=ssdCacheParti, hddList=hddList, bootHdd=bootHdd)
     ret._bcache = BcacheRaid(keyList=hddList, bcacheDevPathList=pvDevPathList)
     ret._mnt = MountEfi(mount_dir)
+
+    # mount
+    Util.mntMount(mount_dir, Util.optimizeMntParamList(ret.get_params_for_mount(), mount_options))
     return ret
 
 
-def create_and_mount(disk_list, mount_dir, mnt_opt_list):
+def create_and_mount(disk_list, mount_dir, mount_options):
     # add disks to cache group
     cg = EfiCacheGroup()
     HandyCg.checkAndAddDisks(cg, *Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list))
@@ -299,13 +301,12 @@ def create_and_mount(disk_list, mount_dir, mnt_opt_list):
         LvmUtil.addPvToVg(bcacheDevPath, LvmUtil.vgName, mayCreate=True)
     LvmUtil.createLvWithDefaultSize(LvmUtil.vgName, LvmUtil.rootLvName)
 
-    # mount
-    HandyUtil.checkMntOptList(mnt_opt_list)
-    MountEfi.mount(LvmUtil.rootLvDevPath, cg.dev_boot, mount_dir, mnt_opt_list)
-
     # return
     ret = StorageLayoutImpl()
     ret._cg = cg
     ret._bcache = bcache
     ret._mnt = MountEfi(mount_dir)
+
+    # mount
+    Util.mntMount(mount_dir, Util.optimizeMntParamList(ret.get_params_for_mount(), mount_options))
     return ret

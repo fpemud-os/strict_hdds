@@ -599,12 +599,19 @@ class Snapshot(abc.ABC):
             raise errors.StorageLayoutParseError("sub-volume \"%s\" is not supported" % (ret))
         return ret[1:]
 
-    def get_mntopt_list_for_mount(self, kwargsDict):
+    def get_params_for_mount(self, kwargsDict):
+        ret = []
         if "snapshot" not in kwargsDict:
-            return ["subvol=/@"]
+            ret.append(("/", "subvol=/@"))
         else:
             assert kwargsDict["snapshot"] in self.get_snapshot_list()
-            return ["subvol=/@snapshots/%s" % (kwargsDict["snapshot"])]
+            ret.append(("/", "subvol=/@snapshots/%s" % (kwargsDict["snapshot"])))
+        ret += [
+            ("/root", "subvol=/@root"),
+            ("/home", "subvol=/@home"),
+            ("/var", "subvol=/@var"),
+        ]
+        return ret
 
     def get_snapshot_list(self):
         ret = []
@@ -698,10 +705,6 @@ class MountBios:
             pass
 
     @staticmethod
-    def mount(rootParti, mountDir, mntOptList):
-        Util.cmdCall("/bin/mount", rootParti, mountDir, "-o", Util.mntOptsListToStr(mntOptList))
-
-    @staticmethod
     def proxy(func):
         if isinstance(func, property):
             def f_get(self):
@@ -755,13 +758,6 @@ class MountEfi:
             for pobj in psutil.disk_partitions():
                 if pobj.mountpoint == self._mntDir:
                     return ("rw" in Util.mntOptsStrToList(pobj.opts))
-
-    @staticmethod
-    def mount(rootParti, espParti, rootMntDir, rootMntOptList):
-        Util.cmdCall("/bin/mount", rootParti, rootMntDir, "-o", Util.mntOptsListToStr(rootMntOptList))
-        bootDir = MountEfi._getBootMountDir(rootMntDir)
-        os.makedirs(bootDir, exist_ok=True)
-        Util.cmdCall("/bin/mount", espParti, bootDir, "-o", "ro")
 
     @staticmethod
     def proxy(func):

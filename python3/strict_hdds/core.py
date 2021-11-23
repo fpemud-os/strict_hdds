@@ -78,7 +78,7 @@ class StorageLayout(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def get_mntopt_list_for_mount(self, **kwargs):
+    def get_params_for_mount(self, **kwargs):
         pass
 
     def check(self, auto_fix=False, error_callback=None):
@@ -91,6 +91,15 @@ class StorageLayout(abc.ABC):
     @abc.abstractmethod
     def _check_impl(self, check_item, auto_fix=False, error_callback=None):
         pass
+
+
+class StorageLayoutMountParam:
+
+    def __init__(self, target, dirpath, mnt_opts):
+        assert dirpath.startswith("/")
+        self.target = target
+        self.dirpath = dirpath
+        self.mnt_opts = mnt_opts
 
 
 class BootDirRwController(abc.ABC):
@@ -230,7 +239,7 @@ def create_and_mount_storage_layout(layout_name, mount_dir, mount_options=""):
     for mod in pkgutil.iter_modules(["."]):
         if mod.name.startswith("layout_"):
             if layout_name == Util.modName2layoutName(mod.name):
-                return mod.create_and_mount(Util.getDevPathListForFixedDisk(), mount_dir, Util.mntOptsStrToList(mount_options))
+                return mod.create_and_mount(Util.getDevPathListForFixedDisk(), mount_dir, mount_options)
     raise errors.StorageLayoutCreateError("layout \"%s\" not supported" % (layout_name))
 
 
@@ -249,6 +258,6 @@ def _detectAndMountOneStorageLayout(layoutName, diskList, mountDir, mountOptions
     try:
         exec("import strict_hdds.%s" % (modname))
         f = eval("strict_hdds.%s.detect_and_mount" % (modname))
-        return f(diskList, mountDir, Util.mntOptsStrToList(mountOptions))
+        return f(diskList, mountDir, mountOptions)
     except ModuleNotFoundError:
         raise errors.StorageLayoutParseError("", "unknown storage layout")

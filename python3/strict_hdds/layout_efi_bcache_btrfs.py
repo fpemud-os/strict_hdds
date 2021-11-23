@@ -22,9 +22,9 @@
 
 
 from .util import Util, BcacheUtil, BtrfsUtil
-from .handy import EfiCacheGroup, BcacheRaid, Snapshot, SnapshotBtrfs, MountEfi, HandyCg, HandyBcache, HandyUtil
+from .handy import EfiCacheGroup, BcacheRaid, Snapshot, SnapshotBtrfs, MountEfi, HandyCg, HandyBcache
 from . import errors
-from . import StorageLayout
+from . import StorageLayout, StorageLayoutMountParam
 
 
 class StorageLayoutImpl(StorageLayout):
@@ -104,10 +104,12 @@ class StorageLayoutImpl(StorageLayout):
     def get_bootdir_rw_controller(self):
         pass
 
-    def get_mntopt_list_for_mount(self, **kwargs):
-        retList = []
-        retList += self._snapshot.get_mntopt_list_for_mount(kwargs)
-        return retList
+    def get_params_for_mount(self, **kwargs):
+        ret = []
+        for dirPath, mntOpts in self._snapshot.get_params_for_mount(kwargs):
+            ret.append(StorageLayoutMountParam(self.dev_rootfs, dirPath, mntOpts))
+        ret.append(StorageLayoutMountParam(self.dev_boot, "/boot", "ro"))
+        return ret
 
     def optimize_rootdev(self):
         # FIXME: btrfs balance
@@ -262,7 +264,7 @@ def parse(boot_dev, root_dev):
     return ret
 
 
-def detect_and_mount(disk_list, mount_dir, mnt_opt_list):
+def detect_and_mount(disk_list, mount_dir, mount_options):
     # scan
     bcacheDevPathList = BcacheUtil.scanAndRegisterAll()
     bcacheDevPathList = [x for x in bcacheDevPathList if Util.getBlkDevFsType(x) == Util.fsTypeBtrfs]
@@ -283,13 +285,11 @@ def detect_and_mount(disk_list, mount_dir, mnt_opt_list):
     ret._mnt = MountEfi(mount_dir)
 
     # mount
-    tlist = mnt_opt_list + ret.get_mntopt_list_for_mount()
-    HandyUtil.checkMntOptList(tlist)
-    MountEfi.mount(ret.dev_rootfs, ret.dev_boot, mount_dir, tlist)
+    Util.mntMount(mount_dir, Util.optimizeMntParamList(ret.get_params_for_mount(), mount_options))
     return ret
 
 
-def create_and_mount(disk_list, mount_dir, mnt_opt_list):
+def create_and_mount(disk_list, mount_dir, mount_options):
     # add disks to cache group
     cg = EfiCacheGroup()
     HandyCg.checkAndAddDisks(cg, *Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list))
@@ -314,7 +314,5 @@ def create_and_mount(disk_list, mount_dir, mnt_opt_list):
     ret._mnt = MountEfi(mount_dir)
 
     # mount
-    tlist = mnt_opt_list + ret.get_mntopt_list_for_mount()
-    HandyUtil.checkMntOptList(tlist)
-    MountEfi.mount(ret.dev_rootfs, ret.dev_boot, mount_dir, tlist)
+    Util.mntMount(mount_dir, Util.optimizeMntParamList(ret.get_params_for_mount(), mount_options))
     return ret
