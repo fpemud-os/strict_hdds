@@ -224,14 +224,7 @@ def parse(boot_dev, root_dev):
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.BOOT_DEV_NOT_EXIST)
     if root_dev != LvmUtil.rootLvDevPath:
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.ROOT_DEV_MUST_BE(LvmUtil.rootLvDevPath))
-
-    # FIXME
-    import os
-    if os.path.exists(LvmUtil.rootLvDevPath):
-        t = LvmUtil.rootLvDevPath
-    else:
-        t = LvmUtil.rootLvDevPath.replace(".", "-")
-    if Util.getBlkDevFsType(t) != Util.fsTypeExt4:
+    if Util.getBlkDevFsType(LvmUtil.rootLvDevPath) != Util.fsTypeExt4:
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.ROOT_PARTITION_FS_SHOULD_BE(Util.fsTypeExt4))
 
     # pv list
