@@ -20,24 +20,22 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+from enum import Enum, auto
 
-class CheckCode:
 
-    TRIVIAL = 1000
+class CheckCode(Enum):
+    TRIVIAL = auto()
 
-    CACHE_DEVICE_NOT_FOUND = 100
+    ESP_SIZE_INVALID = auto()
 
-    ESP_SIZE_TOO_SMALL = 1
-
-    SWAP_NOT_ENABLED = 10
-    SWAP_SIZE_TOO_SMALL = 11
+    SWAP_NOT_ENABLED = auto()
+    SWAP_SIZE_TOO_SMALL = auto()
 
 
 def checkErrorCallback(error_callback, check_code, *kargs):
     errDict = {
         CheckCode.TRIVIAL: (1, "{0}"),
-        CheckCode.CACHE_DEVICE_NOT_FOUND: (0, "It would be better to add a cache device."),
-        CheckCode.ESP_SIZE_TOO_SMALL: (1, "Invalid size for ESP partition \"{0}\"."),
+        CheckCode.ESP_SIZE_INVALID: (1, "Invalid size for ESP partition \"{0}\"."),
         CheckCode.SWAP_NOT_ENABLED: (0, "Swap is not enabled."),
         CheckCode.SWAP_SIZE_TOO_SMALL: (1, "Swap {0} size is too small."),
     }

@@ -379,7 +379,7 @@ class EfiCacheGroup:
     def check_ssd(self, auto_fix, error_callback):
         if self._ssd is None:
             # no way to auto fix
-            error_callback(errors.CheckCode.CACHE_DEVICE_NOT_FOUND)
+            error_callback(errors.CheckCode.TRIVIAL, "It would be better to add a cache device.")
 
     def check_esp(self, auto_fix, error_callback):
         if self._ssd is not None:
