@@ -143,7 +143,7 @@ class EfiMultiDisk:
             parti = self.get_disk_esp_partition(hdd)
             if Util.getBlkDevSize(parti) != Util.getEspSize():
                 # no way to auto fix
-                error_callback(errors.CheckCode.ESP_SIZE_TOO_SMALL, parti)
+                error_callback(errors.CheckCode.ESP_SIZE_INVALID, parti)
 
     def _mountFirstHddAsBootHdd(self):
         self._bootHdd = self._hddList[0]
@@ -392,7 +392,7 @@ class EfiCacheGroup:
             parti = self.get_disk_esp_partition(hdd)
             if Util.getBlkDevSize(parti) != Util.getEspSize():
                 # no way to auto fix
-                error_callback(errors.CheckCode.ESP_SIZE_TOO_SMALL)
+                error_callback(errors.CheckCode.ESP_SIZE_INVALID)
 
     def check_swap(self, auto_fix, error_callback):
         if self._ssdSwapParti is None:
