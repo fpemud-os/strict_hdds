@@ -24,7 +24,7 @@
 from .util import Util, PartiUtil, GptUtil
 from .handy import SwapFile, MountEfi, HandyUtil
 from . import errors
-from . import StorageLayout, StorageLayoutMountParam
+from . import StorageLayout, MountParam
 
 
 class StorageLayoutImpl(StorageLayout):
@@ -86,8 +86,8 @@ class StorageLayoutImpl(StorageLayout):
 
     def get_params_for_mount(self, **kwargs):
         return [
-            StorageLayoutMountParam(self.dev_rootfs, "/", ""),
-            StorageLayoutMountParam(self.dev_boot, "/boot", "ro"),
+            MountParam(self.dev_rootfs, "/", ""),
+            MountParam(self.dev_boot, "/boot", "ro"),
         ]
 
     def get_esp(self):

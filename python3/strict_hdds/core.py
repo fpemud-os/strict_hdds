@@ -93,7 +93,7 @@ class StorageLayout(abc.ABC):
         pass
 
 
-class StorageLayoutMountParam:
+class MountParam:
 
     def __init__(self, target, dirpath, mnt_opts):
         assert dirpath.startswith("/")

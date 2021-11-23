@@ -24,7 +24,7 @@
 from .util import Util, BcachefsUtil
 from .handy import EfiCacheGroup, Snapshot, SnapshotBcachefs, MountEfi, HandyCg
 from . import errors
-from . import StorageLayout, StorageLayoutMountParam
+from . import StorageLayout, MountParam
 
 
 class StorageLayoutImpl(StorageLayout):
@@ -106,8 +106,8 @@ class StorageLayoutImpl(StorageLayout):
     def get_params_for_mount(self, **kwargs):
         ret = []
         for dirPath, mntOpts in self._snapshot.get_params_for_mount(kwargs):
-            ret.append(StorageLayoutMountParam(self.dev_rootfs, dirPath, mntOpts))
-        ret.append(StorageLayoutMountParam(self.dev_boot, "/boot", "ro"))
+            ret.append(MountParam(self.dev_rootfs, dirPath, mntOpts))
+        ret.append(MountParam(self.dev_boot, "/boot", "ro"))
         return ret
 
     @EfiCacheGroup.proxy
