@@ -724,9 +724,6 @@ class MountBios:
     def mount_point(self):
         return self._mntDir
 
-    def umount(self):
-        Util.cmdCall("/bin/umount", self._mntDir)
-
     def get_bootdir_rw_controller(self):
         return self._rwCtrl
 
@@ -741,18 +738,18 @@ class MountEfi:
         @property
         def is_writable(self):
             for pobj in psutil.disk_partitions():
-                if pobj.mountpoint == MountEfi._getBootMountDir(self._mntDir):
+                if pobj.mountpoint == os.path.join(self._mntDir, "boot"):
                     return ("rw" in Util.mntOptsStrToList(pobj.opts))
             assert False
 
         def to_read_write(self):
             assert not self.is_writable
             assert self._isRootfsWritable()
-            Util.cmdCall("/bin/mount", MountEfi._getBootMountDir(self._mntDir), "-o", "rw,remount")
+            Util.cmdCall("/bin/mount", os.path.join(self._mntDir, "boot"), "-o", "rw,remount")
 
         def to_read_only(self):
             assert self.is_writable
-            Util.cmdCall("/bin/mount", MountEfi._getBootMountDir(self._mntDir), "-o", "ro,remount")
+            Util.cmdCall("/bin/mount", os.path.join(self._mntDir, "boot"), "-o", "ro,remount")
 
         def _isRootfsWritable(self):
             for pobj in psutil.disk_partitions():
@@ -779,16 +776,8 @@ class MountEfi:
     def mount_point(self):
         return self._mntDir
 
-    def umount(self):
-        Util.cmdCall("/bin/umount", MountEfi._getBootMountDir(self._mntDir))
-        Util.cmdCall("/bin/umount", self._mntDir)
-
     def get_bootdir_rw_controller(self):
         return self._rwCtrl
-
-    @staticmethod
-    def _getBootMountDir(rootMountDir):
-        return os.path.join(rootMountDir, "boot")
 
 
 class HandyMd:
