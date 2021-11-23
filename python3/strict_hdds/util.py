@@ -131,9 +131,9 @@ class Util:
             Util.cmdCall("/bin/mount", p.target, realDir, "-o", p.mnt_opts)
 
     @staticmethod
-    def mntUmount(rootMountDir, mntParamList):
-        for p in reversed(mntParamList):
-            realDir = os.path.join(rootMountDir, p.dirpath[1:]).rstrip("/")
+    def mntUmount(rootMountDir, dirPathList):
+        for dirPath in dirPathList:
+            realDir = os.path.join(rootMountDir, dirPath[1:]).rstrip("/")
             Util.cmdCall("/bin/umount", realDir)
 
     @staticmethod

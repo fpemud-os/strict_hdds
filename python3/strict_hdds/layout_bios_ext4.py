@@ -71,7 +71,7 @@ class StorageLayoutImpl(StorageLayout):
 
     def umount_and_dispose(self):
         if True:
-            Util.mntUmount(self.mount_point, self.get_params_for_mount())
+            Util.mntUmount(self.mount_point, ["/"])
             del self._mnt
         del self._swap
         del self._hddRootParti

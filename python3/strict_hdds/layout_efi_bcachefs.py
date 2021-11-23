@@ -94,7 +94,7 @@ class StorageLayoutImpl(StorageLayout):
 
     def umount_and_dispose(self):
         if True:
-            Util.mntUmount(self.mount_point, self.get_params_for_mount())
+            Util.mntUmount(self.mount_point, ["/boot"] + self._snapshot.getDirpathsForUmount())
             del self._mnt
         if True:
             del self._cg
@@ -105,7 +105,7 @@ class StorageLayoutImpl(StorageLayout):
 
     def get_params_for_mount(self, **kwargs):
         ret = []
-        for dirPath, mntOpts in self._snapshot.get_params_for_mount(kwargs):
+        for dirPath, mntOpts in self._snapshot.getDirPathsAndMntOptsForMount(kwargs):
             ret.append(MountParam(self.dev_rootfs, dirPath, mntOpts))
         ret.append(MountParam(self.dev_boot, "/boot", "ro"))
         return ret

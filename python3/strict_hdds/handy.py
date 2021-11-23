@@ -599,20 +599,6 @@ class Snapshot(abc.ABC):
             raise errors.StorageLayoutParseError("sub-volume \"%s\" is not supported" % (ret))
         return ret[1:]
 
-    def get_params_for_mount(self, kwargsDict):
-        ret = []
-        if "snapshot" not in kwargsDict:
-            ret.append(("/", "subvol=/@"))
-        else:
-            assert kwargsDict["snapshot"] in self.get_snapshot_list()
-            ret.append(("/", "subvol=/@snapshots/%s" % (kwargsDict["snapshot"])))
-        ret += [
-            ("/root", "subvol=/@root"),
-            ("/home", "subvol=/@home"),
-            ("/var", "subvol=/@var"),
-        ]
-        return ret
-
     def get_snapshot_list(self):
         ret = []
         for sv in self._getSubVolList():
@@ -626,6 +612,23 @@ class Snapshot(abc.ABC):
 
     def remove_snapshot(self, snapshot_name):
         self._deleteSubVol(os.path.join("@snapshots", snapshot_name))
+
+    def getDirPathsAndMntOptsForMount(self, kwargsDict):
+        ret = []
+        if "snapshot" not in kwargsDict:
+            ret.append(("/", "subvol=/@"))
+        else:
+            assert kwargsDict["snapshot"] in self.get_snapshot_list()
+            ret.append(("/", "subvol=/@snapshots/%s" % (kwargsDict["snapshot"])))
+        ret += [
+            ("/root", "subvol=/@root"),
+            ("/home", "subvol=/@home"),
+            ("/var", "subvol=/@var"),
+        ]
+        return ret
+
+    def getDirpathsForUmount(self):
+        return ["/var", "/home", "/root", "/"]
 
     @staticmethod
     @abc.abstractmethod
