@@ -304,6 +304,7 @@ def create_and_mount(disk_list, mount_dir, mnt_opt_list):
 
     # create btrfs
     Util.cmdCall("/usr/sbin/mkfs.btrfs", "-d", "single", "-m", "single", *bcache.get_all_bcache_dev_list())
+    SnapshotBtrfs.initializeFs(cg.dev_rootfs)
 
     # return
     ret = StorageLayoutImpl()
@@ -311,11 +312,6 @@ def create_and_mount(disk_list, mount_dir, mnt_opt_list):
     ret._bcache = bcache
     ret._snapshot = SnapshotBtrfs(mount_dir)
     ret._mnt = MountEfi(mount_dir)
-
-    # mount temporarily to create the initial subvolume
-    Util.cmdCall("/bin/mount", ret.dev_rootfs, mount_dir)
-    Util.cmdCall("/sbin/btrfs", "subvolume", "create", "/@")
-    Util.cmdCall("/bin/umount", ret.dev_rootfs)
 
     # mount
     tlist = mnt_opt_list + ret.get_mntopt_list_for_mount()

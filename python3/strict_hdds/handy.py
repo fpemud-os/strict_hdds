@@ -25,7 +25,7 @@ import os
 import re
 import abc
 import psutil
-from .util import Util, PartiUtil, GptUtil, BcacheUtil, LvmUtil
+from .util import Util, PartiUtil, GptUtil, BcacheUtil, LvmUtil, TmpMount
 from . import errors
 from . import BootDirRwController
 
@@ -600,12 +600,18 @@ class Snapshot(abc.ABC):
             ret.append(sv[1:])
         return ret
 
-    @abc.abstractclassmethod
     def create_snapshot(self, snapshot_name):
+        self._createSubVol(snapshot_name, "/@")
+
+    def remove_snapshot(self, snapshot_name):
+        self._deleteSubVol(snapshot_name)
+
+    @abc.abstractclassmethod
+    def _createSubVol(self, subVolName, snapshotSrcSubVolName=None):
         pass
 
     @abc.abstractclassmethod
-    def remove_snapshot(self, snapshot_name):
+    def _deleteSubVol(self, subVolName):
         pass
 
     @abc.abstractclassmethod
@@ -615,11 +621,24 @@ class Snapshot(abc.ABC):
 
 class SnapshotBtrfs(Snapshot):
 
-    def create_snapshot(self, snapshot_name):
+    @staticmethod
+    def initializeFs(devPath):
+        with TmpMount(devPath) as mp:
+            Util.cmdCall("/sbin/btrfs", "subvolume", "create", os.path.join(mp.mountpoint, "@"))
+            Util.cmdCall("/sbin/btrfs", "subvolume", "create", os.path.join(mp.mountpoint, "@root"))
+            Util.cmdCall("/sbin/btrfs", "subvolume", "create", os.path.join(mp.mountpoint, "@home"))
+            Util.cmdCall("/sbin/btrfs", "subvolume", "create", os.path.join(mp.mountpoint, "@var"))
+            Util.cmdCall("/sbin/btrfs", "subvolume", "create", os.path.join(mp.mountpoint, "@snapshots"))
+
+    @staticmethod
+    def checkFs(mount_dir):
+        pass
+
+    def _createSubVol(self, subVolName, snapshotSrcSubVolName=None):
         Util.cmdCall("/sbin/btrfs", "subvolume", "snapshot", os.path.join(self._mntDir, "@"), os.path.join(self._mntDir, "@%s" % (snapshot_name)))
 
-    def remove_snapshot(self, snapshot_name):
-        Util.cmdCall("/sbin/btrfs", "subvolume", "delete", os.path.join(self._mntDir, "@%s" % (snapshot_name)))
+    def _deleteSubVol(self, subVolName):
+        Util.cmdCall("/sbin/btrfs", "subvolume", "delete", os.path.join(self._mntDir, "@%s" % (subVolName)))
 
     def _getSubVolList(self):
         out = Util.cmdCall("/sbin/btrfs", "subvolume", "list", self._mntDir)
@@ -629,10 +648,19 @@ class SnapshotBtrfs(Snapshot):
 
 class SnapshotBcachefs(Snapshot):
 
-    def create_snapshot(self, snapshot_name):
+    @staticmethod
+    def initializeFs(devPath):
+        with TmpMount(devPath) as mp:
+            Util.cmdCall("/sbin/bcachefs", "subvolume", "create", os.path.join(mp.mountpoint, "@"))
+            Util.cmdCall("/sbin/bcachefs", "subvolume", "create", os.path.join(mp.mountpoint, "@root"))
+            Util.cmdCall("/sbin/bcachefs", "subvolume", "create", os.path.join(mp.mountpoint, "@home"))
+            Util.cmdCall("/sbin/bcachefs", "subvolume", "create", os.path.join(mp.mountpoint, "@var"))
+            Util.cmdCall("/sbin/bcachefs", "subvolume", "create", os.path.join(mp.mountpoint, "@snapshots"))
+
+    def _createSubVol(self, subVolName, snapshotSrcSubVolName=None):
         assert False
 
-    def remove_snapshot(self, snapshot_name):
+    def _deleteSubVol(self, subVolName):
         assert False
 
     def _getSubVolList(self):

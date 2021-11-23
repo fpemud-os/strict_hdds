@@ -290,6 +290,7 @@ def create_and_mount(disk_list, mount_dir, mnt_opt_list):
         ssd_list2 = []
     hdd_list2 = [cg.get_hdd_data_partition(x) for x in cg.get_hdd_list()]
     BcachefsUtil.createBcachefs(ssd_list2, hdd_list2, 1, 1)
+    SnapshotBcachefs.initializeFs(cg.dev_rootfs)
 
     # return
     ret = StorageLayoutImpl()

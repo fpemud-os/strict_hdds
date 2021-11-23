@@ -217,6 +217,7 @@ def create_and_mount(disk_list, mount_dir, mnt_opt_list):
 
     # create and mount
     Util.cmdCall("/usr/sbin/mkfs.btrfs", "-d", "single", "-m", "single", *[md.get_disk_data_partition(x) for x in md.get_disk_list()])
+    SnapshotBtrfs.initializeFs(md.dev_rootfs)
 
     # return
     ret = StorageLayoutImpl()
