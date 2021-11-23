@@ -25,9 +25,7 @@ from enum import Enum, auto
 
 class CheckCode(Enum):
     TRIVIAL = auto()
-
     ESP_SIZE_INVALID = auto()
-
     SWAP_NOT_ENABLED = auto()
     SWAP_SIZE_TOO_SMALL = auto()
 
