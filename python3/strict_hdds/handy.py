@@ -635,7 +635,7 @@ class SnapshotBtrfs(Snapshot):
         pass
 
     def _createSubVol(self, subVolName, snapshotSrcSubVolName=None):
-        Util.cmdCall("/sbin/btrfs", "subvolume", "snapshot", os.path.join(self._mntDir, "@"), os.path.join(self._mntDir, "@%s" % (snapshot_name)))
+        Util.cmdCall("/sbin/btrfs", "subvolume", "snapshot", os.path.join(self._mntDir, "@"), os.path.join(self._mntDir, "@%s" % (subVolName)))
 
     def _deleteSubVol(self, subVolName):
         Util.cmdCall("/sbin/btrfs", "subvolume", "delete", os.path.join(self._mntDir, "@%s" % (subVolName)))
