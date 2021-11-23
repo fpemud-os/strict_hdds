@@ -584,14 +584,6 @@ class Snapshot(abc.ABC):
     def __init__(self, mntDir):
         self._mntDir = mntDir
 
-        # check filesystem
-        for sv in self._getSubVolList(mntDir):
-            if sv in ["@", "@root", "@home", "@var", "@snapshots"]:
-                continue
-            if re.fullmatch("@snapshots/([^/]+)", sv) is not None:
-                continue
-            raise errors.StorageLayoutParseError("sub-volume \"%s\" is not supported" % (sv))
-
     @property
     def snapshot(self):
         ret = Util.mntGetSubVol(self._mntDir)
@@ -629,6 +621,19 @@ class Snapshot(abc.ABC):
 
     def getDirpathsForUmount(self):
         return ["/var", "/home", "/root", "/"]
+
+    def check(self, auto_fix, error_callback):
+        svList = self._getSubVolList(self._mntDir)
+        for sv in ["@", "@root", "@home", "@var", "@snapshots"]:
+            try:
+                svList.remove(sv)
+            except ValueError:
+                # no way to auto fix
+                error_callback(errors.CheckCode.TRIVIAL, "Sub-volume \"%s\" does not exist." % (sv))
+        for sv in svList:
+            if not re.fullmatch("@snapshots/([^/]+)", sv) is not None:
+                # no way to auto fix
+                error_callback(errors.CheckCode.TRIVIAL, "Redundant sub-volume \"%s\"." % (sv))
 
     @staticmethod
     @abc.abstractmethod

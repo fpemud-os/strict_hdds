@@ -226,6 +226,7 @@ class StorageLayoutImpl(StorageLayout):
     def _check_impl(self, check_item, *kargs, auto_fix=False, error_callback=None):
         if check_item == Util.checkItemBasic:
             self._cg.check_esp(auto_fix, error_callback)
+            self._snapshot.check(auto_fix, error_callback)
         elif check_item == "ssd":
             self._cg.check_ssd(auto_fix, error_callback)
         elif check_item == "swap":

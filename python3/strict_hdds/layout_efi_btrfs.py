@@ -165,6 +165,7 @@ class StorageLayoutImpl(StorageLayout):
     def _check_impl(self, check_item, *kargs, auto_fix=False, error_callback=None):
         if check_item == Util.checkItemBasic:
             self._md.check_esp(auto_fix, error_callback)
+            self._snapshot.check(auto_fix, error_callback)
         else:
             assert False
 
