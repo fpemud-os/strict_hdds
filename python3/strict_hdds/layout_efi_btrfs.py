@@ -78,7 +78,7 @@ class StorageLayoutImpl(StorageLayout):
 
     def umount_and_dispose(self):
         if True:
-            Util.mntUmount(self.mount_point, self.get_params_for_mount(snapshot=self.snapshot))
+            Util.mntUmount(self.mount_point, self.get_params_for_mount())
             del self._mnt
         del self._md
 
