@@ -225,11 +225,6 @@ def create_and_mount(disk_list, mount_dir, mnt_opt_list):
     ret._snapshot = SnapshotBtrfs(mount_dir)
     ret._mnt = MountEfi(mount_dir)
 
-    # mount temporarily to create the initial subvolume
-    Util.cmdCall("/bin/mount", ret.dev_rootfs, mount_dir)
-    Util.cmdCall("/sbin/btrfs", "subvolume", "create", "/@")
-    Util.cmdCall("/bin/umount", ret.dev_rootfs)
-
     # mnount
     tlist = mnt_opt_list + ret.get_mntopt_list_for_mount()
     HandyUtil.checkMntOptList(tlist)

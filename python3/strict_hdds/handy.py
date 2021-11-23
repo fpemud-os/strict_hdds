@@ -560,6 +560,15 @@ class SwapFile:
 
 class Snapshot(abc.ABC):
 
+    @classmethod
+    def initializeFs(cls, devPath):
+        with TmpMount(devPath) as mp:
+            cls._createSubVol(mp.mountpoint, "@")
+            cls._createSubVol(mp.mountpoint, "@root")
+            cls._createSubVol(mp.mountpoint, "@home")
+            cls._createSubVol(mp.mountpoint, "@var")
+            cls._createSubVol(mp.mountpoint, "@snapshots")
+
     @staticmethod
     def proxy(func):
         if isinstance(func, property):
@@ -574,9 +583,14 @@ class Snapshot(abc.ABC):
 
     def __init__(self, mntDir):
         self._mntDir = mntDir
-        for sv in self._getSubVolList():
-            if not sv.startswith("@"):
-                raise errors.StorageLayoutParseError("sub-volume \"%s\" is not supported" % (sv))
+
+        # check filesystem
+        for sv in self._getSubVolList(mntDir):
+            if sv in ["@", "@root", "@home", "@var", "@snapshots"]:
+                continue
+            if re.fullmatch("@snapshots/([^/]+)", sv) is not None:
+                continue
+            raise errors.StorageLayoutParseError("sub-volume \"%s\" is not supported" % (sv))
 
     @property
     def snapshot(self):
@@ -595,26 +609,34 @@ class Snapshot(abc.ABC):
     def get_snapshot_list(self):
         ret = []
         for sv in self._getSubVolList():
-            if not sv.startswith("@"):
-                raise errors.StorageLayoutParseError("sub-volume \"%s\" is not supported" % (sv))
-            ret.append(sv[1:])
+            m = re.fullmatch("@snapshots/([^/]+)", sv)
+            if m is not None:
+                ret.append(m.group(1))
         return ret
 
     def create_snapshot(self, snapshot_name):
-        self._createSubVol(snapshot_name, "/@")
+        self._createSnapshotSubVol(self._mntDir, "@", os.path.join("@snapshots", snapshot_name))
 
     def remove_snapshot(self, snapshot_name):
-        self._deleteSubVol(snapshot_name)
+        self._deleteSubVol(os.path.join("@snapshots", snapshot_name))
 
-    @abc.abstractclassmethod
-    def _createSubVol(self, subVolName, snapshotSrcSubVolName=None):
+    @staticmethod
+    @abc.abstractmethod
+    def _createSubVol(mntDir, subVolPath):
         pass
 
-    @abc.abstractclassmethod
-    def _deleteSubVol(self, subVolName):
+    @staticmethod
+    @abc.abstractmethod
+    def _createSnapshotSubVol(mntDir, srcSubVolPath, subVolPath):
         pass
 
-    @abc.abstractclassmethod
+    @staticmethod
+    @abc.abstractmethod
+    def _deleteSubVol(mntDir, subVolPath):
+        pass
+
+    @staticmethod
+    @abc.abstractmethod
     def _getSubVolList(self):
         pass
 
@@ -622,26 +644,20 @@ class Snapshot(abc.ABC):
 class SnapshotBtrfs(Snapshot):
 
     @staticmethod
-    def initializeFs(devPath):
-        with TmpMount(devPath) as mp:
-            Util.cmdCall("/sbin/btrfs", "subvolume", "create", os.path.join(mp.mountpoint, "@"))
-            Util.cmdCall("/sbin/btrfs", "subvolume", "create", os.path.join(mp.mountpoint, "@root"))
-            Util.cmdCall("/sbin/btrfs", "subvolume", "create", os.path.join(mp.mountpoint, "@home"))
-            Util.cmdCall("/sbin/btrfs", "subvolume", "create", os.path.join(mp.mountpoint, "@var"))
-            Util.cmdCall("/sbin/btrfs", "subvolume", "create", os.path.join(mp.mountpoint, "@snapshots"))
+    def _createSubVol(mntDir, subVolPath):
+        Util.cmdCall("/sbin/btrfs", "subvolume", "create", os.path.join(mntDir, subVolPath))
 
     @staticmethod
-    def checkFs(mount_dir):
-        pass
+    def _createSnapshotSubVol(mntDir, srcSubVolPath, subVolPath):
+        Util.cmdCall("/sbin/btrfs", "subvolume", "snapshot", os.path.join(mntDir, srcSubVolPath), os.path.join(mntDir, subVolPath))
 
-    def _createSubVol(self, subVolName, snapshotSrcSubVolName=None):
-        Util.cmdCall("/sbin/btrfs", "subvolume", "snapshot", os.path.join(self._mntDir, "@"), os.path.join(self._mntDir, "@%s" % (subVolName)))
+    @staticmethod
+    def _deleteSubVol(mntDir, subVolPath):
+        Util.cmdCall("/sbin/btrfs", "subvolume", "delete", os.path.join(mntDir, subVolPath))
 
-    def _deleteSubVol(self, subVolName):
-        Util.cmdCall("/sbin/btrfs", "subvolume", "delete", os.path.join(self._mntDir, "@%s" % (subVolName)))
-
-    def _getSubVolList(self):
-        out = Util.cmdCall("/sbin/btrfs", "subvolume", "list", self._mntDir)
+    @staticmethod
+    def _getSubVolList(mntDir):
+        out = Util.cmdCall("/sbin/btrfs", "subvolume", "list", mntDir)
         # FIXME: parse out
         return out
 
@@ -649,22 +665,22 @@ class SnapshotBtrfs(Snapshot):
 class SnapshotBcachefs(Snapshot):
 
     @staticmethod
-    def initializeFs(devPath):
-        with TmpMount(devPath) as mp:
-            Util.cmdCall("/sbin/bcachefs", "subvolume", "create", os.path.join(mp.mountpoint, "@"))
-            Util.cmdCall("/sbin/bcachefs", "subvolume", "create", os.path.join(mp.mountpoint, "@root"))
-            Util.cmdCall("/sbin/bcachefs", "subvolume", "create", os.path.join(mp.mountpoint, "@home"))
-            Util.cmdCall("/sbin/bcachefs", "subvolume", "create", os.path.join(mp.mountpoint, "@var"))
-            Util.cmdCall("/sbin/bcachefs", "subvolume", "create", os.path.join(mp.mountpoint, "@snapshots"))
+    def _createSubVol(mntDir, subVolPath):
+        Util.cmdCall("/sbin/bcachefs", "subvolume", "create", os.path.join(mntDir, subVolPath))
 
-    def _createSubVol(self, subVolName, snapshotSrcSubVolName=None):
-        assert False
+    @staticmethod
+    def _createSnapshotSubVol(mntDir, srcSubVolPath, subVolPath):
+        Util.cmdCall("/sbin/bcachefs", "subvolume", "snapshot", os.path.join(mntDir, srcSubVolPath), os.path.join(mntDir, subVolPath))
 
-    def _deleteSubVol(self, subVolName):
-        assert False
+    @staticmethod
+    def _deleteSubVol(mntDir, subVolPath):
+        Util.cmdCall("/sbin/bcachefs", "subvolume", "delete", os.path.join(mntDir, subVolPath))
 
-    def _getSubVolList(self):
-        assert False
+    @staticmethod
+    def _getSubVolList(mntDir):
+        out = Util.cmdCall("/sbin/bcachefs", "subvolume", "list", mntDir)
+        # FIXME: parse out
+        return out
 
 
 class MountBios:
