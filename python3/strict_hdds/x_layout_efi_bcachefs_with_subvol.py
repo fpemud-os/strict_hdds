@@ -22,7 +22,7 @@
 
 
 from .util import Util, BcachefsUtil
-from .handy import EfiCacheGroup, MountEfi, HandyCg
+from .handy import EfiCacheGroup, Snapshot, SnapshotBcachefs, MountEfi, HandyCg
 from . import errors
 from . import StorageLayout, MountParam
 
@@ -51,6 +51,7 @@ class StorageLayoutImpl(StorageLayout):
 
     def __init__(self, mount_dir):
         self._cg = None                     # EfiCacheGroup
+        self._snapshot = None               # SnapshotBcachefs
         self._mnt = None                    # MountEfi
 
     @property
@@ -81,6 +82,11 @@ class StorageLayoutImpl(StorageLayout):
     def boot_disk(self):
         pass
 
+    @SnapshotBcachefs.proxy
+    @property
+    def snapshot(self):
+        pass
+
     @MountEfi.proxy
     @property
     def mount_point(self):
@@ -88,7 +94,7 @@ class StorageLayoutImpl(StorageLayout):
 
     def umount_and_dispose(self):
         if True:
-            Util.mntUmount(self.mount_point, ["/boot", "/"])
+            Util.mntUmount(self.mount_point, ["/boot"] + self._snapshot.getDirpathsForUmount())
             del self._mnt
         if True:
             del self._cg
@@ -98,10 +104,11 @@ class StorageLayoutImpl(StorageLayout):
         pass
 
     def get_params_for_mount(self, **kwargs):
-        return [
-            MountParam(self.dev_rootfs, "/", ""),
-            MountParam(self.dev_boot, "/boot", "ro"),
-        ]
+        ret = []
+        for dirPath, mntOpts in self._snapshot.getDirPathsAndMntOptsForMount(kwargs):
+            ret.append(MountParam(self.dev_rootfs, dirPath, mntOpts))
+        ret.append(MountParam(self.dev_boot, "/boot", "ro"))
+        return ret
 
     @EfiCacheGroup.proxy
     def get_esp(self):
@@ -145,6 +152,10 @@ class StorageLayoutImpl(StorageLayout):
 
     @EfiCacheGroup.proxy
     def get_hdd_data_partition(self, disk):
+        pass
+
+    @Snapshot.proxy
+    def get_snapshot_list(self):
         pass
 
     def add_disk(self, disk):
@@ -204,9 +215,18 @@ class StorageLayoutImpl(StorageLayout):
 
             return lastBootHdd != self._cg.boot_disk     # boot disk may change
 
+    @Snapshot.proxy
+    def create_snapshot(self, snapshot_name):
+        pass
+
+    @Snapshot.proxy
+    def remove_snapshot(self, snapshot_name):
+        pass
+
     def _check_impl(self, check_item, *kargs, auto_fix=False, error_callback=None):
         if check_item == Util.checkItemBasic:
             self._cg.check_esp(auto_fix, error_callback)
+            self._snapshot.check(auto_fix, error_callback)
         elif check_item == "ssd":
             self._cg.check_ssd(auto_fix, error_callback)
         elif check_item == "swap":
@@ -232,6 +252,7 @@ def parse(boot_dev, root_dev):
     # return
     ret = StorageLayoutImpl()
     ret._cg = EfiCacheGroup(ssd=ssd, ssdEspParti=ssdEspParti, ssdSwapParti=ssdSwapParti, ssdCacheParti=ssdCacheParti, hddList=hddList, bootHdd=bootHdd)
+    ret._snapshot = SnapshotBcachefs("/")
     ret._mnt = MountEfi("/")
     return ret
 
@@ -250,6 +271,7 @@ def detect_and_mount(disk_list, mount_dir, mount_options):
     # return
     ret = StorageLayoutImpl()
     ret._cg = EfiCacheGroup(ssd=ssd, ssdEspParti=ssdEspParti, ssdSwapParti=ssdSwapParti, ssdCacheParti=ssdCacheParti, hddList=hddList, bootHdd=bootHdd)
+    ret._snapshot = SnapshotBcachefs(mount_dir)
     ret._mnt = MountEfi(mount_dir)
 
     # mount
@@ -269,10 +291,12 @@ def create_and_mount(disk_list, mount_dir, mount_options):
         ssd_list2 = []
     hdd_list2 = [cg.get_hdd_data_partition(x) for x in cg.get_hdd_list()]
     BcachefsUtil.createBcachefs(ssd_list2, hdd_list2, 1, 1)
+    SnapshotBcachefs.initializeFs(cg.dev_rootfs)
 
     # return
     ret = StorageLayoutImpl()
     ret._cg = cg
+    ret._snapshot = SnapshotBcachefs(mount_dir)
     ret._mnt = MountEfi(mount_dir)
 
     # mount
