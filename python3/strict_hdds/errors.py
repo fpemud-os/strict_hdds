@@ -31,6 +31,9 @@ class CheckCode(Enum):
 
 
 def checkErrorCallback(error_callback, check_code, *kargs):
+    if error_callback is None:
+        return
+
     errDict = {
         CheckCode.TRIVIAL: (1, "{0}"),
         CheckCode.ESP_SIZE_INVALID: (1, "Invalid size for ESP partition \"{0}\"."),
