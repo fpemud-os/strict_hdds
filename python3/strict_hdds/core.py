@@ -82,14 +82,14 @@ class StorageLayout(abc.ABC):
         pass
 
     def check(self, auto_fix=False, error_callback=None):
-        self._check_impl(auto_fix, Util.checkItemBasic, functools.partial(errors.checkErrorCallback, error_callback))
+        self._check_impl(Util.checkItemBasic, auto_fix=auto_fix, error_callback=functools.partial(errors.checkErrorCallback, error_callback))
 
     def opt_check(self, check_item, *kargs, auto_fix=False, error_callback=None):
         assert check_item != Util.checkItemBasic
-        self._check_impl(auto_fix, check_item, *kargs, functools.partial(errors.checkErrorCallback, error_callback))
+        self._check_impl(check_item, *kargs, auto_fix=auto_fix, error_callback=functools.partial(errors.checkErrorCallback, error_callback))
 
     @abc.abstractmethod
-    def _check_impl(self, check_item, auto_fix=False, error_callback=None):
+    def _check_impl(self, check_item, *kargs, auto_fix=False, error_callback=None):
         pass
 
 
