@@ -104,9 +104,9 @@ class StorageLayoutImpl(StorageLayout):
     def _check_impl(self, check_item, *kargs, auto_fix=False, error_callback=None):
         if check_item == Util.checkItemBasic:
             dc = DisksChecker([self._hdd])
-            dc.check_logical_sector_size(auto_fix, error_callback)
-            dc.check_boot_sector(auto_fix, error_callback)
             dc.check_partition_type("gpt", auto_fix, error_callback)
+            dc.check_boot_sector(auto_fix, error_callback)
+            dc.check_logical_sector_size(auto_fix, error_callback)
         elif check_item == "swap":
             self._swap.check(auto_fix, error_callback)
         else:

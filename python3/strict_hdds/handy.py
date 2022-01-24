@@ -985,39 +985,25 @@ class DisksChecker:
         self._hddList = disk_list
         self._diskCache = dict()        # avoid create new disk object every time
 
-    def check_logical_sector_size(self, auto_fix, error_callback):
+    def check_partition_type(self, partition_type_list, auto_fix, error_callback):
+        partTypeList = []
+
+        bBad = False
         for hdd in self._hddList:
-            dev = parted.getDevice(hdd)
+            dev, disk = self._partedGetDevAndDisk(hdd)
+            partTypeList.append(disk.type)
+            if disk.type not in [partition_type_list]:
+                error_callback(errors.CheckCode.TRIVIAL, "Inappopriate partition type for %s" % (hdd))
+                bBad = True
 
-            # check according to physical sector size
-            if dev.physicalSectorSize == 512:
-                if dev.sectorSize != dev.physicalSectorSize:
-                    error_callback(errors.CheckCode.TRIVIAL, "%s has different physical sector size (%d) and logical sector size (%d)" % (hdd, dev.physicalSectorSize, dev.sectorSize))
-                    continue
-            elif dev.physicalSectorSize == 4096:
-                if dev.sectorSize != dev.physicalSectorSize:
-                    error_callback(errors.CheckCode.TRIVIAL, "%s has different physical sector size (%d) and logical sector size (%d)" % (hdd, dev.physicalSectorSize, dev.sectorSize))
-                    continue
-            else:
-                if dev.sectorSize not in [512, 4096]:
-                    error_callback(errors.CheckCode.TRIVIAL, "%s has inapporiate logical sector size (%d)" % (hdd, dev.sectorSize))
-                    continue
-
-            # check according to partition type
-            disk = self._partedGetDisk(hdd, dev)
-            if disk.type == "msdos":
-                if dev.sectorSize != 512:
-                    error_callback(errors.CheckCode.TRIVIAL, "%s uses MBR partition table, its logical sector size (%d) must be 512" % (hdd, dev.sectorSize))
-                    continue
-            elif disk.type == "gpt":
-                if dev.sectorSize < 4096:
-                    error_callback(errors.CheckCode.TRIVIAL, "%s uses GPT partition table, its logical sector size (%d) should be at least 4096" % (hdd, dev.sectorSize))
-                    continue
+        if not bBad:
+            for i in range(1, len(self._hddList)):
+                if partTypeList[i - 1] != partTypeList[i]:
+                    error_callback(errors.CheckCode.TRIVIAL, "%s and %s have different partition types" % (self._hddList[i - 1], self._hddList[i]))
 
     def check_boot_sector(self, auto_fix, error_callback):
         for hdd in self._hddList:
-            dev = parted.getDevice(hdd)
-            disk = self._partedGetDisk(hdd, dev)
+            dev, disk = self._partedGetDevAndDisk(hdd)
             if disk.type == "msdos":
                 pass
             elif disk.type == "gpt":
@@ -1077,29 +1063,32 @@ class DisksChecker:
                 # ghnt and check primary and backup GPT header
                 pass
 
-    def check_partition_type(self, partition_type_list, auto_fix, error_callback):
-        partTypeList = []
-
-        bBad = False
+    def check_logical_sector_size(self, auto_fix, error_callback):
         for hdd in self._hddList:
-            disk = self._partedGetDisk(hdd)
-            partTypeList.append(disk.type)
-            if disk.type not in [partition_type_list]:
-                error_callback(errors.CheckCode.TRIVIAL, "Inappopriate partition type for %s" % (hdd))
-                bBad = True
+            dev, disk = self._partedGetDevAndDisk(hdd)
+            if disk.type == "msdos":
+                if dev.sectorSize != 512:
+                    error_callback(errors.CheckCode.TRIVIAL, "%s uses MBR partition table, its logical sector size (%d) should be 512" % (hdd, dev.sectorSize))
+                    continue
+            elif disk.type == "gpt":
+                if dev.physicalSectorSize == 512:
+                    if dev.sectorSize != dev.physicalSectorSize:
+                        error_callback(errors.CheckCode.TRIVIAL, "%s has different physical sector size (%d) and logical sector size (%d)" % (hdd, dev.physicalSectorSize, dev.sectorSize))
+                        continue
+                elif dev.physicalSectorSize == 4096:
+                    if dev.sectorSize != dev.physicalSectorSize:
+                        error_callback(errors.CheckCode.TRIVIAL, "%s has different physical sector size (%d) and logical sector size (%d)" % (hdd, dev.physicalSectorSize, dev.sectorSize))
+                        continue
+                else:
+                    if dev.sectorSize not in [512, 4096]:
+                        error_callback(errors.CheckCode.TRIVIAL, "%s has inapporiate logical sector size (%d)" % (hdd, dev.sectorSize))
+                        continue
 
-        if not bBad:
-            for i in range(1, len(self._hddList)):
-                if partTypeList[i - 1] != partTypeList[i]:
-                    error_callback(errors.CheckCode.TRIVIAL, "%s and %s have different partition types" % (self._hddList[i - 1], self._hddList[i]))
-
-    def _partedGetDisk(self, devPath, partedDev=None):
-        assert devPath is not None
-        if partedDev is None:
-            partedDev = parted.getDevice(devPath)
+    def _partedGetDevAndDisk(self, devPath):
+        partedDev = parted.getDevice(devPath)
         if partedDev not in self._diskCache:
             self._diskCache[partedDev] = parted.newDisk(partedDev)
-        return self._diskCache[partedDev]
+        return partedDev, self._diskCache[partedDev]
 
     def _partedReadSectors(self, partedDev, startSector, sectorCount):
         partedDev.open()

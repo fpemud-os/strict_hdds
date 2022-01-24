@@ -226,9 +226,9 @@ class StorageLayoutImpl(StorageLayout):
         if check_item == Util.checkItemBasic:
             if True:
                 dc = DisksChecker(self._cg.get_disk_list())
-                dc.check_logical_sector_size(auto_fix, error_callback)
-                dc.check_boot_sector(auto_fix, error_callback)
                 dc.check_partition_type("gpt", auto_fix, error_callback)
+                dc.check_boot_sector(auto_fix, error_callback)
+                dc.check_logical_sector_size(auto_fix, error_callback)
             self._cg.check_ssd(auto_fix, error_callback)
             self._cg.check_esp(auto_fix, error_callback)
             self._bcache.check(auto_fix, error_callback)
