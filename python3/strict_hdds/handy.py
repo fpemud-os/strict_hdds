@@ -1047,7 +1047,7 @@ class DisksChecker:
                 assert struct.calcsize(self.mbrHeaderFmt) == 512
 
                 # get Protective MBR header
-                mbrHeader = struct.unpack(self.mbrHeaderFmt, self._partedReadSector(dev, 0, 1)[:struct.calcsize(self.mbrHeaderFmt)])
+                mbrHeader = struct.unpack(self.mbrHeaderFmt, self._partedReadSectors(dev, 0, 1)[:struct.calcsize(self.mbrHeaderFmt)])
 
                 # check Protective MBR header
                 if not Util.isBufferAllZero(mbrHeader[0]):
@@ -1101,7 +1101,7 @@ class DisksChecker:
             self._diskCache[partedDev] = parted.newDisk(partedDev)
         return self._diskCache[partedDev]
 
-    def _partedReadSector(self, partedDev, startSector, sectorCount):
+    def _partedReadSectors(self, partedDev, startSector, sectorCount):
         partedDev.open()
         try:
             return partedDev.read(startSector, sectorCount)

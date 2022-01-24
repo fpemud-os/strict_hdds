@@ -43,7 +43,7 @@ def checkErrorCallback(error_callback, check_code, *kargs):
 
     argNum, fstr = errDict[check_code]
     assert len(kargs) == argNum
-    error_callback(check_code, fstr % kargs)
+    error_callback(check_code, fstr.format(*kargs))
 
 
 class StorageLayoutError(Exception):
