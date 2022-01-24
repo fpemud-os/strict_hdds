@@ -61,7 +61,7 @@ class StorageLayoutImpl(StorageLayout):
     def dev_rootfs(self):
         tlist = []
         if self.get_ssd() is not None:
-            tlist.append(self.get_ssd_cache_partition)
+            tlist.append(self.get_ssd_cache_partition())
         for hdd in self.get_hdd_list():
             tlist.append(self.get_hdd_data_partition(hdd))
         return ":".join(tlist)
