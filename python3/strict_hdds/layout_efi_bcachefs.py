@@ -210,13 +210,16 @@ class StorageLayoutImpl(StorageLayout):
 
 
 def parse(boot_dev, root_dev):
+    rootDevList = root_dev.split(":")
+
     if boot_dev is None:
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.BOOT_DEV_NOT_EXIST)
-    if Util.getBlkDevFsType(root_dev) != Util.fsTypeBcachefs:
-        raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.ROOT_PARTITION_FS_SHOULD_BE(Util.fsTypeBcachefs))
+    for rootDev in rootDevList:
+        if Util.getBlkDevFsType(rootDev) != Util.fsTypeBcachefs:
+            raise errors.StorageLayoutParseError(StorageLayoutImpl.name, "file system of root partition %s is not %s" % (Util.fsTypeBcachefs))
 
     # ssd, hdd_list, boot_disk
-    ssd, hddList = HandyCg.checkAndGetSsdAndHddList(BcachefsUtil.getSlaveSsdDevPatListAndHddDevPathList(root_dev), False)
+    ssd, hddList = HandyCg.checkAndGetSsdAndHddList(BcachefsUtil.getSlaveSsdDevPatListAndHddDevPathList(rootDevList))
     ssdEspParti, ssdSwapParti, ssdCacheParti = HandyCg.checkAndGetSsdPartitions(StorageLayoutImpl.name, ssd)
     bootHdd = HandyCg.checkAndGetBootHddFromBootDev(StorageLayoutImpl.name, boot_dev, ssdEspParti, hddList)
 

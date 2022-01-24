@@ -1073,8 +1073,15 @@ class BcacheUtil:
 class BcachefsUtil:
 
     @staticmethod
-    def getSlaveSsdDevPatListAndHddDevPathList(devPath):
-        return [], []
+    def getSlaveSsdDevPatListAndHddDevPathList(rootDevList):
+        ssdList = []
+        hddList = []
+        for devPath in rootDevList:
+            if Util.isBlkDevSsdOrHdd(devPath):      # FIXME: should detect which bcache group devPath belongs to
+                ssdList.append(devPath)
+            else:
+                hddList.append(devPath)
+        return (ssdList, hddList)
 
     @staticmethod
     def createBcachefs(ssdList, hddList):
