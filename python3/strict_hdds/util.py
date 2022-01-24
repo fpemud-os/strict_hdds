@@ -261,6 +261,12 @@ class Util:
 
     @staticmethod
     def getBlkDevFsType(devPath):
+        # blkid doesn't support bcachefs yet, use /usr/bin/file instead
+        ret = Util.cmdCall("/usr/bin/file", "-sb", devPath)
+        if re.search("^bcachefs, UUID=", ret) is not None:
+            return "bcachefs"
+
+        # use /sbin/blkid to get fstype
         ret = Util.cmdCall("/sbin/blkid", "-o", "export", devPath)
         m = re.search("^TYPE=(\\S+)$", ret, re.M)
         if m is not None:
