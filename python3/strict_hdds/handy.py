@@ -1069,20 +1069,13 @@ class DisksChecker:
             if disk.type == "msdos":
                 if dev.sectorSize != 512:
                     error_callback(errors.CheckCode.TRIVIAL, "%s uses MBR partition table, its logical sector size (%d) should be 512" % (hdd, dev.sectorSize))
-                    continue
             elif disk.type == "gpt":
-                if dev.physicalSectorSize == 512:
+                if dev.physicalSectorSize in [512, 4096]:
                     if dev.sectorSize != dev.physicalSectorSize:
                         error_callback(errors.CheckCode.TRIVIAL, "%s has different physical sector size (%d) and logical sector size (%d)" % (hdd, dev.physicalSectorSize, dev.sectorSize))
-                        continue
-                elif dev.physicalSectorSize == 4096:
-                    if dev.sectorSize != dev.physicalSectorSize:
-                        error_callback(errors.CheckCode.TRIVIAL, "%s has different physical sector size (%d) and logical sector size (%d)" % (hdd, dev.physicalSectorSize, dev.sectorSize))
-                        continue
                 else:
                     if dev.sectorSize not in [512, 4096]:
                         error_callback(errors.CheckCode.TRIVIAL, "%s has inapporiate logical sector size (%d)" % (hdd, dev.sectorSize))
-                        continue
 
     def _partedGetDevAndDisk(self, devPath):
         partedDev = parted.getDevice(devPath)
