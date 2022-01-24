@@ -24,6 +24,8 @@
 import os
 import re
 import abc
+import struct
+import parted
 import psutil
 from .util import Util, PartiUtil, GptUtil, BcacheUtil, LvmUtil, TmpMount
 from . import errors
@@ -976,11 +978,135 @@ class HandyBcache:
         return (ssd, hddList)
 
 
-class HandyChecker:
+class DisksChecker:
 
-    @staticmethod
-    def check_disks(self, hdd_list, auto_fix, error_callback):
-        pass
+    def __init__(self, disk_list):
+        assert len(disk_list) > 0
+        self._hddList = disk_list
+        self._diskCache = dict()        # avoid create new disk object every time
+
+    def check_logical_sector_size(self, auto_fix, error_callback):
+        for hdd in self._hddList:
+            dev = parted.getDevice(hdd)
+
+            # check according to physical sector size
+            if dev.physicalSectorSize == 512:
+                if dev.sectorSize != dev.physicalSectorSize:
+                    error_callback(errors.CheckCode.TRIVIAL, "%s has different physical sector size (%d) and logical sector size (%d)" % (hdd, dev.physicalSectorSize, dev.sectorSize))
+                    continue
+            elif dev.physicalSectorSize == 4096:
+                if dev.sectorSize != dev.physicalSectorSize:
+                    error_callback(errors.CheckCode.TRIVIAL, "%s has different physical sector size (%d) and logical sector size (%d)" % (hdd, dev.physicalSectorSize, dev.sectorSize))
+                    continue
+            else:
+                if dev.sectorSize not in [512, 4096]:
+                    error_callback(errors.CheckCode.TRIVIAL, "%s has inapporiate logical sector size (%d)" % (hdd, dev.sectorSize))
+                    continue
+
+            # check according to partition type
+            disk = self._partedGetDisk(hdd, dev)
+            if disk.type == "msdos":
+                if dev.sectorSize != 512:
+                    error_callback(errors.CheckCode.TRIVIAL, "%s uses MBR partition table, its logical sector size (%d) must be 512" % (hdd, dev.sectorSize))
+                    continue
+            elif disk.type == "gpt":
+                if dev.sectorSize < 4096:
+                    error_callback(errors.CheckCode.TRIVIAL, "%s uses GPT partition table, its logical sector size (%d) should be at least 4096" % (hdd, dev.sectorSize))
+                    continue
+
+    def check_boot_sector(self, auto_fix, error_callback):
+        for hdd in self._hddList:
+            dev = parted.getDevice(hdd)
+            disk = self._partedGetDisk(hdd, dev)
+            if disk.type == "msdos":
+                pass
+            elif disk.type == "gpt":
+                # struct mbr_partition_record {
+                #     uint8_t  boot_indicator;
+                #     uint8_t  start_head;
+                #     uint8_t  start_sector;
+                #     uint8_t  start_track;
+                #     uint8_t  os_type;
+                #     uint8_t  end_head;
+                #     uint8_t  end_sector;
+                #     uint8_t  end_track;
+                #     uint32_t starting_lba;
+                #     uint32_t size_in_lba;
+                # };
+                mbrPartitionRecordFmt = "8BII"
+                assert struct.calcsize(mbrPartitionRecordFmt) == 16
+
+                # struct mbr_header {
+                #     uint8_t                     boot_code[440];
+                #     uint32_t                    unique_mbr_signature;
+                #     uint16_t                    unknown;
+                #     struct mbr_partition_record partition_record[4];
+                #     uint16_t                    signature;
+                # };
+                self.mbrHeaderFmt = "440sIH%dsH" % (struct.calcsize(mbrPartitionRecordFmt) * 4)
+                assert struct.calcsize(self.mbrHeaderFmt) == 512
+
+                # get Protective MBR header
+                mbrHeader = struct.unpack(self.mbrHeaderFmt, self._partedReadSector(dev, 0, 1)[:struct.calcsize(self.mbrHeaderFmt)])
+
+                # check Protective MBR header
+                if not Util.isBufferAllZero(mbrHeader[0]):
+                    error_callback(errors.CheckCode.TRIVIAL, "Protective MBR Boot Code should be empty for %s" % (hdd))
+                    continue
+                if mbrHeader[1] != 0:
+                    error_callback(errors.CheckCode.TRIVIAL, "Protective MBR Disk Signature should be zero for %s" % (hdd))
+                    continue
+                if mbrHeader[2] != 0:
+                    error_callback(errors.CheckCode.TRIVIAL, "reserved area in Protective MBR should be zero for %s" % (hdd))
+                    continue
+
+                # check Protective MBR Partition Record
+                pRec = struct.unpack_from(mbrPartitionRecordFmt, mbrHeader[3], 0)
+                if pRec[4] != 0xEE:
+                    error_callback(errors.CheckCode.TRIVIAL, "The first Partition Record should be Protective MBR Partition Record (OS Type == 0xEE) for %s" % (hdd))
+                    continue
+                if pRec[0] != 0:
+                    error_callback(errors.CheckCode.TRIVIAL, "Boot Indicator in Protective MBR Partition Record should be zero for %s" % (hdd))
+                    continue
+
+                # other Partition Record should be filled with zero
+                if not Util.isBufferAllZero(mbrHeader[struct.calcsize(mbrPartitionRecordFmt):]):
+                    error_callback(errors.CheckCode.TRIVIAL, "All Partition Records should be filled with zero")
+                    continue
+
+                # ghnt and check primary and backup GPT header
+                pass
+
+    def check_partition_type(self, partition_type_list, auto_fix, error_callback):
+        partTypeList = []
+
+        bBad = False
+        for hdd in self._hddList:
+            disk = self._partedGetDisk(hdd)
+            partTypeList.append(disk.type)
+            if disk.type not in [partition_type_list]:
+                error_callback(errors.CheckCode.TRIVIAL, "Inappopriate partition type for %s" % (hdd))
+                bBad = True
+
+        if not bBad:
+            for i in range(1, len(self._hddList)):
+                if partTypeList[i - 1] != partTypeList[i]:
+                    error_callback(errors.CheckCode.TRIVIAL, "%s and %s have different partition types" % (self._hddList[i - 1], self._hddList[i]))
+
+    def _partedGetDisk(self, devPath, partedDev=None):
+        assert devPath is not None
+        if partedDev is None:
+            partedDev = parted.getDevice(devPath)
+        if partedDev not in self._diskCache:
+            self._diskCache[partedDev] = parted.newDisk(partedDev)
+        return self._diskCache[partedDev]
+
+    def _partedReadSector(self, partedDev, startSector, sectorCount):
+        partedDev.open()
+        try:
+            return partedDev.read(startSector, sectorCount)
+        finally:
+            partedDev.close()
 
 
 class HandyUtil:

@@ -22,7 +22,7 @@
 
 
 from .util import Util, PartiUtil, GptUtil
-from .handy import SwapFile, MountEfi, HandyChecker, HandyUtil
+from .handy import SwapFile, MountEfi, DisksChecker, HandyUtil
 from . import errors
 from . import StorageLayout, MountParam
 
@@ -103,7 +103,10 @@ class StorageLayoutImpl(StorageLayout):
 
     def _check_impl(self, check_item, *kargs, auto_fix=False, error_callback=None):
         if check_item == Util.checkItemBasic:
-            HandyChecker.check_disks([self._hdd], auto_fix, error_callback)
+            dc = DisksChecker([self._hdd])
+            dc.check_logical_sector_size(auto_fix, error_callback)
+            dc.check_boot_sector(auto_fix, error_callback)
+            dc.check_partition_type("gpt", auto_fix, error_callback)
         elif check_item == "swap":
             self._swap.check(auto_fix, error_callback)
         else:

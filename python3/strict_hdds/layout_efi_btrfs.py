@@ -22,7 +22,7 @@
 
 
 from .util import Util, BtrfsUtil
-from .handy import EfiMultiDisk, Snapshot, SnapshotBtrfs, MountEfi, HandyMd, HandyChecker
+from .handy import EfiMultiDisk, Snapshot, SnapshotBtrfs, MountEfi, HandyMd, DisksChecker
 from . import errors
 from . import StorageLayout, MountParam
 
@@ -164,7 +164,11 @@ class StorageLayoutImpl(StorageLayout):
 
     def _check_impl(self, check_item, *kargs, auto_fix=False, error_callback=None):
         if check_item == Util.checkItemBasic:
-            HandyChecker.check_disks(self._md.get_disk_list(), auto_fix, error_callback)
+            if True:
+                dc = DisksChecker(self._md.get_disk_list())
+                dc.check_logical_sector_size(auto_fix, error_callback)
+                dc.check_boot_sector(auto_fix, error_callback)
+                dc.check_partition_type("gpt", auto_fix, error_callback)
             self._md.check_esp(auto_fix, error_callback)
             self._snapshot.check(auto_fix, error_callback)
         else:
