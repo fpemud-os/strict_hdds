@@ -1079,9 +1079,9 @@ class DisksChecker:
 
     def _partedGetDevAndDisk(self, devPath):
         partedDev = parted.getDevice(devPath)
-        if partedDev not in self._diskCache:
-            self._diskCache[partedDev] = parted.newDisk(partedDev)
-        return partedDev, self._diskCache[partedDev]
+        if devPath not in self._diskCache:
+            self._diskCache[devPath] = parted.newDisk(partedDev)
+        return partedDev, self._diskCache[devPath]
 
     def _partedReadSectors(self, partedDev, startSector, sectorCount):
         partedDev.open()
