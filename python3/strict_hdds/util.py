@@ -1077,7 +1077,9 @@ class BcachefsUtil:
         ssdList = []
         hddList = []
         for devPath in rootDevList:
-            if Util.isBlkDevSsdOrHdd(devPath):      # FIXME: should detect which bcache group devPath belongs to
+            # FIXME: should detect which bcache group devPath belongs to
+            devPath = PartiUtil.partiToDisk(devPath)
+            if Util.isBlkDevSsdOrHdd(devPath):
                 ssdList.append(devPath)
             else:
                 hddList.append(devPath)
