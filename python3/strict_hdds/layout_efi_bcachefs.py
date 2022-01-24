@@ -153,56 +153,45 @@ class StorageLayoutImpl(StorageLayout):
         if disk not in Util.getDevPathListForFixedDisk():
             raise errors.StorageLayoutAddDiskError(disk, errors.NOT_DISK)
 
+        lastBootHdd = self._cg.boot_disk
+
         if Util.isBlkDevSsdOrHdd(disk):
             self._cg.add_ssd(disk)
-
-            # ssd partition 3: make it as cache device and add it to bcachefs
-            parti = self._cg.get_ssd_cache_partition()
-            BcachefsUtil.makeDevice(parti)
-
-            return True     # boot disk changed
+            BcachefsUtil.addSsdToBcachefs(self._cg.get_ssd_cache_partition(), self._mnt.mount_point)
         else:
-            lastBootHdd = self._cg.boot_disk
-
             self._cg.add_hdd(disk)
+            BcachefsUtil.addHddToBcachefs(self._cg.get_hdd_data_partition(disk), self._mnt.mount_point)
 
-            # hdd partition 2: make it as backing device and add it to bcachefs
-            parti = self._cg.get_hdd_data_partition(disk)
-            BcachefsUtil.makeDevice(parti)
-            Util.cmdCall("/sbin/bcachefs", "device", "add", parti, self._mnt.mount_point)
-
-            return lastBootHdd != self._cg.boot_disk     # boot disk may change
+        # return True means boot disk is changed
+        return lastBootHdd != self._cg.boot_disk
 
     def remove_disk(self, disk):
         assert disk is not None
 
+        lastBootHdd = self._cg.boot_disk
+
         if self._cg.get_ssd() is not None and disk == self._cg.get_ssd():
+            # check if swap is in use
             if self._cg.get_ssd_swap_partition() is not None:
                 if Util.isSwapFileOrPartitionBusy(self._cg.get_ssd_swap_partition()):
                     raise errors.StorageLayoutRemoveDiskError(errors.SWAP_IS_IN_USE)
 
-            # ssd partition 3: remove from bcachefs
-            BcachefsUtil.removeDevice(self._cg.get_ssd_cache_partition())
-
             # remove
+            BcachefsUtil.removeDevice(self._cg.get_ssd_cache_partition())
             self._cg.remove_ssd()
-
-            return True     # boot disk changed
-        else:
-            assert disk in self._cg.get_hdd_list()
-
+        elif disk in self._cg.get_hdd_list():
+            # check for last hdd
             if len(self._cg.get_hdd_list()) <= 1:
                 raise errors.StorageLayoutRemoveDiskError(errors.CAN_NOT_REMOVE_LAST_HDD)
 
-            lastBootHdd = self._cg.boot_disk
-
-            # hdd partition 2: remove from bcachefs
-            BcachefsUtil.removeDevice(self._cg.get_hdd_data_partition(disk))
-
             # remove
+            BcachefsUtil.removeDevice(self._cg.get_hdd_data_partition(disk))
             self._cg.remove_hdd(disk)
+        else:
+            assert False
 
-            return lastBootHdd != self._cg.boot_disk     # boot disk may change
+        # return True means boot disk is changed
+        return lastBootHdd != self._cg.boot_disk
 
     def _check_impl(self, check_item, *kargs, auto_fix=False, error_callback=None):
         if check_item == Util.checkItemBasic:

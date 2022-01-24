@@ -261,7 +261,7 @@ class Util:
 
     @staticmethod
     def getBlkDevFsType(devPath):
-        # blkid doesn't support bcachefs yet, use /usr/bin/file instead
+        # FIXME: blkid doesn't support bcachefs yet, use /usr/bin/file instead
         ret = Util.cmdCall("/usr/bin/file", "-sb", devPath)
         if re.search("^bcachefs, UUID=", ret) is not None:
             return "bcachefs"
@@ -1092,13 +1092,19 @@ class BcachefsUtil:
         Util.cmdCall(*cmdList)
 
     @staticmethod
-    def addSsdToBcachefs(ssd):
-        Util.cmdCall("")
-        cmdList = ["/sbin/bcachefs", "device", "add", "--group=ssd", "/mnt", ssd]
+    def addSsdToBcachefs(ssd, mountPoint):
+        cmdList = ["/sbin/bcachefs", "device", "add", "--group=ssd", mountPoint, ssd]
+        Util.cmdCall(*cmdList)
 
     @staticmethod
-    def addHddToBcachefs(hdd):
-        pass
+    def addHddToBcachefs(hdd, mountPoint):
+        cmdList = ["/sbin/bcachefs", "device", "add", "--group=hdd", mountPoint, hdd]
+        Util.cmdCall(*cmdList)
+
+    @staticmethod
+    def removeDevice(disk, mountPoint):
+        # FIXME
+        assert False
 
 
 class BtrfsUtil:
