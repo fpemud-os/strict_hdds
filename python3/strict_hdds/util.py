@@ -128,7 +128,7 @@ class Util:
                 os.makedirs(realDir, 0o755, exist_ok=True)
             else:
                 os.makedirs(realDir, exist_ok=True)
-            Util.cmdCall("/bin/mount", "-t", p.ts_type, "-o", p.mnt_opts, p.target, realDir)
+            Util.cmdCall("/bin/mount", "-t", p.fs_type, "-o", p.mnt_opts, p.target, realDir)
 
     @staticmethod
     def mntUmount(rootMountDir, dirPathList):
