@@ -106,8 +106,8 @@ class StorageLayoutImpl(StorageLayout):
     def get_params_for_mount(self, **kwargs):
         ret = []
         for dirPath, mntOpts in self._snapshot.getDirPathsAndMntOptsForMount(kwargs):
-            ret.append(MountParam(self.dev_rootfs, dirPath, mntOpts))
-        ret.append(MountParam(self.dev_boot, "/boot", "ro"))
+            ret.append(MountParam(self.dev_rootfs, dirPath, "bcachefs", mntOpts))
+        ret.append(MountParam(self.dev_boot, "/boot", "vfat", "ro"))
         return ret
 
     @EfiCacheGroup.proxy

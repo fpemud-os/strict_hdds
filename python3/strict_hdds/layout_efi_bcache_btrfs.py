@@ -107,8 +107,8 @@ class StorageLayoutImpl(StorageLayout):
     def get_params_for_mount(self, **kwargs):
         ret = []
         for dirPath, mntOpts in self._snapshot.getDirPathsAndMntOptsForMount(kwargs):
-            ret.append(MountParam(self.dev_rootfs, dirPath, mntOpts))
-        ret.append(MountParam(self.dev_boot, "/boot", "ro"))
+            ret.append(MountParam(self.dev_rootfs, dirPath, "btrfs", mntOpts))
+        ret.append(MountParam(self.dev_boot, "/boot", "vfat", "ro"))
         return ret
 
     def optimize_rootdev(self):
@@ -291,7 +291,7 @@ def detect_and_mount(disk_list, mount_dir, mount_options):
     ret._mnt = MountEfi(mount_dir)
 
     # mount
-    Util.mntMount(mount_dir, "btrfs", Util.optimizeMntParamList(ret.get_params_for_mount(), mount_options))
+    Util.mntMount(mount_dir, Util.optimizeMntParamList(ret.get_params_for_mount(), mount_options))
     return ret
 
 
@@ -320,5 +320,5 @@ def create_and_mount(disk_list, mount_dir, mount_options):
     ret._mnt = MountEfi(mount_dir)
 
     # mount
-    Util.mntMount(mount_dir, "btrfs", Util.optimizeMntParamList(ret.get_params_for_mount(), mount_options))
+    Util.mntMount(mount_dir, Util.optimizeMntParamList(ret.get_params_for_mount(), mount_options))
     return ret

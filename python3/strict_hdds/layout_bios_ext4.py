@@ -82,7 +82,7 @@ class StorageLayoutImpl(StorageLayout):
         pass
 
     def get_params_for_mount(self, **kwargs):
-        return [MountParam(self.dev_rootfs, "/", "")]
+        return [MountParam(self.dev_rootfs, "/", "ext4", "")]
 
     @SwapFile.proxy
     def create_swap_file(self):
@@ -153,7 +153,7 @@ def detect_and_mount(disk_list, mount_dir, mount_options):
     ret._mnt = MountBios(mount_dir)
 
     # mount
-    Util.mntMount(mount_dir, "ext4", [MountParam(ret.dev_rootfs, "/", mount_options)])
+    Util.mntMount(mount_dir, [MountParam(ret.dev_rootfs, "/", "ext4", mount_options)])
     return ret
 
 
@@ -175,5 +175,5 @@ def create_and_mount(disk_list, mount_dir, mount_options):
     ret._mnt = MountBios(mount_dir)
 
     # mount
-    Util.mntMount(mount_dir, "ext4", [MountParam(ret.dev_rootfs, "/", mount_options)])
+    Util.mntMount(mount_dir, [MountParam(ret.dev_rootfs, "/", "ext4", mount_options)])
     return ret

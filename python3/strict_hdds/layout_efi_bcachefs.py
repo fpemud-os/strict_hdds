@@ -99,8 +99,8 @@ class StorageLayoutImpl(StorageLayout):
 
     def get_params_for_mount(self, **kwargs):
         return [
-            MountParam(self.dev_rootfs, "/", ""),
-            MountParam(self.dev_boot, "/boot", "ro"),
+            MountParam(self.dev_rootfs, "/", "bcachefs", ""),
+            MountParam(self.dev_boot, "/boot", "vfat", "ro"),
         ]
 
     @EfiCacheGroup.proxy
@@ -260,7 +260,7 @@ def detect_and_mount(disk_list, mount_dir, mount_options):
     ret._mnt = MountEfi(mount_dir)
 
     # mount
-    Util.mntMount(mount_dir, "bcachefs", Util.optimizeMntParamList(ret.get_params_for_mount(), mount_options))
+    Util.mntMount(mount_dir, Util.optimizeMntParamList(ret.get_params_for_mount(), mount_options))
     return ret
 
 
@@ -283,5 +283,5 @@ def create_and_mount(disk_list, mount_dir, mount_options):
     ret._mnt = MountEfi(mount_dir)
 
     # mount
-    Util.mntMount(mount_dir, "bcachefs", Util.optimizeMntParamList(ret.get_params_for_mount(), mount_options))
+    Util.mntMount(mount_dir, Util.optimizeMntParamList(ret.get_params_for_mount(), mount_options))
     return ret

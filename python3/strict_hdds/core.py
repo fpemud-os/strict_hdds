@@ -95,10 +95,11 @@ class StorageLayout(abc.ABC):
 
 class MountParam:
 
-    def __init__(self, target, dirpath, mnt_opts):
+    def __init__(self, target, dirpath, fs_type, mnt_opts):
         assert dirpath.startswith("/")
         self.target = target
         self.dirpath = dirpath
+        self.fs_type = fs_type
         self.mnt_opts = mnt_opts
 
 

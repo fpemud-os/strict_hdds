@@ -115,7 +115,7 @@ class Util:
         return mntParamList
 
     @staticmethod
-    def mntMount(rootMountDir, fsType, mntParamList):
+    def mntMount(rootMountDir, mntParamList):
         for p in mntParamList:
             realDir = os.path.join(rootMountDir, p.dirpath[1:]).rstrip("/")
             if p.dirpath == "/boot":
@@ -128,7 +128,7 @@ class Util:
                 os.makedirs(realDir, 0o755, exist_ok=True)
             else:
                 os.makedirs(realDir, exist_ok=True)
-            Util.cmdCall("/bin/mount", "-t", fsType, p.target, realDir, "-o", p.mnt_opts)
+            Util.cmdCall("/bin/mount", "-t", p.ts_type, "-o", p.mnt_opts, p.target, realDir)
 
     @staticmethod
     def mntUmount(rootMountDir, dirPathList):
