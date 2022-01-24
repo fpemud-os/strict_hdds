@@ -21,7 +21,7 @@
 # THE SOFTWARE.
 
 
-from .util import Util, BcachefsUtil
+from .util import Util, PartiUtil, BcachefsUtil
 from .handy import EfiCacheGroup, MountEfi, HandyCg, DisksChecker
 from . import errors
 from . import StorageLayout, MountParam
@@ -235,7 +235,17 @@ def parse(boot_dev, root_dev):
 
 def detect_and_mount(disk_list, mount_dir, mount_options):
     # filter
-    diskList = [x for x in disk_list if Util.getBlkDevFsType(x) == Util.fsTypeBcachefs]
+    diskList = []
+    for d in disk_list:
+        i = 1
+        while True:
+            parti = PartiUtil.diskToParti(d, i)
+            if not PartiUtil.partiExists(parti):
+                break
+            if Util.getBlkDevFsType(parti) == Util.fsTypeBcachefs:
+                diskList.append(d)
+                break
+            i += 1
     if len(diskList) == 0:
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.DISK_NOT_FOUND)
 
