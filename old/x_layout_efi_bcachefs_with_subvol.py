@@ -242,7 +242,7 @@ def parse(boot_dev, root_dev):
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.ROOT_PARTITION_FS_SHOULD_BE(Util.fsTypeBcachefs))
 
     # ssd, hdd_list, boot_disk
-    ssd, hddList = HandyCg.checkAndGetSsdAndHddList(BcachefsUtil.getSlaveSsdDevPatListAndHddDevPathList(root_dev), False)
+    ssd, hddList = HandyCg.checkAndGetSsdAndHddList(*BcachefsUtil.getSlaveSsdDevPatListAndHddDevPathList(root_dev))
     ssdEspParti, ssdSwapParti, ssdCacheParti = HandyCg.checkAndGetSsdPartitions(StorageLayoutImpl.name, ssd)
     bootHdd = HandyCg.checkAndGetBootHddFromBootDev(StorageLayoutImpl.name, boot_dev, ssdEspParti, hddList)
 
@@ -264,7 +264,7 @@ def detect_and_mount(disk_list, mount_dir, mount_options):
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.DISK_NOT_FOUND)
 
     # ssd, hdd_list, boot_disk
-    ssd, hddList = HandyCg.checkAndGetSsdAndHddList(Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list))
+    ssd, hddList = HandyCg.checkAndGetSsdAndHddList(*Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list))
     ssdEspParti, ssdSwapParti, ssdCacheParti = HandyCg.checkAndGetSsdPartitions(StorageLayoutImpl.name, ssd)
     bootHdd = HandyCg.checkAndGetBootHddAndBootDev(StorageLayoutImpl.name, ssdEspParti, hddList)[0]
 
