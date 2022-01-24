@@ -22,7 +22,7 @@
 
 
 from .util import Util, BtrfsUtil
-from .handy import EfiMultiDisk, Snapshot, SnapshotBtrfs, MountEfi, HandyMd
+from .handy import EfiMultiDisk, Snapshot, SnapshotBtrfs, MountEfi, HandyMd, HandyChecker
 from . import errors
 from . import StorageLayout, MountParam
 
@@ -164,6 +164,7 @@ class StorageLayoutImpl(StorageLayout):
 
     def _check_impl(self, check_item, *kargs, auto_fix=False, error_callback=None):
         if check_item == Util.checkItemBasic:
+            HandyChecker.check_disks(self._md.get_disk_list(), auto_fix, error_callback)
             self._md.check_esp(auto_fix, error_callback)
             self._snapshot.check(auto_fix, error_callback)
         else:

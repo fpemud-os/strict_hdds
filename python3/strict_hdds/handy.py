@@ -976,6 +976,13 @@ class HandyBcache:
         return (ssd, hddList)
 
 
+class HandyChecker:
+
+    @staticmethod
+    def check_disks(self, hdd_list, auto_fix, error_callback):
+        pass
+
+
 class HandyUtil:
 
     @staticmethod

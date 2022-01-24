@@ -22,7 +22,7 @@
 
 
 from .util import Util, BcachefsUtil
-from .handy import EfiCacheGroup, MountEfi, HandyCg
+from .handy import EfiCacheGroup, MountEfi, HandyCg, HandyChecker
 from . import errors
 from . import StorageLayout, MountParam
 
@@ -206,6 +206,7 @@ class StorageLayoutImpl(StorageLayout):
 
     def _check_impl(self, check_item, *kargs, auto_fix=False, error_callback=None):
         if check_item == Util.checkItemBasic:
+            HandyChecker.check_disks(self._cg.get_disk_list(), auto_fix, error_callback)
             self._cg.check_esp(auto_fix, error_callback)
         elif check_item == "ssd":
             self._cg.check_ssd(auto_fix, error_callback)

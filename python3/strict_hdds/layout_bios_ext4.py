@@ -22,7 +22,7 @@
 
 
 from .util import Util, PartiUtil, MbrUtil
-from .handy import SwapFile, MountBios, HandyUtil
+from .handy import SwapFile, MountBios, HandyChecker, HandyUtil
 from . import errors
 from . import StorageLayout, MountParam
 
@@ -94,7 +94,7 @@ class StorageLayoutImpl(StorageLayout):
 
     def _check_impl(self, check_item, *kargs, auto_fix=False, error_callback=None):
         if check_item == Util.checkItemBasic:
-            pass
+            HandyChecker.check_disks([self._hdd], auto_fix, error_callback)
         elif check_item == "swap":
             self._swap.check(auto_fix, error_callback)
         else:
