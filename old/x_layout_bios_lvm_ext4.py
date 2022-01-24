@@ -41,8 +41,7 @@ class StorageLayoutImpl(StorageLayout):
            4. extra harddisk is allowed to exist
     """
 
-    def __init__(self, mount_dir):
-        super().__init__(mount_dir)
+    def __init__(self):
         self._diskList = []         # harddisk list
         self._swap = None            # SwapLvmLv
         self._bootHdd = None        # boot harddisk name

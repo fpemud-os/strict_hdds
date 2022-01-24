@@ -49,7 +49,7 @@ class StorageLayoutImpl(StorageLayout):
            6. extra harddisk is allowed to exist
     """
 
-    def __init__(self, mount_dir):
+    def __init__(self):
         self._cg = None                     # EfiCacheGroup
         self._mnt = None                    # MountEfi
 
