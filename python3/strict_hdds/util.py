@@ -367,7 +367,7 @@ class Util:
                                              type=parted.PARTITION_NORMAL,
                                              fs=parted.FileSystem(type="fat32", geometry=region),
                                              geometry=region)
-                partition.setFlag(parted.PARTITION_ESP)     # which also sets flag parted.PARTITION_BOOT
+                partition.setFlag(parted.PARTITION_BOOT)
             elif pType == "bcache":
                 assert partitionTableType == "gpt"
                 partition = parted.Partition(disk=disk, type=parted.PARTITION_NORMAL, geometry=region)
@@ -465,9 +465,9 @@ class Util:
         diskObj = parted.newDisk(parted.getDevice(diskDevPath))
         partObj = diskObj.partitions[partId - 1]
         if espOrRegular:
-            partObj.setFlag(parted.PARTITION_ESP)
+            partObj.setFlag(parted.PARTITION_BOOT)
         else:
-            partObj.unsetFlag(parted.PARTITION_ESP)
+            partObj.unsetFlag(parted.PARTITION_BOOT)
         diskObj.commit()
 
     @staticmethod
