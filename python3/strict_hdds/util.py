@@ -387,7 +387,7 @@ class Util:
                                              type=parted.PARTITION_NORMAL,
                                              fs=parted.FileSystem(type="fat32", geometry=region),
                                              geometry=region)
-            elif pType in ["ext2", "ext4", "btrfs"]:
+            elif pType in ["ext4", "btrfs"]:
                 partition = parted.Partition(disk=disk,
                                              type=parted.PARTITION_NORMAL,
                                              fs=parted.FileSystem(type=pType, geometry=region),
