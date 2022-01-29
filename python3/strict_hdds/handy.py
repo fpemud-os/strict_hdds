@@ -361,17 +361,23 @@ class EfiCacheGroup:
         self._hddList.sort()
 
         # change boot disk if needed
-        if self._bootHdd is None:
-            self._mountFirstHddAsBootHdd()
+        if self._ssd is None:
+            if self._bootHdd is None:
+                assert len(self._hddList) == 1
+                self._mountFirstHddAsBootHdd()
 
     def remove_hdd(self, hdd):
         assert hdd is not None and hdd in self._hddList
 
         # change boot device if needed
-        if self._bootHdd is not None and self._bootHdd == hdd:
-            self._unmountCurrentBootHdd()
-            self._hddList.remove(hdd)
-            self._mountFirstHddAsBootHdd()
+        if self._ssd is None:
+            assert self._bootHdd is not None
+            if self._bootHdd == hdd:
+                self._unmountCurrentBootHdd()
+                self._hddList.remove(hdd)
+                self._mountFirstHddAsBootHdd()
+            else:
+                self._hddList.remove(hdd)
         else:
             self._hddList.remove(hdd)
 
