@@ -236,11 +236,13 @@ def detect_and_mount_storage_layout(mount_dir, mount_options=""):
         return _detectAndMountOneStorageLayout("bios-ext4", diskList, mount_dir, mount_options)
 
 
-def create_and_mount_storage_layout(layout_name, mount_dir, mount_options=""):
+def create_and_mount_storage_layout(layout_name, mount_dir, disk_list=None, mount_options=""):
+    if disk_list is None:
+        disk_list = Util.getDevPathListForFixedDisk()
     for mod in pkgutil.iter_modules(["."]):
         if mod.name.startswith("layout_"):
             if layout_name == Util.modName2layoutName(mod.name):
-                return mod.create_and_mount(Util.getDevPathListForFixedDisk(), mount_dir, mount_options)
+                return mod.create_and_mount(disk_list, mount_dir, mount_options)
     raise errors.StorageLayoutCreateError("layout \"%s\" not supported" % (layout_name))
 
 
