@@ -184,9 +184,9 @@ class EfiCacheGroup:
                 self._ssdSwapParti = None
                 self._ssdCacheParti = PartiUtil.diskToParti(ssd, 2)
         else:
-            self._ssdEspParti is None
-            self._ssdSwapParti is None
-            self._ssdCacheParti is None
+            self._ssdEspParti = None
+            self._ssdSwapParti = None
+            self._ssdCacheParti = None
         assert self._ssdEspParti == ssdEspParti
         assert self._ssdSwapParti == ssdSwapParti
         assert self._ssdCacheParti == ssdCacheParti
