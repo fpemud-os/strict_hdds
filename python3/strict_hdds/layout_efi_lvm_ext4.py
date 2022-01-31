@@ -129,28 +129,18 @@ class StorageLayoutImpl(StorageLayout):
         if disk not in Util.getDevPathListForFixedDisk():
             raise errors.StorageLayoutAddDiskError(disk, errors.NOT_DISK)
 
-        lastBootHdd = self._md.get_boot_hdd()
-
         # add
         self._md.add_disk(disk)
 
         # create lvm physical volume on partition2 and add it to volume group
         LvmUtil.addPvToVg(self._md.get_disk_data_partition(disk), LvmUtil.vgName)
 
-        return lastBootHdd != self._md.get_boot_hdd()     # boot disk may change
-
-    def release_disk(self, disk):
-        assert disk is not None
-        assert disk in self._md.disk_list
-
-        # check
-        if len(self._md.get_disk_list()) <= 1:
-            raise errors.StorageLayoutReleaseDiskError(disk, errors.CAN_NOT_REMOVE_LAST_HDD)
-
-        # move data
-        rc, out = Util.cmdCallWithRetCode("/sbin/lvm", "pvmove", PartiUtil.diskToParti(disk, 1))
-        if rc != 5:
-            raise errors.StorageLayoutRemoveDiskError(disk, "failed")
+        # boot disk change
+        if disk == self._md.boot_disk:
+            self._mnt.mount_esp(self._md.get_disk_esp_partition(self._md.boot_disk))
+            return True
+        else:
+            return False
 
     def remove_disk(self, disk):
         assert disk is not None
@@ -158,10 +148,15 @@ class StorageLayoutImpl(StorageLayout):
         if len(self._md.get_disk_list()) <= 1:
             raise errors.StorageLayoutRemoveDiskError(errors.CAN_NOT_REMOVE_LAST_HDD)
 
-        lastBootHdd = self._cg.boot_disk
-        parti = self._md.get_disk_data_partition(disk)
+        # boot disk change
+        if disk == self._md.boot_disk:
+            self._mnt.umount_esp(self._md.get_disk_esp_partition(self._md.boot_disk))
+            bChange = True
+        else:
+            bChange = False
 
         # hdd partition 2: remove from volume group
+        parti = self._md.get_disk_data_partition(disk)
         rc, out = Util.cmdCallWithRetCode("/sbin/lvm", "pvmove", parti)
         if rc != 5:
             raise errors.StorageLayoutRemoveDiskError("failed")
@@ -170,7 +165,13 @@ class StorageLayoutImpl(StorageLayout):
         # remove
         self._md.remove_disk(disk)
 
-        return lastBootHdd != self._md.get_boot_hdd()     # boot disk may change
+        # boot disk change
+        if bChange:
+            assert self._md.boot_disk is not None
+            self._mnt.mount_esp(self._md.get_disk_esp_partition(self._md.boot_disk))
+            return True
+        else:
+            return False
 
     @SwapLvmLv.proxy
     def create_swap_lv(self):

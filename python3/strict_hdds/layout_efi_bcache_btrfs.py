@@ -172,10 +172,9 @@ class StorageLayoutImpl(StorageLayout):
         if disk not in Util.getDevPathListForFixedDisk():
             raise errors.StorageLayoutAddDiskError(disk, errors.NOT_DISK)
 
-        if self._cg.boot_disk is not None:
-            self._mnt.umount_esp(self._cg.get_hdd_esp_partition(self._cg.boot_disk))
-
         if Util.isBlkDevSsdOrHdd(disk):
+            if self._cg.boot_disk is not None:
+                self._mnt.umount_esp(self._cg.get_hdd_esp_partition(self._cg.boot_disk))
             self._cg.add_ssd(disk)
             self._bcache.add_cache(self._cg.get_ssd_cache_partition())
             self._mnt.mount_esp(self._cg.get_ssd_esp_partition())
@@ -230,7 +229,8 @@ class StorageLayoutImpl(StorageLayout):
 
             # boot disk change
             if bChange:
-                self._mnt.mount_esp(self._md.get_disk_esp_partition(self._md.boot_disk))
+                assert self._cg.boot_disk is not None
+                self._mnt.mount_esp(self._cg.get_disk_esp_partition(self._cg.boot_disk))
                 return True
             else:
                 return False

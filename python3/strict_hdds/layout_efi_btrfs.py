@@ -136,6 +136,9 @@ class StorageLayoutImpl(StorageLayout):
         # boot disk change
         if disk == self._md.boot_disk:
             self._mnt.mount_esp(self._md.get_disk_esp_partition(self._md.boot_disk))
+            return True
+        else:
+            return False
 
     def remove_disk(self, disk):
         assert disk is not None
@@ -159,7 +162,11 @@ class StorageLayoutImpl(StorageLayout):
 
         # boot disk change
         if bChange:
+            assert self._md.boot_disk is not None
             self._mnt.mount_esp(self._md.get_disk_esp_partition(self._md.boot_disk))
+            return True
+        else:
+            return False
 
     @Snapshot.proxy
     def create_snapshot(self, snapshot_name):

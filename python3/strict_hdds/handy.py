@@ -306,8 +306,7 @@ class EfiCacheGroup:
 
         # change boot device
         if self._bootHdd is not None:
-            self._unmountCurrentBootHdd()
-        Util.cmdCall("/bin/mount", self._ssdEspParti, Util.bootDir, "-o", "ro")
+            self._unsetCurrentBootHdd()
 
     def remove_ssd(self):
         assert self._ssd is not None
@@ -321,16 +320,15 @@ class EfiCacheGroup:
             self._ssdSwapParti = None
 
         # partition1: ESP partition
-        Util.cmdCall("/bin/umount", Util.bootDir)
         self._ssdEspParti = None
-
-        # change boot device
-        if len(self._hddList) > 0:
-            self._mountFirstHddAsBootHdd()
 
         # wipe disk
         Util.wipeHarddisk(self._ssd)
         self._ssd = None
+
+        # change boot device
+        if len(self._hddList) > 0:
+            self._setFirstHddAsBootHdd()
 
     def add_hdd(self, hdd):
         assert hdd is not None and hdd not in self._hddList
@@ -359,28 +357,27 @@ class EfiCacheGroup:
         self._hddList.sort()
 
         # change boot disk if needed
-        if self._ssd is None:
-            if self._bootHdd is None:
-                assert len(self._hddList) == 1
-                self._mountFirstHddAsBootHdd()
+        if self._ssd is None and self._bootHdd is None:
+            assert len(self._hddList) == 1
+            self._setFirstHddAsBootHdd()
 
     def remove_hdd(self, hdd):
         assert hdd is not None and hdd in self._hddList
 
-        # change boot device if needed
+        # boot device change
+        bChange = False
         if self._ssd is None:
             assert self._bootHdd is not None
             if self._bootHdd == hdd:
-                self._unmountCurrentBootHdd()
-                self._hddList.remove(hdd)
-                self._mountFirstHddAsBootHdd()
-            else:
-                self._hddList.remove(hdd)
-        else:
-            self._hddList.remove(hdd)
+                self._unsetCurrentBootHdd()
+                bChange = True
 
-        # wipe disk
+        self._hddList.remove(hdd)
         Util.wipeHarddisk(hdd)
+
+        # boot device change
+        if bChange:
+            self._setFirstHddAsBootHdd()
 
     def check_ssd(self, auto_fix, error_callback):
         if self._ssd is None:
@@ -408,13 +405,11 @@ class EfiCacheGroup:
                 # no way to auto fix
                 error_callback(errors.CheckCode.SWAP_SIZE_TOO_SMALL, "partition")
 
-    def _mountFirstHddAsBootHdd(self):
+    def _setFirstHddAsBootHdd(self):
         self._bootHdd = self._hddList[0]
         Util.toggleEspPartition(PartiUtil.diskToParti(self._bootHdd, 1), True)
-        Util.cmdCall("/bin/mount", PartiUtil.diskToParti(self._bootHdd, 1), Util.bootDir, "-o", "ro")
 
-    def _unmountCurrentBootHdd(self):
-        Util.cmdCall("/bin/umount", Util.bootDir)
+    def _unsetCurrentBootHdd(self):
         Util.toggleEspPartition(PartiUtil.diskToParti(self._bootHdd, 1), False)
         self._bootHdd = None
 
