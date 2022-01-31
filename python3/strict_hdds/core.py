@@ -26,7 +26,6 @@ import sys
 import abc
 import glob
 import psutil
-import pkgutil
 import functools
 from .util import BcacheUtil, Util, GptUtil, BtrfsUtil, LvmUtil
 from . import errors
@@ -237,12 +236,17 @@ def detect_and_mount_storage_layout(mount_dir, mount_options=""):
 
 
 def create_and_mount_storage_layout(layout_name, mount_dir, disk_list=None, mount_options=""):
+    selfDir = os.path.dirname(os.path.realpath(__file__))
     if disk_list is None:
         disk_list = Util.getDevPathListForFixedDisk()
-    for mod in pkgutil.iter_modules(["."]):
-        if mod.name.startswith("layout_"):
-            if layout_name == Util.modName2layoutName(mod.name):
-                return mod.create_and_mount(disk_list, mount_dir, mount_options)
+    for fn in os.listdir(selfDir):
+        if fn.startswith("layout_"):
+            assert fn.endswith(".py")
+            modname = fn.replace(".py", "")
+            if layout_name == Util.modName2layoutName(modname):
+                exec("import strict_hdds.%s" % (modname))
+                f = eval("strict_hdds.%s.create_and_mount" % (modname))
+                return f(disk_list, mount_dir, mount_options)
     raise errors.StorageLayoutCreateError("layout \"%s\" not supported" % (layout_name))
 
 
