@@ -241,8 +241,8 @@ def create_and_mount_storage_layout(layout_name, mount_dir, disk_list=None, moun
 
     modname = Util.layoutName2modName(layout_name)
     try:
-        exec("import strict_hdds.%s" % (modname))
-        f = eval("strict_hdds.%s.create_and_mount" % (modname))
+        exec("from . import %s" % (modname))
+        f = eval("%s.create_and_mount" % (modname))
         return f(disk_list, mount_dir, mount_options)
     except ModuleNotFoundError:
         raise errors.StorageLayoutCreateError("layout \"%s\" not supported" % (layout_name))
@@ -251,8 +251,8 @@ def create_and_mount_storage_layout(layout_name, mount_dir, disk_list=None, moun
 def _parseOneStorageLayout(layoutName, bootDev, rootDev):
     modname = Util.layoutName2modName(layoutName)
     try:
-        exec("import strict_hdds.%s" % (modname))
-        f = eval("strict_hdds.%s.parse" % (modname))
+        exec("from . import %s" % (modname))
+        f = eval("%s.parse" % (modname))
         return f(bootDev, rootDev)
     except ModuleNotFoundError:
         raise errors.StorageLayoutParseError("", "unknown storage layout")
@@ -261,8 +261,8 @@ def _parseOneStorageLayout(layoutName, bootDev, rootDev):
 def _detectAndMountOneStorageLayout(layoutName, diskList, mountDir, mountOptions):
     modname = Util.layoutName2modName(layoutName)
     try:
-        exec("import strict_hdds.%s" % (modname))
-        f = eval("strict_hdds.%s.detect_and_mount" % (modname))
+        exec("from . import %s" % (modname))
+        f = eval("%s.detect_and_mount" % (modname))
         return f(diskList, mountDir, mountOptions)
     except ModuleNotFoundError:
         raise errors.StorageLayoutParseError("", "unknown storage layout")
