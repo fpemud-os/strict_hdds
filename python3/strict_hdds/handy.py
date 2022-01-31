@@ -124,16 +124,16 @@ class EfiMultiDisk:
 
         # change boot disk if needed
         if self._bootHdd is None:
-            self._mountFirstHddAsBootHdd()
+            self._setFirstHddAsBootHdd()
 
     def remove_disk(self, hdd):
         assert hdd is not None and hdd in self._hddList
 
         # change boot device if needed
-        if self._bootHdd is not None and self._bootHdd == hdd:
-            self._unmountCurrentBootHdd()
+        if self._bootHdd == hdd:
+            self._unsetCurrentBootHdd()
             self._hddList.remove(hdd)
-            self._mountFirstHddAsBootHdd()
+            self._setFirstHddAsBootHdd()
         else:
             self._hddList.remove(hdd)
 
@@ -147,13 +147,11 @@ class EfiMultiDisk:
                 # no way to auto fix
                 error_callback(errors.CheckCode.ESP_SIZE_INVALID, parti)
 
-    def _mountFirstHddAsBootHdd(self):
+    def _setFirstHddAsBootHdd(self):
         self._bootHdd = self._hddList[0]
         Util.toggleEspPartition(PartiUtil.diskToParti(self._bootHdd, 1), True)
-        Util.cmdCall("/bin/mount", PartiUtil.diskToParti(self._bootHdd, 1), Util.bootDir, "-o", "ro")
 
-    def _unmountCurrentBootHdd(self):
-        Util.cmdCall("/bin/umount", Util.bootDir)
+    def _unsetCurrentBootHdd(self):
         Util.toggleEspPartition(PartiUtil.diskToParti(self._bootHdd, 1), False)
         self._bootHdd = None
 
