@@ -162,37 +162,56 @@ class StorageLayoutImpl(StorageLayout):
         if disk not in Util.getDevPathListForFixedDisk():
             raise errors.StorageLayoutAddDiskError(disk, errors.NOT_DISK)
 
-        lastBootHdd = self._cg.boot_disk
+        if self._cg.boot_disk is not None:
+            self._mnt.umount_esp(self._cg.get_hdd_esp_partition(self._cg.boot_disk))
 
         if Util.isBlkDevSsdOrHdd(disk):
             self._cg.add_ssd(disk)
             self._bcache.add_cache(self._cg.get_ssd_cache_partition())
+            self._mnt.mount_esp(self._cg.get_ssd_esp_partition())
+            return True
         else:
             self._cg.add_hdd(disk)
             self._bcache.add_backing(self._cg.get_ssd_cache_partition(), disk, self._cg.get_hdd_data_partition(disk))
             LvmUtil.addPvToVg(self._bcache.get_bcache_dev(disk), LvmUtil.vgName)
-
-        # return True means boot disk is changed
-        return lastBootHdd != self._cg.boot_disk
+            if disk == self._cg.boot_disk:
+                self._mnt.mount_esp(self._cg.get_hdd_esp_partition(disk))
+                return True
+            else:
+                return False
 
     def remove_disk(self, disk):
         assert disk is not None
 
-        lastBootHdd = self._cg.boot_disk
-
-        if self._cg.get_ssd() is not None and disk == self._cg.get_ssd():
+        if disk == self._cg.get_ssd():
             # check if swap is in use
             if self._cg.get_ssd_swap_partition() is not None:
                 if Util.isSwapFileOrPartitionBusy(self._cg.get_ssd_swap_partition()):
                     raise errors.StorageLayoutRemoveDiskError(errors.SWAP_IS_IN_USE)
 
             # remove
+            self._mnt.umount_esp(self._cg.get_ssd_esp_partition())
             self._bcache.remove_cache(self._cg.get_ssd_cache_partition())
             self._cg.remove_ssd()
-        elif disk in self._cg.get_hdd_list():
+
+            # boot disk change
+            if self._cg.boot_disk is not None:
+                self._mnt.mount_esp(self._cg.get_hdd_esp_partition(self._cg.boot_disk))
+                return True
+            else:
+                return False
+
+        if disk in self._cg.get_hdd_list():
             # check for last hdd
             if len(self._cg.get_hdd_list()) <= 1:
                 raise errors.StorageLayoutRemoveDiskError(errors.CAN_NOT_REMOVE_LAST_HDD)
+
+            # boot disk change
+            if disk == self._cg.boot_disk:
+                self._mnt.umount_esp(self._cg.get_hdd_esp_partition(self._cg.boot_disk))
+                bChange = True
+            else:
+                bChange = False
 
             # remove
             rc, out = Util.cmdCallWithRetCode("/sbin/lvm", "pvmove", self._bcache.get_bcache_dev(disk))
@@ -201,10 +220,15 @@ class StorageLayoutImpl(StorageLayout):
             Util.cmdCall("/sbin/lvm", "vgreduce", LvmUtil.vgName, self._bcache.get_bcache_dev(disk))
             self._bcache.remove_backing(disk)
             self._cg.remove_hdd(disk)
-        else:
-            assert False
 
-        return lastBootHdd != self._cg.boot_disk     # boot disk may change
+            # boot disk change
+            if bChange:
+                self._mnt.mount_esp(self._md.get_disk_esp_partition(self._md.boot_disk))
+                return True
+            else:
+                return False
+
+        assert False
 
     def _check_impl(self, check_item, *kargs, auto_fix=False, error_callback=None):
         if check_item == Util.checkItemBasic:

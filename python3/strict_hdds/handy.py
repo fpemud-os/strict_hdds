@@ -746,24 +746,25 @@ class MountEfi:
 
     class BootDirRwController(BootDirRwController):
 
-        def __init__(self, bootMntDir):
-            self._mntDir = bootMntDir
+        def __init__(self, parent):
+            self._mntDir = parent._mntDir
+            self._mntBootDir = parent._mntBootDir
 
         @property
         def is_writable(self):
             for pobj in psutil.disk_partitions():
-                if pobj.mountpoint == os.path.join(self._mntDir, "boot"):
+                if pobj.mountpoint == self._mntBootDir:
                     return ("rw" in Util.mntOptsStrToList(pobj.opts))
             assert False
 
         def to_read_write(self):
             assert not self.is_writable
             assert self._isRootfsWritable()
-            Util.cmdCall("/bin/mount", os.path.join(self._mntDir, "boot"), "-o", "rw,remount")
+            Util.cmdCall("/bin/mount", self._mntBootDir, "-o", "rw,remount")
 
         def to_read_only(self):
             assert self.is_writable
-            Util.cmdCall("/bin/mount", os.path.join(self._mntDir, "boot"), "-o", "ro,remount")
+            Util.cmdCall("/bin/mount", self._mntBootDir, "-o", "ro,remount")
 
         def _isRootfsWritable(self):
             for pobj in psutil.disk_partitions():
@@ -784,7 +785,8 @@ class MountEfi:
 
     def __init__(self, mountDir):
         self._mntDir = mountDir
-        self._rwCtrl = self.BootDirRwController(self._mntDir)
+        self._mntBootDir = os.path.join(self._mntDir, "boot")
+        self._rwCtrl = self.BootDirRwController(self)
 
     @property
     def mount_point(self):
@@ -792,6 +794,18 @@ class MountEfi:
 
     def get_bootdir_rw_controller(self):
         return self._rwCtrl
+
+    def mount_esp(self, parti):
+        Util.cmdCall("/bin/mount", parti, self._mntBootDir, "-o", "ro")
+
+    def umount_esp(self, parti):
+        for pobj in psutil.disk_partitions():
+            if pobj.mountpoint == self._mntBootDir:
+                assert pobj.device == parti
+                assert "rw" not in Util.mntOptsStrToList(pobj.opts)
+                Util.cmdCall("/bin/umount", self._mntBootDir)
+                return
+        assert False
 
 
 class HandyMd:

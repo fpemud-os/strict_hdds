@@ -135,7 +135,7 @@ class StorageLayoutImpl(StorageLayout):
 
         # boot disk change
         if disk == self._md.boot_disk:
-            Util.cmdCall("/bin/mount", self._md.get_disk_esp_partition(self._md.boot_disk), Util.bootDir, "-o", "ro")
+            self._mnt.mount_esp(self._md.get_disk_esp_partition(self._md.boot_disk))
 
     def remove_disk(self, disk):
         assert disk is not None
@@ -146,7 +146,10 @@ class StorageLayoutImpl(StorageLayout):
 
         # boot disk change
         if disk == self._md.boot_disk:
-            Util.cmdCall("/bin/umount", Util.bootDir)
+            self._mnt.umount_esp(self._md.get_disk_esp_partition(self._md.boot_disk))
+            bChange = True
+        else:
+            bChange = False
 
         # hdd partition 2: remove from btrfs and bcache
         Util.cmdCall("/sbin/btrfs", "device", "delete", self._md.get_disk_data_partition(disk), self._mnt.mount_point)
@@ -155,8 +158,8 @@ class StorageLayoutImpl(StorageLayout):
         self._md.remove_disk(disk)
 
         # boot disk change
-        if disk == self._md.boot_disk:
-            Util.cmdCall("/bin/mount", self._md.get_disk_esp_partition(self._md.boot_disk), Util.bootDir, "-o", "ro")
+        if bChange:
+            self._mnt.mount_esp(self._md.get_disk_esp_partition(self._md.boot_disk))
 
     @Snapshot.proxy
     def create_snapshot(self, snapshot_name):
