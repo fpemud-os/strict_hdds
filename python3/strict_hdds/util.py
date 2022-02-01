@@ -353,8 +353,6 @@ class Util:
                 if region is not None:
                     assert False                                            # there should be only one free region
                 region = r
-            if region.start < 2048:
-                region.start = 2048
             return region
 
         def _addPartition(disk, pType, pStart, pEnd):
@@ -421,7 +419,6 @@ class Util:
 
         # delete all partitions
         disk = parted.freshDisk(parted.getDevice(devPath), partitionTableType)
-        disk.commit()
 
         # process preList
         for pSize, pType in preList:
@@ -452,9 +449,8 @@ class Util:
             else:
                 assert False
 
-        # commit and notify kernel (don't wait kernel picks up this change by itself)
+        # write to disk, notify kernel, block until kernel to pick up this change
         disk.commit()
-        Util.cmdCall("/sbin/partprobe")
 
     @staticmethod
     def toggleEspPartition(devPath, espOrRegular):
