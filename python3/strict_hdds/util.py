@@ -23,7 +23,6 @@
 
 import os
 import re
-import glob
 import uuid
 import time
 import stat
@@ -1007,16 +1006,6 @@ class BcacheUtil:
         retList.remove(backingDevPath)
         retList.append(backingDevPath)
         return retList
-
-    @staticmethod
-    def findByBackingDevice(devPath):
-        for fullfn in glob.glob("/dev/bcache*"):
-            if re.fullmatch("/dev/bcache[0-9]+", fullfn):
-                bcachePath = os.path.realpath("/sys/block/" + os.path.basename(devPath) + "/bcache")
-                backingDev = os.path.basename(os.path.dirname(bcachePath))
-                if os.path.basename(devPath) == backingDev:
-                    return fullfn
-        return None
 
     @staticmethod
     def scanAndRegisterAll():

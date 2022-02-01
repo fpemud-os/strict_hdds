@@ -24,6 +24,8 @@
 import os
 import re
 import abc
+import glob
+import time
 import struct
 import parted
 import psutil
@@ -431,9 +433,29 @@ class BcacheRaid:
 
     def add_backing(self, cacheDevPath, key, devPath):
         BcacheUtil.makeAndRegisterBackingDevice(devPath)
-        bcacheDevPath = BcacheUtil.findByBackingDevice(devPath)
+
+        bcacheDevPath = None
+        if True:
+            devName = os.path.basename(devPath)
+            bcacheSet = set()
+            for i in range(0, 10):
+                for fullfn in glob.glob("/dev/bcache*"):
+                    if fullfn not in bcacheSet:
+                        if re.fullmatch("/dev/bcache[0-9]+", fullfn):
+                            bcachePath = os.path.realpath("/sys/block/" + devName + "/bcache")
+                            if os.path.basename(os.path.dirname(bcachePath)) == devName:
+                                bcacheDevPath = fullfn
+                                break
+                    bcacheSet.add(fullfn)
+                if bcacheDevPath is not None:
+                    break
+                time.sleep(1)
+            if bcacheDevPath is None:
+                raise Exception("corresponding bcache device is not found")
+
         if cacheDevPath is not None:
             BcacheUtil.attachCacheDevice([bcacheDevPath], cacheDevPath)
+
         self._backingDict[key] = bcacheDevPath
         return bcacheDevPath
 
