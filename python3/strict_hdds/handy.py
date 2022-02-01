@@ -425,7 +425,7 @@ class BcacheRaid:
         return self._backingDict[key]
 
     def get_all_bcache_dev_list(self):
-        return self._backingDict.values()
+        return list(self._backingDict.values())
 
     def add_cache(self, cacheDevPath):
         BcacheUtil.makeAndRegisterCacheDevice(cacheDevPath)
