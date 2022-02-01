@@ -159,7 +159,7 @@ def get_current_storage_layout():
 
         # lvm related
         if Util.anyIn(["efi-bcache-lvm-ext4", "efi-lvm-ext4"], allLayoutNames):
-            if Util.cmdCallTestSuccess("/sbin/lvm", "vgdisplay", LvmUtil.vgName):   # only call lvm related procedure when corresponding storage layout exists
+            if Util.cmdCallTestSuccess("lvm", "vgdisplay", LvmUtil.vgName):   # only call lvm related procedure when corresponding storage layout exists
                 tlist = LvmUtil.getSlaveDevPathList(LvmUtil.vgName)
                 if any(BcacheUtil.getBcacheDevFromDevPath(x) is not None for x in tlist):
                     return _parseOneStorageLayout("efi-bcache-lvm-ext4", bootDev, rootDev)
@@ -171,7 +171,7 @@ def get_current_storage_layout():
     else:
         # lvm related
         if Util.anyIn(["bios-lvm-ext4"], allLayoutNames):
-            if Util.cmdCallTestSuccess("/sbin/lvm", "vgdisplay", LvmUtil.vgName):   # only call lvm related procedure when corresponding storage layout exists
+            if Util.cmdCallTestSuccess("lvm", "vgdisplay", LvmUtil.vgName):   # only call lvm related procedure when corresponding storage layout exists
                 return _parseOneStorageLayout("bios-lvm-ext4", bootDev, rootDev)
 
         # simplest layout

@@ -131,7 +131,7 @@ class StorageLayoutImpl(StorageLayout):
         self._md.add_disk(disk)
 
         # hdd partition 2: make it as backing device and add it to btrfs filesystem
-        Util.cmdCall("/sbin/btrfs", "device", "add", self._md.get_disk_data_partition(disk), self._mnt.mount_point)
+        Util.cmdCall("btrfs", "device", "add", self._md.get_disk_data_partition(disk), self._mnt.mount_point)
 
         # boot disk change
         if disk == self._md.boot_disk:
@@ -155,7 +155,7 @@ class StorageLayoutImpl(StorageLayout):
             bChange = False
 
         # hdd partition 2: remove from btrfs and bcache
-        Util.cmdCall("/sbin/btrfs", "device", "delete", self._md.get_disk_data_partition(disk), self._mnt.mount_point)
+        Util.cmdCall("btrfs", "device", "delete", self._md.get_disk_data_partition(disk), self._mnt.mount_point)
 
         # remove
         self._md.remove_disk(disk)
@@ -246,7 +246,7 @@ def create_and_mount(disk_list, mount_dir, mount_options):
     HandyMd.checkAndAddDisks(disk_list)
 
     # create and mount
-    Util.cmdCall("/usr/sbin/mkfs.btrfs", "-f", "-d", "single", "-m", "single", *[md.get_disk_data_partition(x) for x in md.get_disk_list()])
+    Util.cmdCall("mkfs.btrfs", "-f", "-d", "single", "-m", "single", *[md.get_disk_data_partition(x) for x in md.get_disk_list()])
     SnapshotBtrfs.initializeFs(md.get_disk_data_partition(md.get_disk_list()[0]))
 
     # return

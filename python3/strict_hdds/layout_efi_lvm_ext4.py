@@ -97,7 +97,7 @@ class StorageLayoutImpl(StorageLayout):
 
     def optimize_rootdev(self):
         LvmUtil.autoExtendLv(LvmUtil.rootLvDevPath)
-        Util.cmdExec("/sbin/resize2fs", LvmUtil.rootLvDevPath)
+        Util.cmdExec("resize2fs", LvmUtil.rootLvDevPath)
 
     @EfiMultiDisk.proxy
     def get_esp(self):
@@ -157,10 +157,10 @@ class StorageLayoutImpl(StorageLayout):
 
         # hdd partition 2: remove from volume group
         parti = self._md.get_disk_data_partition(disk)
-        rc, out = Util.cmdCallWithRetCode("/sbin/lvm", "pvmove", parti)
+        rc, out = Util.cmdCallWithRetCode("lvm", "pvmove", parti)
         if rc != 5:
             raise errors.StorageLayoutRemoveDiskError("failed")
-        Util.cmdCall("/sbin/lvm", "vgreduce", LvmUtil.vgName, parti)
+        Util.cmdCall("lvm", "vgreduce", LvmUtil.vgName, parti)
 
         # remove
         self._md.remove_disk(disk)

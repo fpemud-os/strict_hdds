@@ -111,7 +111,7 @@ class EfiMultiDisk:
 
         # partition1: pending ESP partition
         parti = PartiUtil.diskToParti(disk, 1)
-        Util.cmdCall("/usr/sbin/mkfs.vfat", parti)
+        Util.cmdCall("mkfs.vfat", parti)
         if self._bootHdd is not None:
             Util.syncBlkDev(PartiUtil.diskToParti(self._bootHdd, 1), parti, mountPoint1=Util.bootDir)
         else:
@@ -294,14 +294,14 @@ class EfiCacheGroup:
         ])
 
         # partition1: ESP partition
-        Util.cmdCall("/usr/sbin/mkfs.vfat", self._ssdEspParti)
+        Util.cmdCall("mkfs.vfat", self._ssdEspParti)
         if self._bootHdd is not None:
             Util.syncBlkDev(PartiUtil.diskToParti(self._bootHdd, 1), self._ssdEspParti, mountPoint1=Util.bootDir)
         else:
             pass
 
         # partition2: swap partition
-        Util.cmdCall("/sbin/mkswap", self._ssdSwapParti)
+        Util.cmdCall("mkswap", self._ssdSwapParti)
 
         # partition3: cache partition, leave it to caller
         pass
@@ -343,7 +343,7 @@ class EfiCacheGroup:
 
         # partition1: pending ESP partition
         parti = PartiUtil.diskToParti(hdd, 1)
-        Util.cmdCall("/usr/sbin/mkfs.vfat", parti)
+        Util.cmdCall("mkfs.vfat", parti)
         if self._ssd is not None:
             Util.syncBlkDev(self._ssdEspParti, parti, mountPoint1=Util.bootDir)
         elif self._bootHdd is not None:
@@ -516,12 +516,12 @@ class SwapLvmLv:
 
     def create_swap_lv(self):
         assert not self._bSwapLv
-        Util.cmdCall("/sbin/lvm", "lvcreate", "-L", "%dGiB" % (Util.getSwapSizeInGb()), "-n", LvmUtil.swapLvName, LvmUtil.vgName)
+        Util.cmdCall("lvm", "lvcreate", "-L", "%dGiB" % (Util.getSwapSizeInGb()), "-n", LvmUtil.swapLvName, LvmUtil.vgName)
         self._bSwapLv = True
 
     def remove_swap_lv(self):
         assert self._bSwapLv
-        Util.cmdCall("/sbin/lvm", "lvremove", LvmUtil.swapLvDevPath)
+        Util.cmdCall("lvm", "lvremove", LvmUtil.swapLvDevPath)
         self._bSwapLv = False
 
     def check(self, auto_fix, error_callback):
@@ -587,10 +587,24 @@ class Snapshot(abc.ABC):
     def initializeFs(cls, devPath):
         with TmpMount(devPath) as mp:
             cls._createSubVol(mp.mountpoint, "@")
+            os.chown(os.path.join(mp.muntpoint, "@"), 0, 0)
+            os.chmod(os.path.join(mp.muntpoint, "@"), 0o0755)
+
             cls._createSubVol(mp.mountpoint, "@root")
+            os.chown(os.path.join(mp.muntpoint, "@root"), 0, 0)
+            os.chmod(os.path.join(mp.muntpoint, "@root"), 0o0700)
+
             cls._createSubVol(mp.mountpoint, "@home")
+            os.chown(os.path.join(mp.muntpoint, "@home"), 0, 0)
+            os.chmod(os.path.join(mp.muntpoint, "@home"), 0o0755)
+
             cls._createSubVol(mp.mountpoint, "@var")
+            os.chown(os.path.join(mp.muntpoint, "@var"), 0, 0)
+            os.chmod(os.path.join(mp.muntpoint, "@var"), 0o0755)
+
             cls._createSubVol(mp.mountpoint, "@snapshots")
+            os.chown(os.path.join(mp.muntpoint, "@snapshots"), 0, 0)
+            os.chmod(os.path.join(mp.muntpoint, "@snapshots"), 0o0755)
 
     @staticmethod
     def proxy(func):
@@ -683,19 +697,19 @@ class SnapshotBtrfs(Snapshot):
 
     @staticmethod
     def _createSubVol(mntDir, subVolPath):
-        Util.cmdCall("/sbin/btrfs", "subvolume", "create", os.path.join(mntDir, subVolPath))
+        Util.cmdCall("btrfs", "subvolume", "create", os.path.join(mntDir, subVolPath))
 
     @staticmethod
     def _createSnapshotSubVol(mntDir, srcSubVolPath, subVolPath):
-        Util.cmdCall("/sbin/btrfs", "subvolume", "snapshot", os.path.join(mntDir, srcSubVolPath), os.path.join(mntDir, subVolPath))
+        Util.cmdCall("btrfs", "subvolume", "snapshot", os.path.join(mntDir, srcSubVolPath), os.path.join(mntDir, subVolPath))
 
     @staticmethod
     def _deleteSubVol(mntDir, subVolPath):
-        Util.cmdCall("/sbin/btrfs", "subvolume", "delete", os.path.join(mntDir, subVolPath))
+        Util.cmdCall("btrfs", "subvolume", "delete", os.path.join(mntDir, subVolPath))
 
     @staticmethod
     def _getSubVolList(mntDir):
-        out = Util.cmdCall("/sbin/btrfs", "subvolume", "list", mntDir)
+        out = Util.cmdCall("btrfs", "subvolume", "list", mntDir)
         # FIXME: parse out
         return out
 
@@ -704,19 +718,19 @@ class SnapshotBcachefs(Snapshot):
 
     @staticmethod
     def _createSubVol(mntDir, subVolPath):
-        Util.cmdCall("/sbin/bcachefs", "subvolume", "create", os.path.join(mntDir, subVolPath))
+        Util.cmdCall("bcachefs", "subvolume", "create", os.path.join(mntDir, subVolPath))
 
     @staticmethod
     def _createSnapshotSubVol(mntDir, srcSubVolPath, subVolPath):
-        Util.cmdCall("/sbin/bcachefs", "subvolume", "snapshot", os.path.join(mntDir, srcSubVolPath), os.path.join(mntDir, subVolPath))
+        Util.cmdCall("bcachefs", "subvolume", "snapshot", os.path.join(mntDir, srcSubVolPath), os.path.join(mntDir, subVolPath))
 
     @staticmethod
     def _deleteSubVol(mntDir, subVolPath):
-        Util.cmdCall("/sbin/bcachefs", "subvolume", "delete", os.path.join(mntDir, subVolPath))
+        Util.cmdCall("bcachefs", "subvolume", "delete", os.path.join(mntDir, subVolPath))
 
     @staticmethod
     def _getSubVolList(mntDir):
-        out = Util.cmdCall("/sbin/bcachefs", "subvolume", "list", mntDir)
+        out = Util.cmdCall("bcachefs", "subvolume", "list", mntDir)
         # FIXME: parse out
         return out
 
@@ -1148,17 +1162,17 @@ class HandyUtil:
     @staticmethod
     def lvmEnsureVgLvAndGetPvList(storageLayoutName):
         # check vg
-        if not Util.cmdCallTestSuccess("/sbin/lvm", "vgdisplay", LvmUtil.vgName):
+        if not Util.cmdCallTestSuccess("lvm", "vgdisplay", LvmUtil.vgName):
             raise errors.StorageLayoutParseError(storageLayoutName, errors.LVM_VG_NOT_FOUND(LvmUtil.vgName))
 
         # get pv list
         pvList = []
-        out = Util.cmdCall("/sbin/lvm", "pvdisplay", "-c")
+        out = Util.cmdCall("lvm", "pvdisplay", "-c")
         for m in re.finditer("(/dev/\\S+):%s:.*" % (LvmUtil.vgName), out, re.M):
             pvList.append(m.group(1))
 
         # find root lv
-        out = Util.cmdCall("/sbin/lvm", "lvdisplay", "-c")
+        out = Util.cmdCall("lvm", "lvdisplay", "-c")
         if re.search("/dev/hdd/root:%s:.*" % (LvmUtil.vgName), out, re.M) is None:
             raise errors.StorageLayoutParseError(storageLayoutName, errors.LVM_LV_NOT_FOUND(LvmUtil.rootLvDevPath))
 
@@ -1168,7 +1182,7 @@ class HandyUtil:
     def swapFileDetectAndNew(storageLayoutName, rootfs_mount_dir):
         fullfn = rootfs_mount_dir.rstrip("/") + Util.swapFilepath
         if os.path.exists(fullfn):
-            if not Util.cmdCallTestSuccess("/sbin/swaplabel", fullfn):
+            if not Util.cmdCallTestSuccess("swaplabel", fullfn):
                 raise errors.StorageLayoutParseError(storageLayoutName, errors.SWAP_DEV_HAS_INVALID_FS_FLAG(fullfn))
             return SwapFile(True)
         else:
@@ -1176,7 +1190,7 @@ class HandyUtil:
 
     @staticmethod
     def swapLvDetectAndNew(storageLayoutName):
-        out = Util.cmdCall("/sbin/lvm", "lvdisplay", "-c")
+        out = Util.cmdCall("lvm", "lvdisplay", "-c")
         if re.search("/dev/hdd/swap:%s:.*" % (LvmUtil.vgName), out, re.M) is not None:
             if Util.getBlkDevFsType(LvmUtil.swapLvDevPath) != Util.fsTypeSwap:
                 raise errors.StorageLayoutParseError(storageLayoutName, errors.SWAP_DEV_HAS_INVALID_FS_FLAG(LvmUtil.swapLvDevPath))

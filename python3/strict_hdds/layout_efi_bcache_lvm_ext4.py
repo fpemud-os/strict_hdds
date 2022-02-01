@@ -107,7 +107,7 @@ class StorageLayoutImpl(StorageLayout):
 
     def optimize_rootdev(self):
         LvmUtil.autoExtendLv(LvmUtil.rootLvDevPath)
-        Util.cmdExec("/sbin/resize2fs", LvmUtil.rootLvDevPath)
+        Util.cmdExec("resize2fs", LvmUtil.rootLvDevPath)
 
     @EfiCacheGroup.proxy
     def get_esp(self):
@@ -213,10 +213,10 @@ class StorageLayoutImpl(StorageLayout):
                 bChange = False
 
             # remove
-            rc, out = Util.cmdCallWithRetCode("/sbin/lvm", "pvmove", self._bcache.get_bcache_dev(disk))
+            rc, out = Util.cmdCallWithRetCode("lvm", "pvmove", self._bcache.get_bcache_dev(disk))
             if rc != 5:
                 raise errors.StorageLayoutRemoveDiskError("failed")
-            Util.cmdCall("/sbin/lvm", "vgreduce", LvmUtil.vgName, self._bcache.get_bcache_dev(disk))
+            Util.cmdCall("lvm", "vgreduce", LvmUtil.vgName, self._bcache.get_bcache_dev(disk))
             self._bcache.remove_backing(disk)
             self._cg.remove_hdd(disk)
 

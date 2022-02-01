@@ -238,7 +238,7 @@ class Util:
 
     @staticmethod
     def getBlkDevSize(devPath):
-        out = Util.cmdCall("/sbin/blockdev", "--getsz", devPath)
+        out = Util.cmdCall("blockdev", "--getsz", devPath)
         return int(out) * 512        # unit is byte
 
     @staticmethod
@@ -246,7 +246,7 @@ class Util:
         if not PartiUtil.isDiskOrParti(devPath):
             devPath = PartiUtil.partiToDisk(devPath)
 
-        ret = Util.cmdCall("/sbin/blkid", "-o", "export", devPath)
+        ret = Util.cmdCall("blkid", "-o", "export", devPath)
         m = re.search("^PTTYPE=(\\S+)$", ret, re.M)
         if m is not None:
             if m.group(1) == "gpt":
@@ -260,13 +260,13 @@ class Util:
 
     @staticmethod
     def getBlkDevFsType(devPath):
-        # FIXME: blkid doesn't support bcachefs yet, use /usr/bin/file instead
-        ret = Util.cmdCall("/usr/bin/file", "-sb", devPath)
+        # FIXME: blkid doesn't support bcachefs yet, use file instead
+        ret = Util.cmdCall("file", "-sb", devPath)
         if re.search("^bcachefs, UUID=", ret) is not None:
             return "bcachefs"
 
-        # use /sbin/blkid to get fstype
-        ret = Util.cmdCall("/sbin/blkid", "-o", "export", devPath)
+        # use blkid to get fstype
+        ret = Util.cmdCall("blkid", "-o", "export", devPath)
         m = re.search("^TYPE=(\\S+)$", ret, re.M)
         if m is not None:
             return m.group(1).lower()
@@ -288,7 +288,7 @@ class Util:
         if Util.getBlkDevFsType(devPath1) != Util.getBlkDevFsType(devPath2):
             raise Exception("%s and %s have different filesystem" % (devPath1, devPath2))
 
-        cmd = "/usr/bin/rsync -q -a --delete \"%s/\" \"%s\""        # SRC parameter has "/" postfix so that whole directory is synchronized
+        cmd = "rsync -q -a --delete \"%s/\" \"%s\""        # SRC parameter has "/" postfix so that whole directory is synchronized
         if mountPoint1 is not None and mountPoint2 is not None:
             Util.shellExec(cmd % (mountPoint1, mountPoint2))
         elif mountPoint1 is not None and mountPoint2 is None:
@@ -306,7 +306,7 @@ class Util:
     def createSwapFile(path):
         Util.cmdCall("/bin/dd", "if=/dev/zero", "of=%s" % (path), "bs=%d" % (1024 * 1024), "count=%d" % (Util.getSwapSizeInGb() * 1024))
         Util.cmdCall("/bin/chmod", "600", path)
-        Util.cmdCall("/sbin/mkswap", "-f", path)
+        Util.cmdCall("mkswap", "-f", path)
 
     @staticmethod
     def isSwapFileOrPartitionBusy(path):
@@ -792,7 +792,7 @@ class BcacheUtil:
         if blockSize is None:
             st = os.stat(devPath)
             if stat.S_ISBLK(st.st_mode):
-                out = Util.cmdCall("/sbin/blockdev", "--getss", devPath)
+                out = Util.cmdCall("blockdev", "--getss", devPath)
                 blockSize = int(out) // 512
             else:
                 blockSize = st.st_blksize // 512
@@ -1071,7 +1071,7 @@ class BcachefsUtil:
     def createBcachefs(ssdList, hddList):
         assert len(hddList) > 0
 
-        cmdList = ["/sbin/bcachefs", "format"]
+        cmdList = ["bcachefs", "format"]
         if len(ssdList) > 0:
             cmdList.append("--group=ssd")
             cmdList += ssdList
@@ -1084,12 +1084,12 @@ class BcachefsUtil:
 
     @staticmethod
     def addSsdToBcachefs(ssd, mountPoint):
-        cmdList = ["/sbin/bcachefs", "device", "add", "--group=ssd", mountPoint, ssd]
+        cmdList = ["bcachefs", "device", "add", "--group=ssd", mountPoint, ssd]
         Util.cmdCall(*cmdList)
 
     @staticmethod
     def addHddToBcachefs(hdd, mountPoint):
-        cmdList = ["/sbin/bcachefs", "device", "add", "--group=hdd", mountPoint, hdd]
+        cmdList = ["bcachefs", "device", "add", "--group=hdd", mountPoint, hdd]
         Util.cmdCall(*cmdList)
 
     @staticmethod
@@ -1118,7 +1118,7 @@ class LvmUtil:
     @staticmethod
     def getSlaveDevPathList(vgName):
         ret = []
-        out = Util.cmdCall("/sbin/lvm", "pvdisplay", "-c")
+        out = Util.cmdCall("lvm", "pvdisplay", "-c")
         for m in re.finditer("^\\s*(\\S+):%s:.*" % (vgName), out, re.M):
             if m.group(1) == "[unknown]":
                 raise LvmUtilException("volume group %s not fully loaded" % (vgName))
@@ -1127,34 +1127,34 @@ class LvmUtil:
 
     @staticmethod
     def addPvToVg(pvDevPath, vgName, mayCreate=False):
-        Util.cmdCall("/sbin/lvm", "pvcreate", pvDevPath)
-        if mayCreate and not Util.cmdCallTestSuccess("/sbin/lvm", "vgdisplay", vgName):
-            Util.cmdCall("/sbin/lvm", "vgcreate", vgName, pvDevPath)
+        Util.cmdCall("lvm", "pvcreate", pvDevPath)
+        if mayCreate and not Util.cmdCallTestSuccess("lvm", "vgdisplay", vgName):
+            Util.cmdCall("lvm", "vgcreate", vgName, pvDevPath)
         else:
-            Util.cmdCall("/sbin/lvm", "vgextend", vgName, pvDevPath)
+            Util.cmdCall("lvm", "vgextend", vgName, pvDevPath)
 
     @staticmethod
     def removePvFromVg(pvDevPath, vgName):
-        rc, out = Util.cmdCallWithRetCode("/sbin/lvm", "pvmove", pvDevPath)
+        rc, out = Util.cmdCallWithRetCode("lvm", "pvmove", pvDevPath)
         if rc != 5:
             raise LvmUtilException("failed")
 
         if pvDevPath in LvmUtil.getSlaveDevPathList(vgName):
-            Util.cmdCall("/sbin/lvm", "vgreduce", vgName, pvDevPath)
+            Util.cmdCall("lvm", "vgreduce", vgName, pvDevPath)
 
     @staticmethod
     def createLvWithDefaultSize(vgName, lvName):
-        out = Util.cmdCall("/sbin/lvm", "vgdisplay", "-c", vgName)
+        out = Util.cmdCall("lvm", "vgdisplay", "-c", vgName)
         freePe = int(out.split(":")[15])
-        Util.cmdCall("/sbin/lvm", "lvcreate", "-l", "%d" % (freePe // 2), "-n", lvName, vgName)
+        Util.cmdCall("lvm", "lvcreate", "-l", "%d" % (freePe // 2), "-n", lvName, vgName)
 
     @staticmethod
     def activateAll():
-        Util.cmdCall("/sbin/lvm", "vgchange", "-ay")
+        Util.cmdCall("lvm", "vgchange", "-ay")
 
     @staticmethod
     def getVgList():
-        out = Util.cmdCall("/sbin/lvm", "vgdisplay", "-s")
+        out = Util.cmdCall("lvm", "vgdisplay", "-s")
         return [x for x in out.split("\n") if x != ""]
 
     @staticmethod
@@ -1164,7 +1164,7 @@ class LvmUtil:
             return
         added = int(used / 0.7) - total
         added = (added // 1024 + 1) * 1024      # change unit from MB to GB
-        Util.cmdCall("/sbin/lvm", "lvextend", "-L+%dG" % (added), lvDevPath)
+        Util.cmdCall("lvm", "lvextend", "-L+%dG" % (added), lvDevPath)
 
 
 class LvmUtilException(Exception):
