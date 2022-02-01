@@ -924,11 +924,14 @@ class BcacheUtil:
 
     @staticmethod
     def registerBackingDevice(devPath):
-        BcacheUtil._registerDevice(devPath)
+        print(devPath)
+        with open("/sys/fs/bcache/register_quiet", "w") as f:
+            f.write(devPath)
 
     @staticmethod
     def registerCacheDevice(devPath):
-        BcacheUtil._registerDevice(devPath)
+        with open("/sys/fs/bcache/register_quiet", "w") as f:
+            f.write(devPath)
 
     @staticmethod
     def makeAndRegisterBackingDevice(devPath):
@@ -1059,11 +1062,6 @@ class BcacheUtil:
                 return False
 
             return True
-
-    @staticmethod
-    def _registerDevice(devPath):
-        with open("/sys/fs/bcache/register", "w") as f:
-            f.write(devPath)
 
 
 class BcachefsUtil:
