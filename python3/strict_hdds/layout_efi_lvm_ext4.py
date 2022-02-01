@@ -130,7 +130,7 @@ class StorageLayoutImpl(StorageLayout):
             raise errors.StorageLayoutAddDiskError(disk, errors.NOT_DISK)
 
         # add
-        self._md.add_disk(disk)
+        self._md.add_disk(disk, "lvm")
 
         # create lvm physical volume on partition2 and add it to volume group
         LvmUtil.addPvToVg(self._md.get_disk_data_partition(disk), LvmUtil.vgName)
@@ -243,7 +243,7 @@ def detect_and_mount(disk_list, mount_dir, mount_options):
 def create_and_mount(disk_list, mount_dir, mount_options):
     # add disks
     md = EfiMultiDisk()
-    HandyMd.checkAndAddDisks(disk_list)
+    HandyMd.checkAndAddDisks(disk_list, "lvm")
 
     # create pv, create vg, create root lv
     for disk in md.get_disk_list():

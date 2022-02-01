@@ -128,7 +128,7 @@ class StorageLayoutImpl(StorageLayout):
             raise errors.StorageLayoutAddDiskError(disk, errors.NOT_DISK)
 
         # add
-        self._md.add_disk(disk)
+        self._md.add_disk(disk, Util.fsTypeBtrfs)
 
         # hdd partition 2: make it as backing device and add it to btrfs filesystem
         Util.cmdCall("btrfs", "device", "add", self._md.get_disk_data_partition(disk), self._mnt.mount_point)
@@ -243,7 +243,7 @@ def detect_and_mount(disk_list, mount_dir, mount_options):
 def create_and_mount(disk_list, mount_dir, mount_options):
     # add disks
     md = EfiMultiDisk()
-    HandyMd.checkAndAddDisks(disk_list)
+    HandyMd.checkAndAddDisks(disk_list, Util.fsTypeBtrfs)
 
     # create and mount
     Util.cmdCall("mkfs.btrfs", "-f", "-d", "single", "-m", "single", *[md.get_disk_data_partition(x) for x in md.get_disk_list()])

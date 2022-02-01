@@ -53,13 +53,6 @@ class Util:
     checkItemBasic = "basic"
 
     @staticmethod
-    def listRemoveNoValueError(tlist, value):
-        try:
-            tlist.remove(value)
-        except ValueError:
-            pass
-
-    @staticmethod
     def keyValueListToDict(keyList, valueList):
         assert len(keyList) == len(valueList)
         ret = dict()
@@ -365,7 +358,7 @@ class Util:
                                              fs=parted.FileSystem(type="fat32", geometry=region),
                                              geometry=region)
                 partition.setFlag(parted.PARTITION_BOOT)
-            elif pType == "bcache":
+            elif pType in ["bcache", "bcachefs"]:
                 assert partitionTableType == "gpt"
                 partition = parted.Partition(disk=disk, type=parted.PARTITION_NORMAL, geometry=region)
             elif pType == "swap":

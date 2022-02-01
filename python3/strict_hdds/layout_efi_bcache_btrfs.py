@@ -175,12 +175,12 @@ class StorageLayoutImpl(StorageLayout):
         if Util.isBlkDevSsdOrHdd(disk):
             if self._cg.boot_disk is not None:
                 self._mnt.umount_esp(self._cg.get_hdd_esp_partition(self._cg.boot_disk))
-            self._cg.add_ssd(disk)
+            self._cg.add_ssd(disk, "bcache")
             self._bcache.add_cache(self._cg.get_ssd_cache_partition())
             self._mnt.mount_esp(self._cg.get_ssd_esp_partition())
             return True
         else:
-            self._cg.add_hdd(disk)
+            self._cg.add_hdd(disk, "bcache")
             self._bcache.add_backing(self._cg.get_ssd_cache_partition(), disk, self._cg.get_hdd_data_partition(disk))
             Util.cmdCall("btrfs", "device", "add", self._bcache.get_bcache_dev(disk), self._mnt.mount_point)
             if disk == self._cg.boot_disk:
@@ -321,7 +321,7 @@ def detect_and_mount(disk_list, mount_dir, mount_options):
 def create_and_mount(disk_list, mount_dir, mount_options):
     # add disks to cache group
     cg = EfiCacheGroup()
-    HandyCg.checkAndAddDisks(cg, *Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list))
+    HandyCg.checkAndAddDisks(cg, *Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list), "bcache")
 
     bcache = BcacheRaid()
     for hdd in cg.get_hdd_list():

@@ -100,13 +100,13 @@ class EfiMultiDisk:
         assert disk in self._hddList
         return PartiUtil.diskToParti(disk, 2)
 
-    def add_disk(self, disk):
+    def add_disk(self, disk, fsType):
         assert disk is not None and disk not in self._hddList
 
         # create partitions
         Util.initializeDisk(disk, "gpt", [
             ("%dMiB" % (Util.getEspSizeInMb()), Util.fsTypeFat),
-            ("*", "bcache"),
+            ("*", fsType),
         ])
 
         # partition1: pending ESP partition
@@ -277,7 +277,7 @@ class EfiCacheGroup:
         assert disk in self._hddList
         return PartiUtil.diskToParti(disk, 2)
 
-    def add_ssd(self, ssd):
+    def add_ssd(self, ssd, fsType):
         assert self._ssd is None
         assert ssd is not None and ssd not in self._hddList
 
@@ -290,7 +290,7 @@ class EfiCacheGroup:
         Util.initializeDisk(self._ssd, "gpt", [
             ("%dMiB" % (Util.getEspSizeInMb()), "esp"),
             ("%dGiB" % (Util.getSwapSizeInGb()), Util.fsTypeSwap),
-            ("*", "bcache"),
+            ("*", fsType),
         ])
 
         # partition1: ESP partition
@@ -332,13 +332,13 @@ class EfiCacheGroup:
         if len(self._hddList) > 0:
             self._setFirstHddAsBootHdd()
 
-    def add_hdd(self, hdd):
+    def add_hdd(self, hdd, fsType):
         assert hdd is not None and hdd not in self._hddList
 
         # create partitions
         Util.initializeDisk(hdd, "gpt", [
             ("%dMiB" % (Util.getEspSizeInMb()), Util.fsTypeFat),
-            ("*", "bcache"),
+            ("*", fsType),
         ])
 
         # partition1: pending ESP partition
@@ -836,14 +836,14 @@ class MountEfi(Mount):
 class HandyMd:
 
     @staticmethod
-    def checkAndAddDisks(md, diskList):
+    def checkAndAddDisks(md, diskList, fsType):
         if len(diskList) == 0:
             raise errors.StorageLayoutCreateError(errors.NO_DISK_WHEN_CREATE)
         for disk in diskList:
             if not Util.isHarddiskClean(disk):
                 raise errors.StorageLayoutCreateError(errors.DISK_NOT_CLEAN(disk))
         for disk in diskList:
-            md.add_disk(disk)
+            md.add_disk(disk, fsType)
 
     @staticmethod
     def checkExtraDisks(storageLayoutName, diskList, origDiskList):
@@ -869,7 +869,7 @@ class HandyMd:
 class HandyCg:
 
     @staticmethod
-    def checkAndAddDisks(cg, ssdList, hddList):
+    def checkAndAddDisks(cg, ssdList, hddList, fsType):
         ssd, hddList = HandyCg.checkAndGetSsdAndHddList(ssdList, hddList)
 
         # ensure disks are clean
@@ -882,9 +882,9 @@ class HandyCg:
 
         # add ssd first so that minimal boot disk change is need
         if ssd is not None:
-            cg.add_ssd(ssd)
+            cg.add_ssd(ssd, fsType)
         for hdd in hddList:
-            cg.add_hdd(hdd)
+            cg.add_hdd(hdd, fsType)
 
     @staticmethod
     def checkAndGetSsdAndHddList(ssdList, hddList):
