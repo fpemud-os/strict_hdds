@@ -63,7 +63,7 @@ class StorageLayoutImpl(StorageLayout):
 
     @property
     def dev_rootfs(self):
-        return self.get_hdd_data_partition(self.get_hdd_list()[0])
+        return self._bcache.get_all_bcache_dev_list()[0]
 
     @EfiCacheGroup.proxy
     @property
@@ -333,7 +333,7 @@ def create_and_mount(disk_list, mount_dir, mount_options):
 
     # create btrfs
     Util.cmdCall("/usr/sbin/mkfs.btrfs", "-d", "single", "-m", "single", *bcache.get_all_bcache_dev_list())
-    SnapshotBtrfs.initializeFs(cg.dev_rootfs)
+    SnapshotBtrfs.initializeFs(bcache.get_all_bcache_dev_list()[0])
 
     # return
     ret = StorageLayoutImpl()
