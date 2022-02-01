@@ -587,24 +587,24 @@ class Snapshot(abc.ABC):
     def initializeFs(cls, devPath):
         with TmpMount(devPath) as mp:
             cls._createSubVol(mp.mountpoint, "@")
-            os.chown(os.path.join(mp.muntpoint, "@"), 0, 0)
-            os.chmod(os.path.join(mp.muntpoint, "@"), 0o0755)
+            os.chown(os.path.join(mp.mountpoint, "@"), 0, 0)
+            os.chmod(os.path.join(mp.mountpoint, "@"), 0o0755)
 
             cls._createSubVol(mp.mountpoint, "@root")
-            os.chown(os.path.join(mp.muntpoint, "@root"), 0, 0)
-            os.chmod(os.path.join(mp.muntpoint, "@root"), 0o0700)
+            os.chown(os.path.join(mp.mountpoint, "@root"), 0, 0)
+            os.chmod(os.path.join(mp.mountpoint, "@root"), 0o0700)
 
             cls._createSubVol(mp.mountpoint, "@home")
-            os.chown(os.path.join(mp.muntpoint, "@home"), 0, 0)
-            os.chmod(os.path.join(mp.muntpoint, "@home"), 0o0755)
+            os.chown(os.path.join(mp.mountpoint, "@home"), 0, 0)
+            os.chmod(os.path.join(mp.mountpoint, "@home"), 0o0755)
 
             cls._createSubVol(mp.mountpoint, "@var")
-            os.chown(os.path.join(mp.muntpoint, "@var"), 0, 0)
-            os.chmod(os.path.join(mp.muntpoint, "@var"), 0o0755)
+            os.chown(os.path.join(mp.mountpoint, "@var"), 0, 0)
+            os.chmod(os.path.join(mp.mountpoint, "@var"), 0o0755)
 
             cls._createSubVol(mp.mountpoint, "@snapshots")
-            os.chown(os.path.join(mp.muntpoint, "@snapshots"), 0, 0)
-            os.chmod(os.path.join(mp.muntpoint, "@snapshots"), 0o0755)
+            os.chown(os.path.join(mp.mountpoint, "@snapshots"), 0, 0)
+            os.chmod(os.path.join(mp.mountpoint, "@snapshots"), 0o0755)
 
     @staticmethod
     def proxy(func):
