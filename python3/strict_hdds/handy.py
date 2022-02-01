@@ -699,19 +699,7 @@ class SnapshotBcachefs(Snapshot):
         return out
 
 
-class MountBios:
-
-    class BootDirRwController(BootDirRwController):
-
-        @property
-        def is_writable(self):
-            return True
-
-        def to_read_write(self):
-            pass
-
-        def to_read_only(self):
-            pass
+class Mount(abc.ABC):
 
     @staticmethod
     def proxy(func):
@@ -727,17 +715,39 @@ class MountBios:
 
     def __init__(self, mntDir):
         self._mntDir = mntDir
-        self._rwCtrl = self.BootDirRwController()
 
     @property
     def mount_point(self):
         return self._mntDir
 
+    @abc.abstractmethod
+    def get_bootdir_rw_controller(self):
+        pass
+
+
+class MountBios(Mount):
+
+    class BootDirRwController(BootDirRwController):
+
+        @property
+        def is_writable(self):
+            return True
+
+        def to_read_write(self):
+            pass
+
+        def to_read_only(self):
+            pass
+
+    def __init__(self, mntDir):
+        super().__init__(mntDir)
+        self._rwCtrl = self.BootDirRwController()
+
     def get_bootdir_rw_controller(self):
         return self._rwCtrl
 
 
-class MountEfi:
+class MountEfi(Mount):
 
     class BootDirRwController(BootDirRwController):
 
@@ -766,26 +776,10 @@ class MountEfi:
                 if pobj.mountpoint == self._mntDir:
                     return ("rw" in Util.mntOptsStrToList(pobj.opts))
 
-    @staticmethod
-    def proxy(func):
-        if isinstance(func, property):
-            def f_get(self):
-                return getattr(self._mnt, func.fget.__name__)
-            f_get.__name__ = func.fget.__name__
-            return property(f_get)
-        else:
-            def f(self, *args):
-                return getattr(self._mnt, func.__name__)(*args)
-            return f
-
-    def __init__(self, mountDir):
-        self._mntDir = mountDir
+    def __init__(self, mntDir):
+        super().__init__(mntDir)
         self._mntBootDir = os.path.join(self._mntDir, "boot")
         self._rwCtrl = self.BootDirRwController(self)
-
-    @property
-    def mount_point(self):
-        return self._mntDir
 
     def get_bootdir_rw_controller(self):
         return self._rwCtrl
