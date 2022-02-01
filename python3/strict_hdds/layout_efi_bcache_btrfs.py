@@ -332,7 +332,7 @@ def create_and_mount(disk_list, mount_dir, mount_options):
         bcache.add_cache(cg.get_ssd_cache_partition())
 
     # create btrfs
-    Util.cmdCall("/usr/sbin/mkfs.btrfs", "-d", "single", "-m", "single", *bcache.get_all_bcache_dev_list())
+    Util.cmdCall("/usr/sbin/mkfs.btrfs", "-f", "-d", "single", "-m", "single", *bcache.get_all_bcache_dev_list())
     SnapshotBtrfs.initializeFs(bcache.get_all_bcache_dev_list()[0])
 
     # return

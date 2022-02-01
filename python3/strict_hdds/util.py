@@ -923,7 +923,6 @@ class BcacheUtil:
 
     @staticmethod
     def registerBackingDevice(devPath):
-        print(devPath)
         with open("/sys/fs/bcache/register_quiet", "w") as f:
             f.write(devPath)
 

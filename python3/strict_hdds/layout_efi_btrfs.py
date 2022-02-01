@@ -246,7 +246,7 @@ def create_and_mount(disk_list, mount_dir, mount_options):
     HandyMd.checkAndAddDisks(disk_list)
 
     # create and mount
-    Util.cmdCall("/usr/sbin/mkfs.btrfs", "-d", "single", "-m", "single", *[md.get_disk_data_partition(x) for x in md.get_disk_list()])
+    Util.cmdCall("/usr/sbin/mkfs.btrfs", "-f", "-d", "single", "-m", "single", *[md.get_disk_data_partition(x) for x in md.get_disk_list()])
     SnapshotBtrfs.initializeFs(md.get_disk_data_partition(md.get_disk_list()[0]))
 
     # return
