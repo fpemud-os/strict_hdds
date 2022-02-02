@@ -708,9 +708,11 @@ class SnapshotBtrfs(Snapshot):
 
     @staticmethod
     def _getSubVolList(mntDir):
+        ret = []
         out = Util.cmdCall("btrfs", "subvolume", "list", mntDir)
-        # FIXME: parse out
-        return out
+        for m in re.finditer("path (\\S+)", out, re.M):
+            ret.append(m.group(1))
+        return ret
 
 
 class SnapshotBcachefs(Snapshot):
@@ -731,7 +733,7 @@ class SnapshotBcachefs(Snapshot):
     def _getSubVolList(mntDir):
         out = Util.cmdCall("bcachefs", "subvolume", "list", mntDir)
         # FIXME: parse out
-        return out
+        assert False
 
 
 class Mount(abc.ABC):
