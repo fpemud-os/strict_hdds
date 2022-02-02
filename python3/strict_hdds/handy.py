@@ -1076,7 +1076,15 @@ class DisksChecker:
                 assert struct.calcsize(self.mbrHeaderFmt) == 512
 
                 # get Protective MBR header
-                mbrHeader = struct.unpack(self.mbrHeaderFmt, self._partedReadSectors(dev, 0, 1)[:struct.calcsize(self.mbrHeaderFmt)])
+                mbrHeader = None
+                if True:
+                    with open(hdd, "rb") as f:
+                        buf = f.read(struct.calcsize(self.mbrHeaderFmt))
+                        mbrHeader = struct.unpack(self.mbrHeaderFmt, buf)
+                else:
+                    # FIXME: we can't use self._partedReadSectors() since it returns str, not bytes, what a bug!
+                    # mbrHeader = struct.unpack(self.mbrHeaderFmt, self._partedReadSectors(dev, 0, 1)[:struct.calcsize(self.mbrHeaderFmt)])
+                    pass
 
                 # check Protective MBR header
                 if not Util.isBufferAllZero(mbrHeader[0]):
