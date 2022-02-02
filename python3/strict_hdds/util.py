@@ -1096,7 +1096,7 @@ class BtrfsUtil:
     @staticmethod
     def getSlaveDevPathList(mountPoint):
         ret = []
-        out = Util.cmdCall(["btrfs", "filesystem", "show", mountPoint])
+        out = Util.cmdCall("btrfs", "filesystem", "show", mountPoint)
         for m in re.finditer("path (\\S+)", out, re.M):
             ret.append(m.group(1))
         return ret
