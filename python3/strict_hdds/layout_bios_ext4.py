@@ -104,7 +104,7 @@ class StorageLayoutImpl(StorageLayout):
             assert False
 
 
-def parse(boot_dev, root_dev):
+def parse(boot_dev, root_dev, mount_dir):
     if boot_dev is not None:
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.BOOT_DEV_SHOULD_NOT_EXIST)
     if Util.getBlkDevFsType(root_dev) != Util.fsTypeExt4:
@@ -120,7 +120,7 @@ def parse(boot_dev, root_dev):
     ret._hdd = hdd
     ret._hddRootParti = root_dev
     ret._swap = HandyUtil.swapFileDetectAndNew(StorageLayoutImpl.name, "/")
-    ret._mnt = MountBios("/")
+    ret._mnt = MountBios(mount_dir)
     return ret
 
 

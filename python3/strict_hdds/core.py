@@ -128,17 +128,17 @@ def get_supported_storage_layouts():
     return ret
 
 
-def get_current_storage_layout():
+def get_current_storage_layout(mount_dir="/"):
     allLayoutNames = get_supported_storage_layouts()
 
     rootDev = None
     rootDevFs = None
     bootDev = None
     for pobj in psutil.disk_partitions():
-        if pobj.mountpoint == "/":
+        if pobj.mountpoint == mount_dir:
             rootDev = pobj.device
             rootDevFs = pobj.fstype
-        elif pobj.mountpoint == "/boot":
+        elif pobj.mountpoint == os.path.join(mount_dir, "boot"):
             bootDev = pobj.device
     assert rootDev is not None
 
@@ -146,36 +146,36 @@ def get_current_storage_layout():
         # bcachefs related
         if Util.anyIn(["efi-bcachefs"], allLayoutNames):
             if rootDevFs == Util.fsTypeBcachefs:
-                return _parseOneStorageLayout("efi-bcachefs", bootDev, rootDev)
+                return _parseOneStorageLayout("efi-bcachefs", bootDev, rootDev, mount_dir)
 
         # btrfs related
         if Util.anyIn(["efi-bcache-btrfs", "efi-btrfs"], allLayoutNames):
             if rootDevFs == Util.fsTypeBtrfs:
                 tlist = BtrfsUtil.getSlaveDevPathList(rootDev)                      # only call btrfs related procedure when corresponding storage layout exists
                 if any(BcacheUtil.getBcacheDevFromDevPath(x) is not None for x in tlist):
-                    return _parseOneStorageLayout("efi-bcache-btrfs", bootDev, rootDev)
+                    return _parseOneStorageLayout("efi-bcache-btrfs", bootDev, rootDev, mount_dir)
                 else:
-                    return _parseOneStorageLayout("efi-btrfs", bootDev, rootDev)
+                    return _parseOneStorageLayout("efi-btrfs", bootDev, rootDev, mount_dir)
 
         # lvm related
         if Util.anyIn(["efi-bcache-lvm-ext4", "efi-lvm-ext4"], allLayoutNames):
             if Util.cmdCallTestSuccess("lvm", "vgdisplay", LvmUtil.vgName):   # only call lvm related procedure when corresponding storage layout exists
                 tlist = LvmUtil.getSlaveDevPathList(LvmUtil.vgName)
                 if any(BcacheUtil.getBcacheDevFromDevPath(x) is not None for x in tlist):
-                    return _parseOneStorageLayout("efi-bcache-lvm-ext4", bootDev, rootDev)
+                    return _parseOneStorageLayout("efi-bcache-lvm-ext4", bootDev, rootDev, mount_dir)
                 else:
-                    return _parseOneStorageLayout("efi-lvm-ext4", bootDev, rootDev)
+                    return _parseOneStorageLayout("efi-lvm-ext4", bootDev, rootDev, mount_dir)
 
         # simplest layout
-        return _parseOneStorageLayout("efi-ext4", bootDev, rootDev)
+        return _parseOneStorageLayout("efi-ext4", bootDev, rootDev, mount_dir)
     else:
         # lvm related
         if Util.anyIn(["bios-lvm-ext4"], allLayoutNames):
             if Util.cmdCallTestSuccess("lvm", "vgdisplay", LvmUtil.vgName):   # only call lvm related procedure when corresponding storage layout exists
-                return _parseOneStorageLayout("bios-lvm-ext4", bootDev, rootDev)
+                return _parseOneStorageLayout("bios-lvm-ext4", bootDev, rootDev, mount_dir)
 
         # simplest layout
-        return _parseOneStorageLayout("bios-ext4", bootDev, rootDev)
+        return _parseOneStorageLayout("bios-ext4", bootDev, rootDev, mount_dir)
 
 
 def detect_and_mount_storage_layout(mount_dir, mount_options=""):
@@ -248,12 +248,12 @@ def create_and_mount_storage_layout(layout_name, mount_dir, disk_list=None, moun
         raise errors.StorageLayoutCreateError("layout \"%s\" not supported" % (layout_name))
 
 
-def _parseOneStorageLayout(layoutName, bootDev, rootDev):
+def _parseOneStorageLayout(layoutName, bootDev, rootDev, mountDir):
     modname = Util.layoutName2modName(layoutName)
     try:
         exec("from . import %s" % (modname))
         f = eval("%s.parse" % (modname))
-        return f(bootDev, rootDev)
+        return f(bootDev, rootDev, mountDir)
     except ModuleNotFoundError:
         raise errors.StorageLayoutParseError("", "unknown storage layout")
 

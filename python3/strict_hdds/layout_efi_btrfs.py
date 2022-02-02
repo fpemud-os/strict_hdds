@@ -189,7 +189,7 @@ class StorageLayoutImpl(StorageLayout):
             assert False
 
 
-def parse(boot_dev, root_dev):
+def parse(boot_dev, root_dev, mount_dir):
     if boot_dev is None:
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.BOOT_DEV_NOT_EXIST)
     if Util.getBlkDevFsType(root_dev) != Util.fsTypeBtrfs:
@@ -205,8 +205,8 @@ def parse(boot_dev, root_dev):
     # return
     ret = StorageLayoutImpl()
     ret._md = EfiMultiDisk(diskList=diskList, bootHdd=bootHdd)
-    ret._snapshot = SnapshotBtrfs("/")
-    ret._mnt = MountEfi("/")
+    ret._snapshot = SnapshotBtrfs(mount_dir)
+    ret._mnt = MountEfi(mount_dir)
     return ret
 
 

@@ -195,7 +195,7 @@ class StorageLayoutImpl(StorageLayout):
             assert False
 
 
-def parse(boot_dev, root_dev):
+def parse(boot_dev, root_dev, mount_dir):
     if boot_dev is None:
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.BOOT_DEV_NOT_EXIST)
     if root_dev != LvmUtil.rootLvDevPath:
@@ -212,7 +212,7 @@ def parse(boot_dev, root_dev):
     ret = StorageLayoutImpl()
     ret._md = EfiMultiDisk(diskList=diskList, bootHdd=bootHdd)
     ret._swap = HandyUtil.swapLvDetectAndNew(StorageLayoutImpl.name)
-    ret._mnt = MountEfi("/")
+    ret._mnt = MountEfi(mount_dir)
     return ret
 
 

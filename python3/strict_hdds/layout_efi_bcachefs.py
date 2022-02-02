@@ -232,7 +232,7 @@ class StorageLayoutImpl(StorageLayout):
             assert False
 
 
-def parse(boot_dev, root_dev):
+def parse(boot_dev, root_dev, mount_dir):
     rootDevList = root_dev.split(":")
 
     if boot_dev is None:
@@ -252,7 +252,7 @@ def parse(boot_dev, root_dev):
     # return
     ret = StorageLayoutImpl()
     ret._cg = EfiCacheGroup(ssd=ssd, ssdEspParti=ssdEspParti, ssdSwapParti=ssdSwapParti, ssdCacheParti=ssdCacheParti, hddList=hddList, bootHdd=bootHdd)
-    ret._mnt = MountEfi("/")
+    ret._mnt = MountEfi(mount_dir)
     return ret
 
 

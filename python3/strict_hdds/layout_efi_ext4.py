@@ -113,7 +113,7 @@ class StorageLayoutImpl(StorageLayout):
             assert False
 
 
-def parse(boot_dev, root_dev):
+def parse(boot_dev, root_dev, mount_dir):
     if PartiUtil.partiToDisk(boot_dev) != PartiUtil.partiToDisk(root_dev):
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, "boot device and root device are not on the same harddisk")
     if not GptUtil.isEspPartition(boot_dev):
@@ -126,8 +126,8 @@ def parse(boot_dev, root_dev):
     ret._hdd = PartiUtil.partiToDisk(boot_dev)
     ret._hddEspParti = boot_dev
     ret._hddRootParti = root_dev
-    ret._swap = HandyUtil.swapFileDetectAndNew(StorageLayoutImpl.name, "/")
-    ret._mnt = MountEfi("/")
+    ret._swap = HandyUtil.swapFileDetectAndNew(StorageLayoutImpl.name, mount_dir)
+    ret._mnt = MountEfi(mount_dir)
     return ret
 
 
