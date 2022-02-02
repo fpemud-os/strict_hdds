@@ -393,8 +393,7 @@ class EfiCacheGroup:
             tlist = []
         tlist += [self.get_hdd_esp_partition(x) for x in self._hddList]
 
-        for hdd in tlist:
-            parti = self.get_hdd_esp_partition(hdd)
+        for parti in tlist:
             if Util.getBlkDevSize(parti) != Util.getEspSize():
                 # no way to auto fix
                 error_callback(errors.CheckCode.ESP_SIZE_INVALID)
