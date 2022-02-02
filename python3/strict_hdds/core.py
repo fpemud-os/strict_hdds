@@ -151,7 +151,7 @@ def get_current_storage_layout(mount_dir="/"):
         # btrfs related
         if Util.anyIn(["efi-bcache-btrfs", "efi-btrfs"], allLayoutNames):
             if rootDevFs == Util.fsTypeBtrfs:
-                tlist = BtrfsUtil.getSlaveDevPathList(rootDev)                      # only call btrfs related procedure when corresponding storage layout exists
+                tlist = BtrfsUtil.getSlaveDevPathList(mount_dir)                      # only call btrfs related procedure when corresponding storage layout exists
                 if any(BcacheUtil.getBcacheDevFromDevPath(x) is not None for x in tlist):
                     return _parseOneStorageLayout("efi-bcache-btrfs", bootDev, rootDev, mount_dir)
                 else:

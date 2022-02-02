@@ -271,7 +271,7 @@ def parse(boot_dev, root_dev, mount_dir):
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.ROOT_PARTITION_FS_SHOULD_BE(Util.fsTypeBtrfs))
 
     # bcache device list
-    slaveDevPathList = BtrfsUtil.getSlaveDevPathList(root_dev)
+    slaveDevPathList = BtrfsUtil.getSlaveDevPathList(mount_dir)
     for slaveDevPath in slaveDevPathList:
         if BcacheUtil.getBcacheDevFromDevPath(slaveDevPath) is None:
             raise errors.StorageLayoutParseError(StorageLayoutImpl.name, "\"%s\" has non-bcache slave device" % (root_dev))

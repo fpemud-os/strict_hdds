@@ -196,7 +196,7 @@ def parse(boot_dev, root_dev, mount_dir):
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.ROOT_PARTITION_FS_SHOULD_BE(Util.fsTypeBtrfs))
 
     # disk_list, boot_disk
-    diskList = BtrfsUtil.getSlaveDevPathList(root_dev)
+    diskList = BtrfsUtil.getSlaveDevPathList(mount_dir)
     bootHdd = HandyMd.checkAndGetBootDiskFromBootDev(StorageLayoutImpl.name, boot_dev, diskList)
 
     # FIXME: check mount options
