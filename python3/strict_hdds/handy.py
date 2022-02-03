@@ -30,9 +30,9 @@ import struct
 import parted
 import psutil
 
-from python3.strict_hdds.core import MountParam
 from .util import Util, PartiUtil, GptUtil, BcacheUtil, LvmUtil, TmpMount
 from . import errors
+from . import MountParam
 from . import BootDirRwController
 
 
