@@ -269,13 +269,13 @@ def parse(boot_dev, root_dev, mount_dir):
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.ROOT_PARTITION_FS_SHOULD_BE(Util.fsTypeBtrfs))
 
     # bcache device list
-    slaveDevPathList = BtrfsUtil.getSlaveDevPathList(mount_dir)
-    for slaveDevPath in slaveDevPathList:
-        if BcacheUtil.getBcacheDevFromDevPath(slaveDevPath) is None:
+    bcacheDevPathList = BtrfsUtil.getSlaveDevPathList(mount_dir)
+    for bcacheDevPath in bcacheDevPathList:
+        if BcacheUtil.getBcacheDevFromDevPath(bcacheDevPath) is None:
             raise errors.StorageLayoutParseError(StorageLayoutImpl.name, "\"%s\" has non-bcache slave device" % (root_dev))
 
     # ssd, hdd_list, boot_disk
-    ssd, hddList = HandyBcache.getSsdAndHddListFromBcacheDevPathList(StorageLayoutImpl.name, slaveDevPathList)
+    ssd, hddList = HandyBcache.getSsdAndHddListFromBcacheDevPathList(StorageLayoutImpl.name, bcacheDevPathList)
     ssdEspParti, ssdSwapParti, ssdCacheParti = HandyCg.checkAndGetSsdPartitions(StorageLayoutImpl.name, ssd)
     bootHdd = HandyCg.checkAndGetBootHddFromBootDev(StorageLayoutImpl.name, boot_dev, ssdEspParti, hddList)
 
@@ -285,9 +285,9 @@ def parse(boot_dev, root_dev, mount_dir):
     # return
     ret = StorageLayoutImpl()
     ret._cg = EfiCacheGroup(ssd=ssd, ssdEspParti=ssdEspParti, ssdSwapParti=ssdSwapParti, ssdCacheParti=ssdCacheParti, hddList=hddList, bootHdd=bootHdd)
-    ret._bcache = BcacheRaid(keyList=hddList, bcacheDevPathList=slaveDevPathList)
+    ret._bcache = BcacheRaid(keyList=hddList, bcacheDevPathList=bcacheDevPathList)
     ret._snapshot = SnapshotBtrfs(mount_dir)
-    ret._mnt = MountEfi(mount_dir, "", _params_for_mount(ret, kwargsDict))
+    ret._mnt = MountEfi(mount_dir, "", _params_for_mount(ret, bcacheDevPathList, kwargsDict))
     return ret
 
 
@@ -309,7 +309,7 @@ def detect_and_mount(disk_list, mount_dir, kwargsDict):
     ret._cg = EfiCacheGroup(ssd=ssd, ssdEspParti=ssdEspParti, ssdSwapParti=ssdSwapParti, ssdCacheParti=ssdCacheParti, hddList=hddList, bootHdd=bootHdd)
     ret._bcache = BcacheRaid(keyList=hddList, bcacheDevPathList=bcacheDevPathList)
     ret._snapshot = SnapshotBtrfs(mount_dir)
-    ret._mnt = MountEfi(mount_dir, "", _params_for_mount(ret, kwargsDict))
+    ret._mnt = MountEfi(mount_dir, "", _params_for_mount(ret, bcacheDevPathList, kwargsDict))
 
     # mount
     ret._mnt.mount()
@@ -331,23 +331,24 @@ def create_and_mount(disk_list, mount_dir, kwargsDict):
 
     # create btrfs
     Util.cmdCall("mkfs.btrfs", "-f", "-d", "single", "-m", "single", *bcache.get_all_bcache_dev_list())
-    SnapshotBtrfs.initializeFs(bcache.get_all_bcache_dev_list()[0])
+    SnapshotBtrfs.initializeFs(bcache.get_all_bcache_dev_list()[0], ",".join(["device=%s" % (x) for x in bcache.get_all_bcache_dev_list()]))
 
     # return
     ret = StorageLayoutImpl()
     ret._cg = cg
     ret._bcache = bcache
     ret._snapshot = SnapshotBtrfs(mount_dir)
-    ret._mnt = MountEfi(mount_dir, "", _params_for_mount(ret, kwargsDict))
+    ret._mnt = MountEfi(mount_dir, "", _params_for_mount(ret, ret._bcache.get_all_bcache_dev_list(), kwargsDict))
 
     # mount
     ret._mnt.mount()
     return ret
 
 
-def _params_for_mount(obj, kwargsDict):
+def _params_for_mount(obj, bcacheDevPathList, kwargsDict):
     ret = []
     for dirPath, dirMode, dirUid, dirGid, mntOptList in obj._snapshot.getParamsForMount(kwargsDict):
-        ret.append(MountParam(dirPath, dirMode, dirUid, dirGid, target=obj.dev_rootfs, fs_type=Util.fsTypeBtrfs, mnt_opt_list=mntOptList))
+        tlist = mntOptList + ["device=%s" % (x) for x in bcacheDevPathList]
+        ret.append(MountParam(dirPath, dirMode, dirUid, dirGid, target=obj.dev_rootfs, fs_type=Util.fsTypeBtrfs, mnt_opt_list=tlist))
     ret.append(MountParam(Util.bootDir, 0o0755, 0, 0, target=obj.dev_boot, fs_type=Util.fsTypeFat, mnt_opt_list=["ro"]))
     return ret

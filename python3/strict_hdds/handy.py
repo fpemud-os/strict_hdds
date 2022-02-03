@@ -585,8 +585,8 @@ class SwapFile:
 class Snapshot(abc.ABC):
 
     @classmethod
-    def initializeFs(cls, devPath):
-        with TmpMount(devPath) as mp:
+    def initializeFs(cls, devPath, mntOpts):
+        with TmpMount(devPath, options=mntOpts) as mp:
             cls._createSubVol(mp.mountpoint, "@")
             os.chown(os.path.join(mp.mountpoint, "@"), 0, 0)
             os.chmod(os.path.join(mp.mountpoint, "@"), 0o0755)
@@ -605,7 +605,7 @@ class Snapshot(abc.ABC):
 
             cls._createSubVol(mp.mountpoint, "@snapshots")
             os.chown(os.path.join(mp.mountpoint, "@snapshots"), 0, 0)
-            os.chmod(os.path.join(mp.mountpoint, "@snapshots"), 0o0755)
+            os.chmod(os.path.join(mp.mountpoint, "@snapshots"), 0o0700)
 
     @staticmethod
     def proxy(func):

@@ -194,7 +194,8 @@ def parse(boot_dev, root_dev, mount_dir):
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.ROOT_PARTITION_FS_SHOULD_BE(Util.fsTypeBtrfs))
 
     # disk_list, boot_disk
-    diskList = BtrfsUtil.getSlaveDevPathList(mount_dir)
+    partiList = BtrfsUtil.getSlaveDevPathList(mount_dir)
+    diskList = [PartiUtil.partiToDisk(x) for x in partiList]
     bootHdd = HandyMd.checkAndGetBootDiskFromBootDev(StorageLayoutImpl.name, boot_dev, diskList)
 
     # FIXME: get kwargsDict from mount options
@@ -204,7 +205,7 @@ def parse(boot_dev, root_dev, mount_dir):
     ret = StorageLayoutImpl()
     ret._md = EfiMultiDisk(diskList=diskList, bootHdd=bootHdd)
     ret._snapshot = SnapshotBtrfs(mount_dir)
-    ret._mnt = MountEfi(mount_dir, "", _params_for_mount(ret, kwargsDict))
+    ret._mnt = MountEfi(mount_dir, "", _params_for_mount(ret, partiList, kwargsDict))
     return ret
 
 
@@ -231,7 +232,7 @@ def detect_and_mount(disk_list, mount_dir, kwargsDict):
     ret = StorageLayoutImpl()
     ret._md = EfiMultiDisk(diskList=diskList, bootHdd=bootHdd)
     ret._snapshot = SnapshotBtrfs(mount_dir)
-    ret._mnt = MountEfi(mount_dir, "", _params_for_mount(ret, kwargsDict))
+    ret._mnt = MountEfi(mount_dir, "", _params_for_mount(ret, [ret._md.get_disk_data_partition(x) for x in ret._md.get_disk_list()], kwargsDict))
 
     # mount
     ret._mnt.mount()
@@ -244,23 +245,25 @@ def create_and_mount(disk_list, mount_dir, kwargsDict):
     HandyMd.checkAndAddDisks(disk_list, Util.fsTypeBtrfs)
 
     # create and mount
-    Util.cmdCall("mkfs.btrfs", "-f", "-d", "single", "-m", "single", *[md.get_disk_data_partition(x) for x in md.get_disk_list()])
-    SnapshotBtrfs.initializeFs(md.get_disk_data_partition(md.get_disk_list()[0]))
+    partiList = [md.get_disk_data_partition(x) for x in md.get_disk_list()]
+    Util.cmdCall("mkfs.btrfs", "-f", "-d", "single", "-m", "single", *partiList)
+    SnapshotBtrfs.initializeFs(partiList[0], ",".join(["device=%s" % (x) for x in partiList]))
 
     # return
     ret = StorageLayoutImpl()
     ret._md = md
     ret._snapshot = SnapshotBtrfs(mount_dir)
-    ret._mnt = MountEfi(mount_dir, "", _params_for_mount(ret, kwargsDict))
+    ret._mnt = MountEfi(mount_dir, "", _params_for_mount(ret, partiList, kwargsDict))
 
     # mnount
     ret._mnt.mount()
     return ret
 
 
-def _params_for_mount(obj, kwargsDict):
+def _params_for_mount(obj, partiList, kwargsDict):
     ret = []
     for dirPath, dirMode, dirUid, dirGid, mntOptList in obj._snapshot.getParamsForMount(kwargsDict):
-        ret.append(MountParam(dirPath, dirMode, dirUid, dirGid, target=obj.dev_rootfs, fs_type=Util.fsTypeBtrfs, mnt_opt_list=mntOptList))
+        tlist = mntOptList + ["device=%s" % (x) for x in partiList]
+        ret.append(MountParam(dirPath, dirMode, dirUid, dirGid, target=obj.dev_rootfs, fs_type=Util.fsTypeBtrfs, mnt_opt_list=tlist))
     ret.append(MountParam(Util.bootDir, 0o0755, 0, 0, target=obj.dev_boot, fs_type=Util.fsTypeFat, mnt_opt_list=["ro"]))
     return ret
