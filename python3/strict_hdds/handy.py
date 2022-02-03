@@ -417,7 +417,7 @@ class EfiCacheGroup:
         self._bootHdd = None
 
 
-class BcacheGroup:
+class Bcache:
 
     def __init__(self, keyList=[], bcacheDevPathList=[]):
         self._backingDict = Util.keyValueListToDict(keyList, bcacheDevPathList)
@@ -489,7 +489,7 @@ class BcacheGroup:
         for bcacheDevPath in self._backingDict.values():
             if BcacheUtil.getMode(bcacheDevPath) != mode:
                 if auto_fix:
-                    BcacheGroup.setMode(mode)
+                    Bcache.setMode(mode)
                 else:
                     error_callback(errors.CheckCode.TRIVIAL, "BCACHE device %s should be configured as writeback mode." % (bcacheDevPath))
 
