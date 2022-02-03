@@ -287,7 +287,7 @@ def parse(boot_dev, root_dev, mount_dir):
     ret._cg = EfiCacheGroup(ssd=ssd, ssdEspParti=ssdEspParti, ssdSwapParti=ssdSwapParti, ssdCacheParti=ssdCacheParti, hddList=hddList, bootHdd=bootHdd)
     ret._bcache = BcacheRaid(keyList=hddList, bcacheDevPathList=slaveDevPathList)
     ret._snapshot = SnapshotBtrfs(mount_dir)
-    ret._mnt = MountEfi(mount_dir, "", _params_for_mount(ret))
+    ret._mnt = MountEfi(mount_dir, "", _params_for_mount(ret, dict()))
     return ret
 
 
@@ -309,7 +309,7 @@ def detect_and_mount(disk_list, mount_dir, kwargsDict):
     ret._cg = EfiCacheGroup(ssd=ssd, ssdEspParti=ssdEspParti, ssdSwapParti=ssdSwapParti, ssdCacheParti=ssdCacheParti, hddList=hddList, bootHdd=bootHdd)
     ret._bcache = BcacheRaid(keyList=hddList, bcacheDevPathList=bcacheDevPathList)
     ret._snapshot = SnapshotBtrfs(mount_dir)
-    ret._mnt = MountEfi(mount_dir, "", _params_for_mount(ret))
+    ret._mnt = MountEfi(mount_dir, "", _params_for_mount(ret, kwargsDict))
 
     # mount
     ret._mnt.mount()
@@ -338,16 +338,16 @@ def create_and_mount(disk_list, mount_dir, kwargsDict):
     ret._cg = cg
     ret._bcache = bcache
     ret._snapshot = SnapshotBtrfs(mount_dir)
-    ret._mnt = MountEfi(mount_dir, "", _params_for_mount(ret))
+    ret._mnt = MountEfi(mount_dir, "", _params_for_mount(ret, kwargsDict))
 
     # mount
     ret._mnt.mount()
     return ret
 
 
-def _params_for_mount(obj):
+def _params_for_mount(obj, kwargsDict):
     ret = []
-    for dirPath, dirMode, dirUid, dirGid, mntOpts in obj._snapshot.getParamsForMount():
+    for dirPath, dirMode, dirUid, dirGid, mntOpts in obj._snapshot.getParamsForMount(kwargsDict):
         ret.append(MountParam(dirPath, dirMode, dirUid, dirGid, target=obj.dev_rootfs, fs_type=Util.fsTypeBtrfs, mnt_opts=mntOpts))
     ret.append(MountParam(Util.bootDir, 0o0755, 0, 0, target=obj.dev_boot, fs_type=Util.fsTypeFat, mnt_opts="ro"))
     return ret
