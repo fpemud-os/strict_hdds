@@ -279,15 +279,15 @@ def parse(boot_dev, root_dev, mount_dir):
     ssdEspParti, ssdSwapParti, ssdCacheParti = HandyCg.checkAndGetSsdPartitions(StorageLayoutImpl.name, ssd)
     bootHdd = HandyCg.checkAndGetBootHddFromBootDev(StorageLayoutImpl.name, boot_dev, ssdEspParti, hddList)
 
-    # FIXME: check mount options
-    pass
+    # FIXME: get kwargsDict from mount options
+    kwargsDict = dict()
 
     # return
     ret = StorageLayoutImpl()
     ret._cg = EfiCacheGroup(ssd=ssd, ssdEspParti=ssdEspParti, ssdSwapParti=ssdSwapParti, ssdCacheParti=ssdCacheParti, hddList=hddList, bootHdd=bootHdd)
     ret._bcache = BcacheRaid(keyList=hddList, bcacheDevPathList=slaveDevPathList)
     ret._snapshot = SnapshotBtrfs(mount_dir)
-    ret._mnt = MountEfi(mount_dir, "", _params_for_mount(ret, dict()))
+    ret._mnt = MountEfi(mount_dir, "", _params_for_mount(ret, kwargsDict))
     return ret
 
 

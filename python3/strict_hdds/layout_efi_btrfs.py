@@ -197,14 +197,14 @@ def parse(boot_dev, root_dev, mount_dir):
     diskList = BtrfsUtil.getSlaveDevPathList(mount_dir)
     bootHdd = HandyMd.checkAndGetBootDiskFromBootDev(StorageLayoutImpl.name, boot_dev, diskList)
 
-    # FIXME: check mount options
-    pass
+    # FIXME: get kwargsDict from mount options
+    kwargsDict = dict()
 
     # return
     ret = StorageLayoutImpl()
     ret._md = EfiMultiDisk(diskList=diskList, bootHdd=bootHdd)
     ret._snapshot = SnapshotBtrfs(mount_dir)
-    ret._mnt = MountEfi(mount_dir, "", _params_for_mount(ret, dict()))
+    ret._mnt = MountEfi(mount_dir, "", _params_for_mount(ret, kwargsDict))
     return ret
 
 
