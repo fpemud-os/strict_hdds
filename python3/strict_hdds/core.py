@@ -193,7 +193,7 @@ def get_current_storage_layout(mount_dir="/"):
         return _parseOneStorageLayout("bios-ext4", bootDev, rootDev, mount_dir)
 
 
-def detect_and_mount_storage_layout(mount_dir, mount_options=""):
+def detect_and_mount_storage_layout(mount_dir, **kwargs):
     allLayoutNames = get_supported_storage_layouts()
 
     diskList = Util.getDevPathListForFixedDisk()
@@ -215,42 +215,42 @@ def detect_and_mount_storage_layout(mount_dir, mount_options=""):
         # bcachefs related
         if Util.anyIn(["efi-bcachefs"], allLayoutNames):
             if any(Util.getBlkDevFsType(x) == Util.fsTypeBcachefs for x in normalPartiList):
-                return _detectAndMountOneStorageLayout("efi-bcachefs", diskList, mount_dir, mount_options)
+                return _detectAndMountOneStorageLayout("efi-bcachefs", diskList, mount_dir, kwargs)
 
         # btrfs related
         if Util.anyIn(["efi-btrfs"], allLayoutNames):
             if any(Util.getBlkDevFsType(x) == Util.fsTypeBtrfs for x in normalPartiList):
-                return _detectAndMountOneStorageLayout("efi-btrfs", diskList, mount_dir, mount_options)
+                return _detectAndMountOneStorageLayout("efi-btrfs", diskList, mount_dir, kwargs)
 
         # bcache related
         if Util.anyIn(["efi-bcache-btrfs", "efi-bcache-lvm-ext4"], allLayoutNames):
             bcacheDevPathList = BcacheUtil.scanAndRegisterAll()         # only call bcache related procedure when corresponding storage layout exists
             if len(bcacheDevPathList) > 0:
                 if any(Util.getBlkDevFsType(x) == Util.fsTypeBtrfs for x in bcacheDevPathList):
-                    return _detectAndMountOneStorageLayout("efi-bcache-btrfs", diskList, mount_dir, mount_options)
+                    return _detectAndMountOneStorageLayout("efi-bcache-btrfs", diskList, mount_dir, kwargs)
                 else:
-                    return _detectAndMountOneStorageLayout("efi-bcache-lvm-ext4", diskList, mount_dir, mount_options)
+                    return _detectAndMountOneStorageLayout("efi-bcache-lvm-ext4", diskList, mount_dir, kwargs)
 
         # lvm related
         if Util.anyIn(["efi-lvm-ext4"], allLayoutNames):
             LvmUtil.activateAll()                                       # only call lvm related procedure when corresponding storage layout exists
             if LvmUtil.vgName in LvmUtil.getVgList():
-                return _detectAndMountOneStorageLayout("efi-lvm-ext4", diskList, mount_dir, mount_options)
+                return _detectAndMountOneStorageLayout("efi-lvm-ext4", diskList, mount_dir, kwargs)
 
         # simplest layout
-        return _detectAndMountOneStorageLayout("efi-ext4", diskList, mount_dir, mount_options)
+        return _detectAndMountOneStorageLayout("efi-ext4", diskList, mount_dir, kwargs)
     else:
         # lvm related
         if Util.anyIn(["bios-lvm-ext4"], allLayoutNames):
             LvmUtil.activateAll()                                       # only call lvm related procedure when corresponding storage layout exists
             if LvmUtil.vgName in LvmUtil.getVgList():
-                return _detectAndMountOneStorageLayout("bios-lvm-ext4", diskList, mount_dir, mount_options)
+                return _detectAndMountOneStorageLayout("bios-lvm-ext4", diskList, mount_dir, kwargs)
 
         # simplest layout
-        return _detectAndMountOneStorageLayout("bios-ext4", diskList, mount_dir, mount_options)
+        return _detectAndMountOneStorageLayout("bios-ext4", diskList, mount_dir, kwargs)
 
 
-def create_and_mount_storage_layout(layout_name, mount_dir, disk_list=None, mount_options=""):
+def create_and_mount_storage_layout(layout_name, mount_dir, disk_list=None, **kwargs):
     if disk_list is None:
         disk_list = Util.getDevPathListForFixedDisk()
 
@@ -258,7 +258,7 @@ def create_and_mount_storage_layout(layout_name, mount_dir, disk_list=None, moun
     try:
         exec("from . import %s" % (modname))
         f = eval("%s.create_and_mount" % (modname))
-        return f(disk_list, mount_dir, mount_options)
+        return f(disk_list, mount_dir, kwargs)
     except ModuleNotFoundError:
         raise errors.StorageLayoutCreateError("layout \"%s\" not supported" % (layout_name))
 
@@ -273,11 +273,11 @@ def _parseOneStorageLayout(layoutName, bootDev, rootDev, mountDir):
         raise errors.StorageLayoutParseError("", "unknown storage layout")
 
 
-def _detectAndMountOneStorageLayout(layoutName, diskList, mountDir, mountOptions):
+def _detectAndMountOneStorageLayout(layoutName, diskList, mountDir, kwargsDict):
     modname = Util.layoutName2modName(layoutName)
     try:
         exec("from . import %s" % (modname))
         f = eval("%s.detect_and_mount" % (modname))
-        return f(diskList, mountDir, mountOptions)
+        return f(diskList, mountDir, kwargsDict)
     except ModuleNotFoundError:
         raise errors.StorageLayoutParseError("", "unknown storage layout")

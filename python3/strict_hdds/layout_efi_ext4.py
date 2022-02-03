@@ -130,7 +130,7 @@ def parse(boot_dev, root_dev, mount_dir):
     return ret
 
 
-def detect_and_mount(disk_list, mount_dir, mount_options):
+def detect_and_mount(disk_list, mount_dir, kwargsDict):
     # scan for ESP and root partition
     espAndRootPartitionList = []
     for disk in disk_list:
@@ -163,7 +163,7 @@ def detect_and_mount(disk_list, mount_dir, mount_options):
     return ret
 
 
-def create_and_mount(disk_list, mount_dir, mount_options):
+def create_and_mount(disk_list, mount_dir, kwargsDict):
     # create partitions
     hdd = HandyUtil.checkAndGetHdd(disk_list)
     Util.initializeDisk(hdd, Util.diskPartTableGpt, [

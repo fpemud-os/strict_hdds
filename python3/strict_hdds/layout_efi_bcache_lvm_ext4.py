@@ -274,7 +274,7 @@ def parse(boot_dev, root_dev, mount_dir):
     return ret
 
 
-def detect_and_mount(disk_list, mount_dir, mount_options):
+def detect_and_mount(disk_list, mount_dir, kwargsDict):
     BcacheUtil.scanAndRegisterAll()
     LvmUtil.activateAll()
 
@@ -304,7 +304,7 @@ def detect_and_mount(disk_list, mount_dir, mount_options):
     return ret
 
 
-def create_and_mount(disk_list, mount_dir, mount_options):
+def create_and_mount(disk_list, mount_dir, kwargsDict):
     # add disks to cache group
     cg = EfiCacheGroup()
     HandyCg.checkAndAddDisks(cg, *Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list), "bcache")

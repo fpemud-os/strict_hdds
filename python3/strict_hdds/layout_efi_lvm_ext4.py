@@ -215,7 +215,7 @@ def parse(boot_dev, root_dev, mount_dir):
     return ret
 
 
-def detect_and_mount(disk_list, mount_dir, mount_options):
+def detect_and_mount(disk_list, mount_dir, kwargsDict):
     LvmUtil.activateAll()
 
     # pv list
@@ -239,7 +239,7 @@ def detect_and_mount(disk_list, mount_dir, mount_options):
     return ret
 
 
-def create_and_mount(disk_list, mount_dir, mount_options):
+def create_and_mount(disk_list, mount_dir, kwargsDict):
     # add disks
     md = EfiMultiDisk()
     HandyMd.checkAndAddDisks(disk_list, "lvm")
