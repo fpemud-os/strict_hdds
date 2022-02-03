@@ -347,7 +347,7 @@ def create_and_mount(disk_list, mount_dir, kwargsDict):
 
 def _params_for_mount(obj, kwargsDict):
     ret = []
-    for dirPath, dirMode, dirUid, dirGid, mntOpts in obj._snapshot.getParamsForMount(kwargsDict):
-        ret.append(MountParam(dirPath, dirMode, dirUid, dirGid, target=obj.dev_rootfs, fs_type=Util.fsTypeBtrfs, mnt_opts=mntOpts))
-    ret.append(MountParam(Util.bootDir, 0o0755, 0, 0, target=obj.dev_boot, fs_type=Util.fsTypeFat, mnt_opts="ro"))
+    for dirPath, dirMode, dirUid, dirGid, mntOptList in obj._snapshot.getParamsForMount(kwargsDict):
+        ret.append(MountParam(dirPath, dirMode, dirUid, dirGid, target=obj.dev_rootfs, fs_type=Util.fsTypeBtrfs, mnt_opt_list=mntOptList))
+    ret.append(MountParam(Util.bootDir, 0o0755, 0, 0, target=obj.dev_boot, fs_type=Util.fsTypeFat, mnt_opt_list=["ro"]))
     return ret

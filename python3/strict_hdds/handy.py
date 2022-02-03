@@ -646,14 +646,14 @@ class Snapshot(abc.ABC):
     def getParamsForMount(self, kwargsDict):
         ret = []
         if "snapshot" not in kwargsDict:
-            ret.append(("/", 0o0755, 0, 0, "subvol=/@"))
+            ret.append(("/", 0o0755, 0, 0, ["subvol=/@"]))
         else:
             assert kwargsDict["snapshot"] in self.get_snapshot_list()
-            ret.append(("/", 0o0755, 0, 0, "subvol=/@snapshots/%s" % (kwargsDict["snapshot"])))
+            ret.append(("/", 0o0755, 0, 0, ["subvol=/@snapshots/%s" % (kwargsDict["snapshot"])]))
         ret += [
-            ("/root", 0o0700, 0, 0, "subvol=/@root"),
-            ("/home", 0o0755, 0, 0, "subvol=/@home"),
-            ("/var", 0o0755, 0, 0, "subvol=/@var"),
+            ("/root", 0o0700, 0, 0, ["subvol=/@root"]),
+            ("/home", 0o0755, 0, 0, ["subvol=/@home"]),
+            ("/var", 0o0755, 0, 0, ["subvol=/@var"]),
         ]
         return ret
 
@@ -794,7 +794,7 @@ class Mount(abc.ABC):
                 else:
                     raise errors.StorageLayoutMountError("mount directory \"%s\" is invalid" % (realDir))
             if p.target is not None:
-                Util.cmdCall("/bin/mount", "-t", p.fs_type, "-o", p.mnt_opts, p.target, realDir)
+                Util.cmdCall("/bin/mount", "-t", p.fs_type, "-o", Util.mntOptsListToStr(p.mnt_opt_list), p.target, realDir)
 
     def umount(self):
         for p in reversed(self._mntParams):

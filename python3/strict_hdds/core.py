@@ -95,18 +95,18 @@ class StorageLayout(abc.ABC):
 
 class MountParam:
 
-    def __init__(self, dir_path, dir_mode, dir_uid, dir_gid, target=None, fs_type=None, mnt_opts=None):
+    def __init__(self, dir_path, dir_mode, dir_uid, dir_gid, target=None, fs_type=None, mnt_opt_list=None):
         assert dir_path.startswith("/")
 
         if dir_path == "/":
-            assert dir_mode == 0x0755 and dir_uid == 0 and dir_gid == 0 and mnt_opts == ""
+            assert dir_mode == 0x0755 and dir_uid == 0 and dir_gid == 0 and mnt_opt_list == []
         elif dir_path == "/boot":
-            assert dir_mode == 0x0755 and dir_uid == 0 and dir_gid == 0 and mnt_opts == "ro"
+            assert dir_mode == 0x0755 and dir_uid == 0 and dir_gid == 0 and mnt_opt_list == ["ro"]
 
         if target is None:
-            assert fs_type is None and mnt_opts is None
+            assert fs_type is None and mnt_opt_list is None
         else:
-            assert fs_type is not None and mnt_opts is not None
+            assert fs_type is not None and mnt_opt_list is not None
 
         self.dir_path = dir_path
         self.dir_mode = dir_mode
@@ -114,7 +114,7 @@ class MountParam:
         self.dir_gid = dir_gid
         self.target = target
         self.fs_type = fs_type
-        self.mnt_opts = mnt_opts
+        self.mnt_opt_list = mnt_opt_list
 
 
 class BootDirRwController(abc.ABC):
