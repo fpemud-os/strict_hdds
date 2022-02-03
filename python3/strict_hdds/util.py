@@ -38,6 +38,7 @@ import subprocess
 class Util:
 
     bootDir = "/boot"
+    bootDirMntOptList = ["ro", "dmask=022", "fmask=133"]
 
     swapFilepath = "/var/cache/swap.dat"
 

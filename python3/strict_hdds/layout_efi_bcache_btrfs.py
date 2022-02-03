@@ -350,5 +350,5 @@ def _params_for_mount(obj, bcacheDevPathList, kwargsDict):
     for dirPath, dirMode, dirUid, dirGid, mntOptList in obj._snapshot.getParamsForMount(kwargsDict):
         tlist = mntOptList + ["device=%s" % (x) for x in bcacheDevPathList]
         ret.append(MountParam(dirPath, dirMode, dirUid, dirGid, target=obj.dev_rootfs, fs_type=Util.fsTypeBtrfs, mnt_opt_list=tlist))
-    ret.append(MountParam(Util.bootDir, 0o0755, 0, 0, target=obj.dev_boot, fs_type=Util.fsTypeFat, mnt_opt_list=["ro"]))
+    ret.append(MountParam(Util.bootDir, 0o0755, 0, 0, target=obj.dev_boot, fs_type=Util.fsTypeFat, mnt_opt_list=Util.bootDirMntOptList))
     return ret

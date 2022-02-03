@@ -867,7 +867,7 @@ class MountEfi(Mount):
         assert any([x.dir_path == "/boot" for x in mntParams])
 
     def mount_esp(self, parti):
-        Util.cmdCall("/bin/mount", parti, os.path.join(self.mount_point, "boot"), "-o", "ro")
+        Util.cmdCall("/bin/mount", parti, os.path.join(self.mount_point, "boot"), "-o", ",".join(Util.bootDirMntOptList))
 
     def umount_esp(self, parti):
         for pobj in psutil.disk_partitions():
@@ -885,9 +885,9 @@ class MountParam:
         assert dir_path.startswith("/")
 
         if dir_path == "/":
-            assert dir_mode == 0x0755 and dir_uid == 0 and dir_gid == 0 and mnt_opt_list == []
+            assert dir_mode == 0o0755 and dir_uid == 0 and dir_gid == 0 and mnt_opt_list == []
         elif dir_path == "/boot":
-            assert dir_mode == 0x0755 and dir_uid == 0 and dir_gid == 0 and mnt_opt_list == ["ro"]
+            assert dir_mode == 0o0755 and dir_uid == 0 and dir_gid == 0 and mnt_opt_list == Util.bootDirMntOptList
 
         if target is None:
             assert fs_type is None and mnt_opt_list is None
