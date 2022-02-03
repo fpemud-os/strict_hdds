@@ -771,8 +771,8 @@ class Mount(abc.ABC):
 
     def mount(self):
         for p in self._mntParams:
-            realDir = os.path.join(self.mount_point, p.dir_path[1:]).rstrip("/")
-            if realDir != self.mount_point:
+            realDir = os.path.join(self._mntDir, p.dir_path[1:]).rstrip("/")
+            if realDir != self._mntDir:
                 if not os.path.exists(realDir):
                     os.mkdir(realDir)
                     os.chmod(realDir, p.dir_mode)
@@ -792,7 +792,7 @@ class Mount(abc.ABC):
 
     def umount(self):
         for p in reversed(self._mntParams):
-            realDir = os.path.join(self.mount_point, p.dir_path[1:]).rstrip("/")
+            realDir = os.path.join(self._mntDir, p.dir_path[1:]).rstrip("/")
             if p.target is not None:
                 Util.cmdCall("/bin/umount", realDir)
 
