@@ -102,33 +102,6 @@ class Util:
         return None
 
     @staticmethod
-    def optimizeMntParamList(mntParamList, mount_options):
-        assert mount_options == ""
-        return mntParamList
-
-    @staticmethod
-    def mntMount(rootMountDir, mntParamList):
-        for p in mntParamList:
-            realDir = os.path.join(rootMountDir, p.dirpath[1:]).rstrip("/")
-            if p.dirpath == "/boot":
-                os.makedirs(realDir, 0o755, exist_ok=True)
-            elif p.dirpath == "/root":
-                os.makedirs(realDir, 0o700, exist_ok=True)
-            elif p.dirpath == "/home":
-                os.makedirs(realDir, 0o755, exist_ok=True)
-            elif p.dirpath == "/var":
-                os.makedirs(realDir, 0o755, exist_ok=True)
-            else:
-                os.makedirs(realDir, exist_ok=True)
-            Util.cmdCall("/bin/mount", "-t", p.fs_type, "-o", p.mnt_opts, p.target, realDir)
-
-    @staticmethod
-    def mntUmount(rootMountDir, dirPathList):
-        for dirPath in dirPathList:
-            realDir = os.path.join(rootMountDir, dirPath[1:]).rstrip("/")
-            Util.cmdCall("/bin/umount", realDir)
-
-    @staticmethod
     def getPhysicalMemorySizeInGb():
         with open("/proc/meminfo", "r") as f:
             # We return memory size in GB.

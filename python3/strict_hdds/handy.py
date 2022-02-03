@@ -29,6 +29,8 @@ import time
 import struct
 import parted
 import psutil
+
+from python3.strict_hdds.core import MountParam
 from .util import Util, PartiUtil, GptUtil, BcacheUtil, LvmUtil, TmpMount
 from . import errors
 from . import BootDirRwController
@@ -641,17 +643,17 @@ class Snapshot(abc.ABC):
     def remove_snapshot(self, snapshot_name):
         self._deleteSubVol(os.path.join("@snapshots", snapshot_name))
 
-    def getDirPathsAndMntOptsForMount(self, kwargsDict):
+    def getParamsForMount(self, kwargsDict):
         ret = []
         if "snapshot" not in kwargsDict:
-            ret.append(("/", "subvol=/@"))
+            ret.append(("/", 0o0755, 0, 0, "subvol=/@"))
         else:
             assert kwargsDict["snapshot"] in self.get_snapshot_list()
-            ret.append(("/", "subvol=/@snapshots/%s" % (kwargsDict["snapshot"])))
+            ret.append(("/", 0o0755, 0, 0, "subvol=/@snapshots/%s" % (kwargsDict["snapshot"])))
         ret += [
-            ("/root", "subvol=/@root"),
-            ("/home", "subvol=/@home"),
-            ("/var", "subvol=/@var"),
+            ("/root", 0o0700, 0, 0, "subvol=/@root"),
+            ("/home", 0o0755, 0, 0, "subvol=/@home"),
+            ("/var", 0o0755, 0, 0, "subvol=/@var"),
         ]
         return ret
 
@@ -750,16 +752,58 @@ class Mount(abc.ABC):
                 return getattr(self._mnt, func.__name__)(*args)
             return f
 
-    def __init__(self, mntDir):
+    def __init__(self, mntDir, specialMntOpts, mntParams, rwCtrl):
+        assert len(mntParams) > 0
+        assert all([isinstance(x, MountParam) for x in mntParams])
+        assert mntParams[0].dir_path == "/"
+
         self._mntDir = mntDir
+        # self._mntOpts = specialMntOpts
+        self._mntParams = mntParams
+        self._rwCtrl = rwCtrl
 
     @property
     def mount_point(self):
         return self._mntDir
 
-    @abc.abstractmethod
+    # FIXME: we are not sure about this
+    # @property
+    # def special_mount_options(self):
+    #     return self._mntOpts
+
+    @property
+    def mount_params(self):
+        return self._mntParams
+
+    def mount(self):
+        for p in self._mntParams:
+            realDir = os.path.join(self.mount_point, p.dir_path[1:]).rstrip("/")
+            if realDir != self.mount_point:
+                if not os.path.exists(realDir):
+                    os.mkdir(realDir)
+                    os.chmod(realDir, p.dir_mode)
+                    os.chown(realDir, p.dir_uid, p.dir_gid)
+                elif os.path.isdir(realDir) and not os.path.islink(realDir):
+                    st = os.stat(realDir)
+                    if st.st_mode != p.dir_mode:
+                        raise errors.StorageLayoutMountError("mount directory \"%s\" has invalid permission" % (realDir))
+                    if st.st_uid != p.dir_uid:
+                        raise errors.StorageLayoutMountError("mount directory \"%s\" has invalid owner" % (realDir))
+                    if st.st_gid != p.dir_gid:
+                        raise errors.StorageLayoutMountError("mount directory \"%s\" has invalid owner group" % (realDir))
+                else:
+                    raise errors.StorageLayoutMountError("mount directory \"%s\" is invalid" % (realDir))
+            if p.target is not None:
+                Util.cmdCall("/bin/mount", "-t", p.fs_type, "-o", p.mnt_opts, p.target, realDir)
+
+    def umount(self):
+        for p in reversed(self._mntParams):
+            realDir = os.path.join(self.mount_point, p.dir_path[1:]).rstrip("/")
+            if p.target is not None:
+                Util.cmdCall("/bin/umount", realDir)
+
     def get_bootdir_rw_controller(self):
-        pass
+        return self._rwCtrl
 
 
 class MountBios(Mount):
@@ -776,60 +820,52 @@ class MountBios(Mount):
         def to_read_only(self):
             pass
 
-    def __init__(self, mntDir):
-        super().__init__(mntDir)
-        self._rwCtrl = self.BootDirRwController()
-
-    def get_bootdir_rw_controller(self):
-        return self._rwCtrl
+    def __init__(self, mntDir, specialMntOpts, mntParams):
+        super().__init__(mntDir, specialMntOpts, mntParams, self.BootDirRwController())
+        assert len(self.mount_params) == 1
 
 
 class MountEfi(Mount):
 
     class BootDirRwController(BootDirRwController):
 
-        def __init__(self, parent):
-            self._mntDir = parent._mntDir
-            self._mntBootDir = parent._mntBootDir
+        def __init__(self, mntDir):
+            self._mntDir = mntDir
 
         @property
         def is_writable(self):
             for pobj in psutil.disk_partitions():
-                if pobj.mountpoint == self._mntBootDir:
+                if pobj.mountpoint == os.path.join(self._mntDir, "boot"):
                     return ("rw" in Util.mntOptsStrToList(pobj.opts))
             assert False
 
         def to_read_write(self):
             assert not self.is_writable
             assert self._isRootfsWritable()
-            Util.cmdCall("/bin/mount", self._mntBootDir, "-o", "rw,remount")
+            Util.cmdCall("/bin/mount", os.path.join(self._mntDir, "boot"), "-o", "rw,remount")
 
         def to_read_only(self):
             assert self.is_writable
-            Util.cmdCall("/bin/mount", self._mntBootDir, "-o", "ro,remount")
+            Util.cmdCall("/bin/mount", os.path.join(self._mntDir, "boot"), "-o", "ro,remount")
 
         def _isRootfsWritable(self):
             for pobj in psutil.disk_partitions():
                 if pobj.mountpoint == self._mntDir:
                     return ("rw" in Util.mntOptsStrToList(pobj.opts))
 
-    def __init__(self, mntDir):
-        super().__init__(mntDir)
-        self._mntBootDir = os.path.join(self._mntDir, "boot")
-        self._rwCtrl = self.BootDirRwController(self)
-
-    def get_bootdir_rw_controller(self):
-        return self._rwCtrl
+    def __init__(self, mntDir, specialMntOpts, mntParams):
+        super().__init__(mntDir, specialMntOpts, mntParams, self.BootDirRwController(mntDir))
+        assert any([x.dir_path == "/boot" for x in self.mount_params])
 
     def mount_esp(self, parti):
-        Util.cmdCall("/bin/mount", parti, self._mntBootDir, "-o", "ro")
+        Util.cmdCall("/bin/mount", parti, os.path.join(self.mount_point, "boot"), "-o", "ro")
 
     def umount_esp(self, parti):
         for pobj in psutil.disk_partitions():
-            if pobj.mountpoint == self._mntBootDir:
+            if pobj.mountpoint == os.path.join(self.mount_point, "boot"):
                 assert pobj.device == parti
                 assert "rw" not in Util.mntOptsStrToList(pobj.opts)
-                Util.cmdCall("/bin/umount", self._mntBootDir)
+                Util.cmdCall("/bin/umount", os.path.join(self.mount_point, "boot"))
                 return
         assert False
 

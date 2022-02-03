@@ -90,9 +90,14 @@ class StorageLayoutImpl(StorageLayout):
     def mount_point(self):
         pass
 
+    @MountEfi.proxy
+    @property
+    def mount_params(self):
+        pass
+
     def umount_and_dispose(self):
         if True:
-            Util.mntUmount(self.mount_point, ["/boot"] + self._snapshot.getDirpathsForUmount())
+            self._mnt.umount()
             del self._mnt
         if True:
             self._bcache.stopAll()
@@ -103,13 +108,6 @@ class StorageLayoutImpl(StorageLayout):
     @MountEfi.proxy
     def get_bootdir_rw_controller(self):
         pass
-
-    def get_params_for_mount(self, **kwargs):
-        ret = []
-        for dirPath, mntOpts in self._snapshot.getDirPathsAndMntOptsForMount(kwargs):
-            ret.append(MountParam(self.dev_rootfs, dirPath, "btrfs", mntOpts))
-        ret.append(MountParam(self.dev_boot, "/boot", "vfat", "ro"))
-        return ret
 
     def optimize_rootdev(self):
         # FIXME: btrfs balance
@@ -289,7 +287,7 @@ def parse(boot_dev, root_dev, mount_dir):
     ret._cg = EfiCacheGroup(ssd=ssd, ssdEspParti=ssdEspParti, ssdSwapParti=ssdSwapParti, ssdCacheParti=ssdCacheParti, hddList=hddList, bootHdd=bootHdd)
     ret._bcache = BcacheRaid(keyList=hddList, bcacheDevPathList=slaveDevPathList)
     ret._snapshot = SnapshotBtrfs(mount_dir)
-    ret._mnt = MountEfi(mount_dir)
+    ret._mnt = MountEfi(mount_dir, "", _params_for_mount(ret))
     return ret
 
 
@@ -311,10 +309,10 @@ def detect_and_mount(disk_list, mount_dir, mount_options):
     ret._cg = EfiCacheGroup(ssd=ssd, ssdEspParti=ssdEspParti, ssdSwapParti=ssdSwapParti, ssdCacheParti=ssdCacheParti, hddList=hddList, bootHdd=bootHdd)
     ret._bcache = BcacheRaid(keyList=hddList, bcacheDevPathList=bcacheDevPathList)
     ret._snapshot = SnapshotBtrfs(mount_dir)
-    ret._mnt = MountEfi(mount_dir)
+    ret._mnt = MountEfi(mount_dir, "", _params_for_mount(ret))
 
     # mount
-    Util.mntMount(mount_dir, Util.optimizeMntParamList(ret.get_params_for_mount(), mount_options))
+    ret._mnt.mount()
     return ret
 
 
@@ -340,8 +338,16 @@ def create_and_mount(disk_list, mount_dir, mount_options):
     ret._cg = cg
     ret._bcache = bcache
     ret._snapshot = SnapshotBtrfs(mount_dir)
-    ret._mnt = MountEfi(mount_dir)
+    ret._mnt = MountEfi(mount_dir, "", _params_for_mount(ret))
 
     # mount
-    Util.mntMount(mount_dir, Util.optimizeMntParamList(ret.get_params_for_mount(), mount_options))
+    ret._mnt.mount()
+    return ret
+
+
+def _params_for_mount(obj):
+    ret = []
+    for dirPath, dirMode, dirUid, dirGid, mntOpts in obj._snapshot.getParamsForMount():
+        ret.append(MountParam(dirPath, dirMode, dirUid, dirGid, target=obj.dev_rootfs, fs_type=Util.fsTypeBtrfs, mnt_opts=mntOpts))
+    ret.append(MountParam(Util.bootDir, 0o0755, 0, 0, target=obj.dev_boot, fs_type=Util.fsTypeFat, mnt_opts="ro"))
     return ret

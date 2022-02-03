@@ -68,16 +68,17 @@ class StorageLayout(abc.ABC):
     def mount_point(self):
         pass
 
+    @property
+    @abc.abstractmethod
+    def mount_params(self):
+        pass
+
     @abc.abstractmethod
     def umount_and_dispose(self):
         pass
 
     @abc.abstractmethod
     def get_bootdir_rw_controller(self):
-        pass
-
-    @abc.abstractmethod
-    def get_params_for_mount(self, **kwargs):
         pass
 
     def check(self, auto_fix=False, error_callback=None):
@@ -94,10 +95,24 @@ class StorageLayout(abc.ABC):
 
 class MountParam:
 
-    def __init__(self, target, dirpath, fs_type, mnt_opts):
-        assert dirpath.startswith("/")
+    def __init__(self, dir_path, dir_mode, dir_uid, dir_gid, target=None, fs_type=None, mnt_opts=None):
+        assert dir_path.startswith("/")
+
+        if dir_path == "/":
+            assert dir_mode == 0x0755 and dir_uid == 0 and dir_gid == 0 and mnt_opts == ""
+        elif dir_path == "/boot":
+            assert dir_mode == 0x0755 and dir_uid == 0 and dir_gid == 0 and mnt_opts == "ro"
+
+        if target is None:
+            assert fs_type is None and mnt_opts is None
+        else:
+            assert fs_type is not None and mnt_opts is not None
+
+        self.dir_path = dir_path
+        self.dir_mode = dir_mode
+        self.dir_uid = dir_uid
+        self.dir_gid = dir_gid
         self.target = target
-        self.dirpath = dirpath
         self.fs_type = fs_type
         self.mnt_opts = mnt_opts
 

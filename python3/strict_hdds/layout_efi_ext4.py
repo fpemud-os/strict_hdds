@@ -71,9 +71,14 @@ class StorageLayoutImpl(StorageLayout):
     def mount_point(self):
         pass
 
+    @MountEfi.proxy
+    @property
+    def mount_params(self):
+        pass
+
     def umount_and_dispose(self):
         if True:
-            Util.mntUmount(self.mount_point, ["/boot", "/"])
+            self._mnt.umount()
             del self._mnt
         del self._swap
         del self._hddRootParti
@@ -83,12 +88,6 @@ class StorageLayoutImpl(StorageLayout):
     @MountEfi.proxy
     def get_bootdir_rw_controller(self):
         pass
-
-    def get_params_for_mount(self, **kwargs):
-        return [
-            MountParam(self.dev_rootfs, "/", "ext4", ""),
-            MountParam(self.dev_boot, "/boot", "vfat", "ro"),
-        ]
 
     def get_esp(self):
         return self._hddEspParti
@@ -127,7 +126,7 @@ def parse(boot_dev, root_dev, mount_dir):
     ret._hddEspParti = boot_dev
     ret._hddRootParti = root_dev
     ret._swap = HandyUtil.swapFileDetectAndNew(StorageLayoutImpl.name, mount_dir)
-    ret._mnt = MountEfi(mount_dir)
+    ret._mnt = MountEfi(mount_dir, "", _params_for_mount(ret))
     return ret
 
 
@@ -157,10 +156,10 @@ def detect_and_mount(disk_list, mount_dir, mount_options):
     ret._hddEspParti = espAndRootPartitionList[0][1]
     ret._hddRootParti = espAndRootPartitionList[0][2]
     ret._swap = HandyUtil.swapFileDetectAndNew(StorageLayoutImpl.name, mount_dir)
-    ret._mnt = MountEfi(mount_dir)
+    ret._mnt = MountEfi(mount_dir, "", _params_for_mount(ret))
 
     # mount
-    Util.mntMount(mount_dir, Util.optimizeMntParamList(ret.get_params_for_mount(), mount_options))
+    ret._mnt.mount()
     return ret
 
 
@@ -182,8 +181,15 @@ def create_and_mount(disk_list, mount_dir, mount_options):
     ret._hddEspParti = espParti
     ret._hddRootParti = rootParti
     ret._swap = SwapFile(False)
-    ret._mnt = MountEfi(mount_dir)
+    ret._mnt = MountEfi(mount_dir, "", _params_for_mount(ret))
 
     # mount
-    Util.mntMount(mount_dir, Util.optimizeMntParamList(ret.get_params_for_mount(), mount_options))
+    ret._mnt.mount()
     return ret
+
+
+def _params_for_mount(obj):
+    return [
+        MountParam("/", 0o0755, 0, 0, target=obj.dev_rootfs, fs_type=Util.fsTypeExt4, mnt_opts=""),
+        MountParam("/boot", 0o0755, 0, 0, target=obj.dev_boot, fs_type=Util.fsTypeFat, mnt_opts="ro"),
+    ]

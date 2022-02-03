@@ -69,9 +69,14 @@ class StorageLayoutImpl(StorageLayout):
     def mount_point(self):
         pass
 
+    @MountBios.proxy
+    @property
+    def mount_params(self):
+        pass
+
     def umount_and_dispose(self):
         if True:
-            Util.mntUmount(self.mount_point, ["/"])
+            self._mnt.umount()
             del self._mnt
         del self._swap
         del self._hddRootParti
@@ -80,9 +85,6 @@ class StorageLayoutImpl(StorageLayout):
     @MountBios.proxy
     def get_bootdir_rw_controller(self):
         pass
-
-    def get_params_for_mount(self, **kwargs):
-        return [MountParam(self.dev_rootfs, "/", "ext4", "")]
 
     @SwapFile.proxy
     def create_swap_file(self):
@@ -120,7 +122,7 @@ def parse(boot_dev, root_dev, mount_dir):
     ret._hdd = hdd
     ret._hddRootParti = root_dev
     ret._swap = HandyUtil.swapFileDetectAndNew(StorageLayoutImpl.name, "/")
-    ret._mnt = MountBios(mount_dir)
+    ret._mnt = MountBios(mount_dir, "", _params_for_mount(ret.dev_rootfs))
     return ret
 
 
@@ -150,10 +152,10 @@ def detect_and_mount(disk_list, mount_dir, mount_options):
     ret._hdd = PartiUtil.partiToDisk(rootPartitionList[0])
     ret._hddRootParti = rootPartitionList[0]
     ret._swap = HandyUtil.swapFileDetectAndNew(StorageLayoutImpl.name, mount_dir)
-    ret._mnt = MountBios(mount_dir)
+    ret._mnt = MountBios(mount_dir, "", _params_for_mount(ret))
 
     # mount
-    Util.mntMount(mount_dir, [MountParam(ret.dev_rootfs, "/", "ext4", mount_options)])
+    ret._mnt.mount()
     return ret
 
 
@@ -172,8 +174,14 @@ def create_and_mount(disk_list, mount_dir, mount_options):
     ret._hdd = hdd
     ret._hddRootParti = rootParti
     ret._swap = SwapFile(False)
-    ret._mnt = MountBios(mount_dir)
+    ret._mnt = MountBios(mount_dir, "", _params_for_mount(ret))
 
     # mount
-    Util.mntMount(mount_dir, [MountParam(ret.dev_rootfs, "/", "ext4", mount_options)])
+    ret._mnt.mount()
     return ret
+
+
+def _params_for_mount(obj):
+    return [
+        MountParam("/", 0o0755, 0, 0, target=obj.dev_rootfs, fs_type=Util.fsTypeExt4, mnt_opts="")
+    ]
