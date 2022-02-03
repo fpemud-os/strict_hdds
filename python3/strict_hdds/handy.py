@@ -752,24 +752,18 @@ class Mount(abc.ABC):
                 return getattr(self._mnt, func.__name__)(*args)
             return f
 
-    def __init__(self, mntDir, specialMntOpts, mntParams, rwCtrl):
+    def __init__(self, mntDir, mntParams, rwCtrl):
         assert len(mntParams) > 0
         assert all([isinstance(x, MountParam) for x in mntParams])
         assert mntParams[0].dir_path == "/"
 
         self._mntDir = mntDir
-        # self._mntOpts = specialMntOpts
         self._mntParams = mntParams
         self._rwCtrl = rwCtrl
 
     @property
     def mount_point(self):
         return self._mntDir
-
-    # FIXME: we are not sure about this
-    # @property
-    # def special_mount_options(self):
-    #     return self._mntOpts
 
     @property
     def mount_params(self):
@@ -820,9 +814,9 @@ class MountBios(Mount):
         def to_read_only(self):
             pass
 
-    def __init__(self, mntDir, specialMntOpts, mntParams):
-        super().__init__(mntDir, specialMntOpts, mntParams, self.BootDirRwController())
-        assert len(self.mount_params) == 1
+    def __init__(self, mntDir, mntParams):
+        super().__init__(mntDir, mntParams, self.BootDirRwController())
+        assert len(mntParams) == 1
 
 
 class MountEfi(Mount):
@@ -853,9 +847,9 @@ class MountEfi(Mount):
                 if pobj.mountpoint == self._mntDir:
                     return ("rw" in Util.mntOptsStrToList(pobj.opts))
 
-    def __init__(self, mntDir, specialMntOpts, mntParams):
-        super().__init__(mntDir, specialMntOpts, mntParams, self.BootDirRwController(mntDir))
-        assert any([x.dir_path == "/boot" for x in self.mount_params])
+    def __init__(self, mntDir, mntParams):
+        super().__init__(mntDir, mntParams, self.BootDirRwController(mntDir))
+        assert any([x.dir_path == "/boot" for x in mntParams])
 
     def mount_esp(self, parti):
         Util.cmdCall("/bin/mount", parti, os.path.join(self.mount_point, "boot"), "-o", "ro")

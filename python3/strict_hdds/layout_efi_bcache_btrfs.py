@@ -287,7 +287,7 @@ def parse(boot_dev, root_dev, mount_dir):
     ret._cg = EfiCacheGroup(ssd=ssd, ssdEspParti=ssdEspParti, ssdSwapParti=ssdSwapParti, ssdCacheParti=ssdCacheParti, hddList=hddList, bootHdd=bootHdd)
     ret._bcache = BcacheRaid(keyList=hddList, bcacheDevPathList=bcacheDevPathList)
     ret._snapshot = SnapshotBtrfs(mount_dir)
-    ret._mnt = MountEfi(mount_dir, "", _params_for_mount(ret, bcacheDevPathList, kwargsDict))
+    ret._mnt = MountEfi(mount_dir, _params_for_mount(ret, bcacheDevPathList, kwargsDict))
     return ret
 
 
@@ -309,7 +309,7 @@ def detect_and_mount(disk_list, mount_dir, kwargsDict):
     ret._cg = EfiCacheGroup(ssd=ssd, ssdEspParti=ssdEspParti, ssdSwapParti=ssdSwapParti, ssdCacheParti=ssdCacheParti, hddList=hddList, bootHdd=bootHdd)
     ret._bcache = BcacheRaid(keyList=hddList, bcacheDevPathList=bcacheDevPathList)
     ret._snapshot = SnapshotBtrfs(mount_dir)
-    ret._mnt = MountEfi(mount_dir, "", _params_for_mount(ret, bcacheDevPathList, kwargsDict))
+    ret._mnt = MountEfi(mount_dir, _params_for_mount(ret, bcacheDevPathList, kwargsDict))
 
     # mount
     ret._mnt.mount()
@@ -338,7 +338,7 @@ def create_and_mount(disk_list, mount_dir, kwargsDict):
     ret._cg = cg
     ret._bcache = bcache
     ret._snapshot = SnapshotBtrfs(mount_dir)
-    ret._mnt = MountEfi(mount_dir, "", _params_for_mount(ret, ret._bcache.get_all_bcache_dev_list(), kwargsDict))
+    ret._mnt = MountEfi(mount_dir, _params_for_mount(ret, ret._bcache.get_all_bcache_dev_list(), kwargsDict))
 
     # mount
     ret._mnt.mount()

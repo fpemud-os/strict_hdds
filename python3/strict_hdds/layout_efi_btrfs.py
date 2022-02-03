@@ -205,7 +205,7 @@ def parse(boot_dev, root_dev, mount_dir):
     ret = StorageLayoutImpl()
     ret._md = EfiMultiDisk(diskList=diskList, bootHdd=bootHdd)
     ret._snapshot = SnapshotBtrfs(mount_dir)
-    ret._mnt = MountEfi(mount_dir, "", _params_for_mount(ret, partiList, kwargsDict))
+    ret._mnt = MountEfi(mount_dir, _params_for_mount(ret, partiList, kwargsDict))
     return ret
 
 
@@ -232,7 +232,7 @@ def detect_and_mount(disk_list, mount_dir, kwargsDict):
     ret = StorageLayoutImpl()
     ret._md = EfiMultiDisk(diskList=diskList, bootHdd=bootHdd)
     ret._snapshot = SnapshotBtrfs(mount_dir)
-    ret._mnt = MountEfi(mount_dir, "", _params_for_mount(ret, [ret._md.get_disk_data_partition(x) for x in ret._md.get_disk_list()], kwargsDict))
+    ret._mnt = MountEfi(mount_dir, _params_for_mount(ret, [ret._md.get_disk_data_partition(x) for x in ret._md.get_disk_list()], kwargsDict))
 
     # mount
     ret._mnt.mount()
@@ -253,7 +253,7 @@ def create_and_mount(disk_list, mount_dir, kwargsDict):
     ret = StorageLayoutImpl()
     ret._md = md
     ret._snapshot = SnapshotBtrfs(mount_dir)
-    ret._mnt = MountEfi(mount_dir, "", _params_for_mount(ret, partiList, kwargsDict))
+    ret._mnt = MountEfi(mount_dir, _params_for_mount(ret, partiList, kwargsDict))
 
     # mnount
     ret._mnt.mount()
