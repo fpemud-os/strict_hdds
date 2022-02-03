@@ -87,7 +87,7 @@ class StorageLayoutImpl(StorageLayout):
 
     @MountEfi.proxy
     @property
-    def mount_params(self):
+    def get_mount_entries(self):
         pass
 
     def umount_and_dispose(self):

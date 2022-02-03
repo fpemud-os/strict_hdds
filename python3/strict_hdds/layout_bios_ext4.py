@@ -69,11 +69,6 @@ class StorageLayoutImpl(StorageLayout):
     def mount_point(self):
         pass
 
-    @MountBios.proxy
-    @property
-    def mount_params(self):
-        pass
-
     def umount_and_dispose(self):
         if True:
             self._mnt.umount()
@@ -81,6 +76,11 @@ class StorageLayoutImpl(StorageLayout):
         del self._swap
         del self._hddRootParti
         del self._hdd
+
+    @MountBios.proxy
+    @property
+    def get_mount_entries(self):
+        pass
 
     @MountBios.proxy
     def get_bootdir_rw_controller(self):

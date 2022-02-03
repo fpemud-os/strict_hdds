@@ -78,17 +78,17 @@ class StorageLayoutImpl(StorageLayout):
     def mount_point(self):
         pass
 
-    @MountEfi.proxy
-    @property
-    def mount_params(self):
-        pass
-
     def umount_and_dispose(self):
         if True:
             self._mnt.umount()
             del self._mnt
         del self._swap
         del self._md
+
+    @MountEfi.proxy
+    @property
+    def get_mount_entries(self):
+        pass
 
     @MountEfi.proxy
     def get_bootdir_rw_controller(self):

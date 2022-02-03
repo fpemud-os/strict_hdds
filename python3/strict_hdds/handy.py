@@ -30,9 +30,9 @@ import struct
 import parted
 import psutil
 
-from .util import Util, PartiUtil, GptUtil, BcacheUtil, LvmUtil, TmpMount
+from .util import Util, PartiUtil, GptUtil, BcacheUtil, LvmUtil, SystemMounts, TmpMount
 from . import errors
-from . import MountParam
+from . import MountEntry
 from . import BootDirRwController
 
 
@@ -758,8 +758,9 @@ class Mount(abc.ABC):
         assert mntParams[0].dir_path == "/"
 
         self._mntDir = mntDir
-        self._mntParams = mntParams
+        self._mntParams = []
         self._rwCtrl = rwCtrl
+        self._mntEntries = None
 
     @property
     def mount_point(self):
@@ -769,7 +770,13 @@ class Mount(abc.ABC):
     def mount_params(self):
         return self._mntParams
 
+    def get_mount_entries(self):
+        assert self._mntEntries is not None
+        return self._mntEntries
+
     def mount(self):
+        m = SystemMounts()
+        self._mntEntries = []
         for p in self._mntParams:
             realDir = os.path.join(self._mntDir, p.dir_path[1:]).rstrip("/")
             if realDir != self._mntDir:
@@ -788,13 +795,21 @@ class Mount(abc.ABC):
                 else:
                     raise errors.StorageLayoutMountError("mount directory \"%s\" is invalid" % (realDir))
             if p.target is not None:
-                Util.cmdCall("/bin/mount", "-t", p.fs_type, "-o", Util.mntOptsListToStr(p.mnt_opt_list), p.target, realDir)
+                Util.cmdCall("/bin/mount", "-t", p.fs_type, "-o", Util.mntOptsListToStr(self._oriMntOptListDict[p.dir_path]), p.target, realDir)
+                item = MountEntry()
+                item.mnt_point = p.dir_path
+                item.real_dir_path = realDir
+                item.target = p.target
+                item.fs_type = p.fs_type
+                item.mnt_opts = ",".join(m.mnt_opt_list)
+                self._mntEntries.append(item)
 
     def umount(self):
         for p in reversed(self._mntParams):
             realDir = os.path.join(self._mntDir, p.dir_path[1:]).rstrip("/")
             if p.target is not None:
                 Util.cmdCall("/bin/umount", realDir)
+        self._mntEntries = None
 
     def get_bootdir_rw_controller(self):
         return self._rwCtrl
@@ -862,6 +877,30 @@ class MountEfi(Mount):
                 Util.cmdCall("/bin/umount", os.path.join(self.mount_point, "boot"))
                 return
         assert False
+
+
+class MountParam:
+
+    def __init__(self, dir_path, dir_mode, dir_uid, dir_gid, target=None, fs_type=None, mnt_opt_list=None):
+        assert dir_path.startswith("/")
+
+        if dir_path == "/":
+            assert dir_mode == 0x0755 and dir_uid == 0 and dir_gid == 0 and mnt_opt_list == []
+        elif dir_path == "/boot":
+            assert dir_mode == 0x0755 and dir_uid == 0 and dir_gid == 0 and mnt_opt_list == ["ro"]
+
+        if target is None:
+            assert fs_type is None and mnt_opt_list is None
+        else:
+            assert fs_type is not None and mnt_opt_list is not None
+
+        self.dir_path = dir_path
+        self.dir_mode = dir_mode
+        self.dir_uid = dir_uid
+        self.dir_gid = dir_gid
+        self.target = target
+        self.fs_type = fs_type
+        self.mnt_opt_list = mnt_opt_list
 
 
 class HandyMd:
