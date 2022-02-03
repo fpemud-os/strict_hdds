@@ -22,7 +22,7 @@
 
 
 from .util import Util, BcacheUtil, BtrfsUtil
-from .handy import EfiCacheGroup, BcacheRaid, Snapshot, SnapshotBtrfs, MountEfi, HandyCg, HandyBcache, DisksChecker
+from .handy import EfiCacheGroup, BcacheGroup, Snapshot, SnapshotBtrfs, MountEfi, HandyCg, HandyBcache, DisksChecker
 from . import errors
 from . import StorageLayout, MountParam
 
@@ -53,7 +53,7 @@ class StorageLayoutImpl(StorageLayout):
 
     def __init__(self):
         self._cg = None                     # EfiCacheGroup
-        self._bcache = None                 # BcacheRaid
+        self._bcache = None                 # BcacheGroup
         self._snapshot = None               # SnapshotBtrfs
         self._mnt = None                    # MountEfi
 
@@ -285,7 +285,7 @@ def parse(boot_dev, root_dev, mount_dir):
     # return
     ret = StorageLayoutImpl()
     ret._cg = EfiCacheGroup(ssd=ssd, ssdEspParti=ssdEspParti, ssdSwapParti=ssdSwapParti, ssdCacheParti=ssdCacheParti, hddList=hddList, bootHdd=bootHdd)
-    ret._bcache = BcacheRaid(keyList=hddList, bcacheDevPathList=bcacheDevPathList)
+    ret._bcache = BcacheGroup(keyList=hddList, bcacheDevPathList=bcacheDevPathList)
     ret._snapshot = SnapshotBtrfs(mount_dir)
     ret._mnt = MountEfi(mount_dir, _params_for_mount(ret, bcacheDevPathList, kwargsDict))
     return ret
@@ -307,7 +307,7 @@ def detect_and_mount(disk_list, mount_dir, kwargsDict):
     # return
     ret = StorageLayoutImpl()
     ret._cg = EfiCacheGroup(ssd=ssd, ssdEspParti=ssdEspParti, ssdSwapParti=ssdSwapParti, ssdCacheParti=ssdCacheParti, hddList=hddList, bootHdd=bootHdd)
-    ret._bcache = BcacheRaid(keyList=hddList, bcacheDevPathList=bcacheDevPathList)
+    ret._bcache = BcacheGroup(keyList=hddList, bcacheDevPathList=bcacheDevPathList)
     ret._snapshot = SnapshotBtrfs(mount_dir)
     ret._mnt = MountEfi(mount_dir, _params_for_mount(ret, bcacheDevPathList, kwargsDict))
 
@@ -321,7 +321,7 @@ def create_and_mount(disk_list, mount_dir, kwargsDict):
     cg = EfiCacheGroup()
     HandyCg.checkAndAddDisks(cg, *Util.splitSsdAndHddFromFixedDiskDevPathList(disk_list), "bcache")
 
-    bcache = BcacheRaid()
+    bcache = BcacheGroup()
     for hdd in cg.get_hdd_list():
         # hdd partition 2: make them as backing device
         bcache.add_backing(None, hdd, cg.get_hdd_data_partition(hdd))
