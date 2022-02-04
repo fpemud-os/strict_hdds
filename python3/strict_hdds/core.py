@@ -104,7 +104,6 @@ class MountEntry:
 
 class BootDirRwController(abc.ABC):
 
-    @property
     @abc.abstractmethod
     def is_writable(self):
         pass

@@ -78,20 +78,6 @@ class Util:
         return "layout_" + layoutName.replace("-", "_")
 
     @staticmethod
-    def mntOptsStrToList(mntOptsStr):
-        if mntOptsStr == "":
-            return []
-        else:
-            return mntOptsStr.split(",")
-
-    @staticmethod
-    def mntOptsListToStr(mntOptsList):
-        if len(mntOptsList) == 0:
-            return ""
-        else:
-            return ",".join(mntOptsList)
-
-    @staticmethod
     def mntGetSubVol(mountPoint):
         for pobj in psutil.disk_partitions():
             if pobj.mountpoint == mountPoint:
@@ -1141,6 +1127,8 @@ class LvmUtil:
         Util.cmdCall("lvm", "lvextend", "-L+%dG" % (added), lvDevPath)
 
 
+# FIXME: change all methods to staticmethod
+# FIXME: change to use psutil
 class SystemMounts:
 
     class Entry:
@@ -1150,7 +1138,8 @@ class SystemMounts:
             self.dev = _items[0]
             self.mount_point = _items[1]
             self.fs_type = _items[2]
-            self.mnt_opt_list = _items[3].split(",")
+            self.mnt_opts = _items[3]
+            self.mnt_opt_list = self.mnt_opts.split(",")
 
     class NotFoundError(Exception):
         pass

@@ -125,7 +125,7 @@ def parse(boot_dev, root_dev, mount_dir):
     ret._hdd = hdd
     ret._hddRootParti = root_dev
     ret._swap = HandyUtil.swapFileDetectAndNew(StorageLayoutImpl.name, "/")
-    ret._mnt = MountBios(mount_dir, _params_for_mount(ret), kwargsDict)
+    ret._mnt = MountBios(True, mount_dir, _params_for_mount(ret), kwargsDict)
     return ret
 
 
@@ -133,9 +133,9 @@ def detect_and_mount(disk_list, mount_dir, kwargsDict):
     # scan for root partition
     rootPartitionList = []
     for disk in disk_list:
-        if not MbrUtil.hasBootCode(disk):                                       # no boot code, ignore unbootable disk
+        if not MbrUtil.hasBootCode(disk):                                           # no boot code, ignore unbootable disk
             continue
-        if Util.getBlkDevPartitionTableType(disk) != Util.diskPartTableMbr:     # only accept disk with MBR partition table
+        if Util.getBlkDevPartitionTableType(disk) != Util.diskPartTableMbr:         # only accept disk with MBR partition table
             continue
         i = 1
         while True:
@@ -155,10 +155,7 @@ def detect_and_mount(disk_list, mount_dir, kwargsDict):
     ret._hdd = PartiUtil.partiToDisk(rootPartitionList[0])
     ret._hddRootParti = rootPartitionList[0]
     ret._swap = HandyUtil.swapFileDetectAndNew(StorageLayoutImpl.name, mount_dir)
-    ret._mnt = MountBios(mount_dir, _params_for_mount(ret), kwargsDict)
-
-    # mount
-    ret._mnt.mount()
+    ret._mnt = MountBios(False, mount_dir, _params_for_mount(ret), kwargsDict)      # do mount during MountBios initialization
     return ret
 
 
@@ -177,10 +174,7 @@ def create_and_mount(disk_list, mount_dir, kwargsDict):
     ret._hdd = hdd
     ret._hddRootParti = rootParti
     ret._swap = SwapFile(False)
-    ret._mnt = MountBios(mount_dir, _params_for_mount(ret), kwargsDict)
-
-    # mount
-    ret._mnt.mount()
+    ret._mnt = MountBios(False, mount_dir, _params_for_mount(ret), kwargsDict)      # do mount during MountBios initialization
     return ret
 
 

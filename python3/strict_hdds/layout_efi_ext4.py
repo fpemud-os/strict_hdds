@@ -129,7 +129,7 @@ def parse(boot_dev, root_dev, mount_dir):
     ret._hddEspParti = boot_dev
     ret._hddRootParti = root_dev
     ret._swap = HandyUtil.swapFileDetectAndNew(StorageLayoutImpl.name, mount_dir)
-    ret._mnt = MountEfi(mount_dir, _params_for_mount(ret), kwargsDict)
+    ret._mnt = MountEfi(True, mount_dir, _params_for_mount(ret), kwargsDict)
     return ret
 
 
@@ -159,10 +159,7 @@ def detect_and_mount(disk_list, mount_dir, kwargsDict):
     ret._hddEspParti = espAndRootPartitionList[0][1]
     ret._hddRootParti = espAndRootPartitionList[0][2]
     ret._swap = HandyUtil.swapFileDetectAndNew(StorageLayoutImpl.name, mount_dir)
-    ret._mnt = MountEfi(mount_dir, _params_for_mount(ret), kwargsDict)
-
-    # mount
-    ret._mnt.mount()
+    ret._mnt = MountEfi(False, mount_dir, _params_for_mount(ret), kwargsDict)             # do mount during MountEfi initialization
     return ret
 
 
@@ -184,10 +181,7 @@ def create_and_mount(disk_list, mount_dir, kwargsDict):
     ret._hddEspParti = espParti
     ret._hddRootParti = rootParti
     ret._swap = SwapFile(False)
-    ret._mnt = MountEfi(mount_dir, _params_for_mount(ret), kwargsDict)
-
-    # mount
-    ret._mnt.mount()
+    ret._mnt = MountEfi(False, mount_dir, _params_for_mount(ret), kwargsDict)             # do mount during MountEfi initialization
     return ret
 
 
