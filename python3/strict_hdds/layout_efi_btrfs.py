@@ -22,9 +22,9 @@
 
 
 from .util import Util, PartiUtil, BtrfsUtil
-from .handy import EfiMultiDisk, Snapshot, SnapshotBtrfs, MountEfi, HandyMd, DisksChecker
+from .handy import EfiMultiDisk, Snapshot, SnapshotBtrfs, MountEfi, MountParam, HandyMd, DisksChecker
 from . import errors
-from . import StorageLayout, MountParam
+from . import StorageLayout
 
 
 class StorageLayoutImpl(StorageLayout):

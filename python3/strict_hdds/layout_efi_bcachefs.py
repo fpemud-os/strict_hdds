@@ -22,9 +22,9 @@
 
 
 from .util import Util, PartiUtil, BcachefsUtil
-from .handy import EfiCacheGroup, MountEfi, HandyCg, DisksChecker
+from .handy import EfiCacheGroup, MountEfi, MountParam, HandyCg, DisksChecker
 from . import errors
-from . import StorageLayout, MountParam
+from . import StorageLayout
 
 
 class StorageLayoutImpl(StorageLayout):

@@ -22,9 +22,9 @@
 
 
 from .util import Util, PartiUtil, LvmUtil
-from .handy import EfiMultiDisk, SwapLvmLv, MountEfi, HandyMd, DisksChecker, HandyUtil
+from .handy import EfiMultiDisk, SwapLvmLv, MountEfi, MountParam, HandyMd, DisksChecker, HandyUtil
 from . import errors
-from . import StorageLayout, MountParam
+from . import StorageLayout
 
 
 class StorageLayoutImpl(StorageLayout):

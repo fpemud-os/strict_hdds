@@ -22,9 +22,9 @@
 
 
 from .util import Util, PartiUtil, MbrUtil
-from .handy import SwapFile, MountBios, DisksChecker, HandyUtil
+from .handy import SwapFile, MountBios, MountParam, DisksChecker, HandyUtil
 from . import errors
-from . import StorageLayout, MountParam
+from . import StorageLayout
 
 
 class StorageLayoutImpl(StorageLayout):
