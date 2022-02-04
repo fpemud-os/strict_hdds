@@ -30,7 +30,6 @@ import psutil
 import crcmod
 import parted
 import struct
-import psutil
 import pathlib
 import tempfile
 import subprocess
@@ -1128,16 +1127,17 @@ class LvmUtil:
         Util.cmdCall("lvm", "lvextend", "-L+%dG" % (added), lvDevPath)
 
 
-class SystemMounts:
+class PhysicalDiskMounts:
+
+    """This class is a better psutil.disk_partitions()"""
 
     class Entry:
 
-        def __init__(self, line):
-            _items = line.rstrip("\n").split(" ")
-            self.dev = _items[0]
-            self.mount_point = _items[1]
-            self.fs_type = _items[2]
-            self.mnt_opts = _items[3]
+        def __init__(self, p):
+            self.dev = p.device
+            self.mount_point = p.mountpoint
+            self.fs_type = p.fstype
+            self.mnt_opts = p.opts
 
         @property
         def mnt_opt_list(self):
@@ -1148,19 +1148,14 @@ class SystemMounts:
 
     @classmethod
     def get_entries(cls):
-        return cls._parse()
+        return [cls.Entry(p) for p in psutil.disk_partitions()]
 
     @classmethod
     def find_entry_by_mount_point(cls, mount_point_path):
-        for entry in cls._parse():
-            if entry.mount_point == mount_point_path:
-                return entry
+        for p in psutil.disk_partitions():
+            if p.mountpoint == mount_point_path:
+                return cls.Entry(p)
         return None
-
-    @classmethod
-    def _parse(cls):
-        with open("/proc/mounts") as f:
-            return [cls.Entry(line) for line in f.readlines()]
 
 
 class TmpMount:
