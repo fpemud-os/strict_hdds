@@ -761,6 +761,7 @@ class Mount(abc.ABC):
         self._mntParams = []
         self._rwCtrl = rwCtrl
         self._mntEntries = None
+        # FIXME: we'll use kwargsDict later
 
     @property
     def mount_point(self):
