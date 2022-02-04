@@ -785,7 +785,7 @@ class Mount(abc.ABC):
                     else:
                         raise errors.StorageLayoutMountError("mount directory \"%s\" is invalid" % (p.getRealDir()))
                 if p.target is not None:
-                    Util.cmdCall("/bin/mount", "-t", p.fs_type, "-o", p.mnt_opts, p.target, p.getRealDir())
+                    Util.cmdCall("mount", "-t", p.fs_type, "-o", p.mnt_opts, p.target, p.getRealDir())
 
     @property
     def mount_point(self):
@@ -810,7 +810,7 @@ class Mount(abc.ABC):
     def umount(self):
         for p in reversed(self._mntParams):
             if p.target is not None:
-                Util.cmdCall("/bin/umount", p.getRealDir())
+                Util.cmdCall("umount", p.getRealDir())
 
     @abc.abstractmethod
     def get_bootdir_rw_controller(self):
@@ -852,11 +852,11 @@ class MountEfi(Mount):
         def to_read_write(self):
             assert self._parent._isMountParamWritable(self._parent._pRootfs)
             assert not self._parent._isMountParamWritable(self._parent._pEsp)
-            Util.cmdCall("/bin/mount", self._parent._pEsp.getRealDir(), "-o", "rw,remount")
+            Util.cmdCall("mount", self._parent._pEsp.getRealDir(), "-o", "rw,remount")
 
         def to_read_only(self):
             assert self._parent._isMountParamWritable(self._parent._pEsp)
-            Util.cmdCall("/bin/mount", self._parent._pEsp.getRealDir(), "-o", "ro,remount")
+            Util.cmdCall("mount", self._parent._pEsp.getRealDir(), "-o", "ro,remount")
 
     def __init__(self, bIsMounted, mntDir, mntParams, kwargsDict):
         super().__init__(bIsMounted, mntDir, mntParams, kwargsDict)
@@ -869,13 +869,13 @@ class MountEfi(Mount):
 
     def mount_esp(self, parti):
         assert self._pEsp.target is None
-        Util.cmdCall("/bin/mount", "-t", self._pEsp.fs_type, "-o", self._pEsp.mnt_opts, parti, self._pEsp.getRealDir())
+        Util.cmdCall("mount", "-t", self._pEsp.fs_type, "-o", self._pEsp.mnt_opts, parti, self._pEsp.getRealDir())
         self._pEsp.target = parti
 
     def umount_esp(self, parti):
         assert parti == self._pEsp.target
         assert not self._isMountParamWritable(self._pEsp)
-        Util.cmdCall("/bin/umount", self._pEsp.getRealDir())
+        Util.cmdCall("umount", self._pEsp.getRealDir())
         self._pEsp.target = None
 
     def _findRootfsMountParam(self):

@@ -228,7 +228,7 @@ class Util:
 
     @staticmethod
     def getBlkDevCapacity(devPath):
-        ret = Util.cmdCall("/bin/df", "-BM", devPath)
+        ret = Util.cmdCall("df", "-BM", devPath)
         m = re.search("%s +(\\d+)M +(\\d+)M +\\d+M", ret, re.M)
         total = int(m.group(1))
         used = int(m.group(2))
@@ -257,8 +257,8 @@ class Util:
 
     @staticmethod
     def createSwapFile(path):
-        Util.cmdCall("/bin/dd", "if=/dev/zero", "of=%s" % (path), "bs=%d" % (1024 * 1024), "count=%d" % (Util.getSwapSizeInGb() * 1024))
-        Util.cmdCall("/bin/chmod", "600", path)
+        Util.cmdCall("dd", "if=/dev/zero", "of=%s" % (path), "bs=%d" % (1024 * 1024), "count=%d" % (Util.getSwapSizeInGb() * 1024))
+        Util.cmdCall("chmod", "600", path)
         Util.cmdCall("mkswap", "-f", path)
 
     @staticmethod
@@ -428,7 +428,7 @@ class Util:
     @staticmethod
     def getDevPathListForFixedDisk():
         ret = []
-        for line in Util.cmdCall("/bin/lsblk", "-o", "NAME,TYPE", "-n").split("\n"):
+        for line in Util.cmdCall("lsblk", "-o", "NAME,TYPE", "-n").split("\n"):
             m = re.fullmatch("(\\S+)\\s+(\\S+)", line)
             if m is None:
                 continue
@@ -1165,7 +1165,7 @@ class TmpMount:
         self._tmppath = tempfile.mkdtemp()
 
         try:
-            cmd = ["/bin/mount"]
+            cmd = ["mount"]
             if options is not None:
                 cmd.append("-o")
                 cmd.append(options)
@@ -1187,5 +1187,5 @@ class TmpMount:
         return self._tmppath
 
     def close(self):
-        subprocess.run(["/bin/umount", self._tmppath], check=True, universal_newlines=True)
+        subprocess.run(["umount", self._tmppath], check=True, universal_newlines=True)
         os.rmdir(self._tmppath)
