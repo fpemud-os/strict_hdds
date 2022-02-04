@@ -803,7 +803,7 @@ class Mount(abc.ABC):
             item.real_dir_path = p.getRealDir()
             item.target = p.target
             item.fs_type = p.fs_type
-            item.mnt_opts = SystemMounts().find_entry_by_mount_point(p.getRealDir()).mnt_opts
+            item.mnt_opts = SystemMounts.find_entry_by_mount_point(p.getRealDir()).mnt_opts
             ret.append(item)
         return ret
 
@@ -891,7 +891,7 @@ class MountEfi(Mount):
         assert False
 
     def _isMountParamWritable(self, p):
-        return ("rw" in SystemMounts().find_entry_by_mount_point(p.getRealDir()).mnt_opt_list)
+        return ("rw" in SystemMounts.find_entry_by_mount_point(p.getRealDir()).mnt_opt_list)
 
 
 class MountParam:

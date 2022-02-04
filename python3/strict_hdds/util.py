@@ -30,6 +30,7 @@ import psutil
 import crcmod
 import parted
 import struct
+import psutil
 import pathlib
 import tempfile
 import subprocess
@@ -1127,8 +1128,6 @@ class LvmUtil:
         Util.cmdCall("lvm", "lvextend", "-L+%dG" % (added), lvDevPath)
 
 
-# FIXME: change all methods to staticmethod
-# FIXME: change to use psutil
 class SystemMounts:
 
     class Entry:
@@ -1139,39 +1138,29 @@ class SystemMounts:
             self.mount_point = _items[1]
             self.fs_type = _items[2]
             self.mnt_opts = _items[3]
-            self.mnt_opt_list = self.mnt_opts.split(",")
+
+        @property
+        def mnt_opt_list(self):
+            return self.mnt_opts.split(",")
 
     class NotFoundError(Exception):
         pass
 
-    def get_entries(self):
-        return self._parse()
+    @classmethod
+    def get_entries(cls):
+        return cls._parse()
 
-    def find_root_entry(self):
-        for entry in self._parse():
-            if entry.mount_point == "/":
-                return entry
-        raise self.NotFoundError("no rootfs mount point")
-
-    def find_entry_by_mount_point(self, mount_point_path):
-        for entry in self._parse():
+    @classmethod
+    def find_entry_by_mount_point(cls, mount_point_path):
+        for entry in cls._parse():
             if entry.mount_point == mount_point_path:
                 return entry
         return None
 
-    def find_entry_by_filepath(self, file_path):
-        entries = self._parse()
-        while True:
-            for entry in entries:
-                if entry.mount_point == file_path:
-                    return entry
-            if file_path == "/":
-                raise self.NotFoundError("no rootfs mount point")
-            file_path = os.path.dirname(file_path)
-
-    def _parse(self):
+    @classmethod
+    def _parse(cls):
         with open("/proc/mounts") as f:
-            return [self.Entry(line) for line in f.readlines()]
+            return [cls.Entry(line) for line in f.readlines()]
 
 
 class TmpMount:
