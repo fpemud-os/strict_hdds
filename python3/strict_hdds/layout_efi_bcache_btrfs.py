@@ -95,7 +95,7 @@ class StorageLayoutImpl(StorageLayout):
             self._mnt.umount()
             del self._mnt
         if True:
-            self._bcache.stopAll()
+            self._bcache.stop_all()
             del self._bcache
         if True:
             del self._cg
