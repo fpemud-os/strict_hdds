@@ -150,7 +150,7 @@ def get_current_storage_layout(mount_dir="/"):
         # btrfs related
         if Util.anyIn(["efi-bcache-btrfs", "efi-btrfs"], allLayoutNames):
             if rootDevFs == Util.fsTypeBtrfs:
-                tlist = BtrfsUtil.getSlaveDevPathList(mount_dir)                      # only call btrfs related procedure when corresponding storage layout exists
+                tlist = BtrfsUtil.getSlaveDevPathList(mount_dir)                    # only call btrfs related procedure when corresponding storage layout exists
                 if any(BcacheUtil.getBcacheDevFromDevPath(x) is not None for x in tlist):
                     return _parseOneStorageLayout("efi-bcache-btrfs", bootDev, rootDev, mount_dir)
                 else:
@@ -158,7 +158,7 @@ def get_current_storage_layout(mount_dir="/"):
 
         # lvm related
         if Util.anyIn(["efi-bcache-lvm-ext4", "efi-lvm-ext4"], allLayoutNames):
-            if Util.cmdCallTestSuccess("lvm", "vgdisplay", LvmUtil.vgName):   # only call lvm related procedure when corresponding storage layout exists
+            if Util.cmdCallTestSuccess("lvm", "vgdisplay", LvmUtil.vgName):         # only call lvm related procedure when corresponding storage layout exists
                 tlist = LvmUtil.getSlaveDevPathList(LvmUtil.vgName)
                 if any(BcacheUtil.getBcacheDevFromDevPath(x) is not None for x in tlist):
                     return _parseOneStorageLayout("efi-bcache-lvm-ext4", bootDev, rootDev, mount_dir)
@@ -170,7 +170,7 @@ def get_current_storage_layout(mount_dir="/"):
     else:
         # lvm related
         if Util.anyIn(["bios-lvm-ext4"], allLayoutNames):
-            if Util.cmdCallTestSuccess("lvm", "vgdisplay", LvmUtil.vgName):   # only call lvm related procedure when corresponding storage layout exists
+            if Util.cmdCallTestSuccess("lvm", "vgdisplay", LvmUtil.vgName):         # only call lvm related procedure when corresponding storage layout exists
                 return _parseOneStorageLayout("bios-lvm-ext4", bootDev, rootDev, mount_dir)
 
         # simplest layout
