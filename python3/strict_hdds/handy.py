@@ -589,23 +589,23 @@ class Snapshot(abc.ABC):
         with TmpMount(devPath, options=mntOpts) as mp:
             cls._createSubVol(mp.mountpoint, "@")
             os.chown(os.path.join(mp.mountpoint, "@"), 0, 0)
-            os.chmod(os.path.join(mp.mountpoint, "@"), 0o0755)
+            os.chmod(os.path.join(mp.mountpoint, "@"), 0o40755)
 
             cls._createSubVol(mp.mountpoint, "@root")
             os.chown(os.path.join(mp.mountpoint, "@root"), 0, 0)
-            os.chmod(os.path.join(mp.mountpoint, "@root"), 0o0700)
+            os.chmod(os.path.join(mp.mountpoint, "@root"), 0o40700)
 
             cls._createSubVol(mp.mountpoint, "@home")
             os.chown(os.path.join(mp.mountpoint, "@home"), 0, 0)
-            os.chmod(os.path.join(mp.mountpoint, "@home"), 0o0755)
+            os.chmod(os.path.join(mp.mountpoint, "@home"), 0o40755)
 
             cls._createSubVol(mp.mountpoint, "@var")
             os.chown(os.path.join(mp.mountpoint, "@var"), 0, 0)
-            os.chmod(os.path.join(mp.mountpoint, "@var"), 0o0755)
+            os.chmod(os.path.join(mp.mountpoint, "@var"), 0o40755)
 
             cls._createSubVol(mp.mountpoint, "@snapshots")
             os.chown(os.path.join(mp.mountpoint, "@snapshots"), 0, 0)
-            os.chmod(os.path.join(mp.mountpoint, "@snapshots"), 0o0700)
+            os.chmod(os.path.join(mp.mountpoint, "@snapshots"), 0o40700)
 
     @staticmethod
     def proxy(func):
@@ -646,14 +646,14 @@ class Snapshot(abc.ABC):
     def getParamsForMount(self, kwargsDict):
         ret = []
         if "snapshot" not in kwargsDict:
-            ret.append(("/", 0o0755, 0, 0, ["subvol=/@"]))
+            ret.append(("/", 0o40755, 0, 0, ["subvol=/@"]))
         else:
             assert kwargsDict["snapshot"] in self.get_snapshot_list()
-            ret.append(("/", 0o0755, 0, 0, ["subvol=/@snapshots/%s" % (kwargsDict["snapshot"])]))
+            ret.append(("/", 0o40755, 0, 0, ["subvol=/@snapshots/%s" % (kwargsDict["snapshot"])]))
         ret += [
-            ("/root", 0o0700, 0, 0, ["subvol=/@root"]),
-            ("/home", 0o0755, 0, 0, ["subvol=/@home"]),
-            ("/var", 0o0755, 0, 0, ["subvol=/@var"]),
+            ("/root", 0o40700, 0, 0, ["subvol=/@root"]),
+            ("/home", 0o40755, 0, 0, ["subvol=/@home"]),
+            ("/var", 0o40755, 0, 0, ["subvol=/@var"]),
         ]
         return ret
 
@@ -758,7 +758,7 @@ class Mount(abc.ABC):
         assert mntParams[0].dir_path == "/"
 
         self._mntDir = mntDir
-        self._mntParams = []
+        self._mntParams = mntParams
         self._rwCtrl = rwCtrl
         self._mntEntries = None
         # FIXME: we'll use kwargsDict later
@@ -796,13 +796,13 @@ class Mount(abc.ABC):
                 else:
                     raise errors.StorageLayoutMountError("mount directory \"%s\" is invalid" % (realDir))
             if p.target is not None:
-                Util.cmdCall("/bin/mount", "-t", p.fs_type, "-o", Util.mntOptsListToStr(self._oriMntOptListDict[p.dir_path]), p.target, realDir)
+                Util.cmdCall("/bin/mount", "-t", p.fs_type, "-o", Util.mntOptsListToStr(p.mnt_opt_list), p.target, realDir)
                 item = MountEntry()
                 item.mnt_point = p.dir_path
                 item.real_dir_path = realDir
                 item.target = p.target
                 item.fs_type = p.fs_type
-                item.mnt_opts = ",".join(m.mnt_opt_list)
+                item.mnt_opts = ",".join(m.find_entry_by_mount_point(realDir).mnt_opt_list)
                 self._mntEntries.append(item)
 
     def umount(self):
@@ -886,9 +886,9 @@ class MountParam:
         assert dir_path.startswith("/")
 
         if dir_path == "/":
-            assert dir_mode == 0o0755 and dir_uid == 0 and dir_gid == 0 and mnt_opt_list == []
+            assert dir_mode == 0o40755 and dir_uid == 0 and dir_gid == 0
         elif dir_path == "/boot":
-            assert dir_mode == 0o0755 and dir_uid == 0 and dir_gid == 0 and mnt_opt_list == Util.bootDirMntOptList
+            assert dir_mode == 0o40755 and dir_uid == 0 and dir_gid == 0 and mnt_opt_list == Util.bootDirMntOptList
 
         if target is None:
             assert fs_type is None and mnt_opt_list is None
