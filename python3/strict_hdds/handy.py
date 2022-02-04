@@ -922,7 +922,10 @@ class MountParam:
         return ",".join(self.mnt_opt_list)
 
     def setMountObj(self, mountObj):
-        self._realDir = os.path.join(mountObj.mount_point, self.dir_path[1:]).rstrip("/")
+        if self.dir_path == "/":
+            self._realDir = mountObj.mount_point
+        else:
+            self._realDir = os.path.join(mountObj.mount_point, self.dir_path[1:])
 
     def getRealDir(self):
         return self._realDir
