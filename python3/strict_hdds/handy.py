@@ -752,7 +752,7 @@ class Mount(abc.ABC):
                 return getattr(self._mnt, func.__name__)(*args)
             return f
 
-    def __init__(self, mntDir, mntParams, rwCtrl):
+    def __init__(self, mntDir, mntParams, rwCtrl, kwargsDict):
         assert len(mntParams) > 0
         assert all([isinstance(x, MountParam) for x in mntParams])
         assert mntParams[0].dir_path == "/"
@@ -829,8 +829,8 @@ class MountBios(Mount):
         def to_read_only(self):
             pass
 
-    def __init__(self, mntDir, mntParams):
-        super().__init__(mntDir, mntParams, self.BootDirRwController())
+    def __init__(self, mntDir, mntParams, kwargsDict):
+        super().__init__(mntDir, mntParams, self.BootDirRwController(), kwargsDict)
         assert len(mntParams) == 1
 
 
@@ -862,8 +862,8 @@ class MountEfi(Mount):
                 if pobj.mountpoint == self._mntDir:
                     return ("rw" in Util.mntOptsStrToList(pobj.opts))
 
-    def __init__(self, mntDir, mntParams):
-        super().__init__(mntDir, mntParams, self.BootDirRwController(mntDir))
+    def __init__(self, mntDir, mntParams, kwargsDict):
+        super().__init__(mntDir, mntParams, self.BootDirRwController(mntDir), kwargsDict)
         assert any([x.dir_path == "/boot" for x in mntParams])
 
     def mount_esp(self, parti):

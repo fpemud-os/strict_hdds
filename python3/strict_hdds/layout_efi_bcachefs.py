@@ -245,13 +245,13 @@ def parse(boot_dev, root_dev, mount_dir):
     ssdEspParti, ssdSwapParti, ssdCacheParti = HandyCg.checkAndGetSsdPartitions(StorageLayoutImpl.name, ssd)
     bootHdd = HandyCg.checkAndGetBootHddFromBootDev(StorageLayoutImpl.name, boot_dev, ssdEspParti, hddList)
 
-    # FIXME: check mount options
-    pass
+    # FIXME: get kwargsDict from mount options
+    kwargsDict = dict()
 
     # return
     ret = StorageLayoutImpl()
     ret._cg = EfiCacheGroup(ssd=ssd, ssdEspParti=ssdEspParti, ssdSwapParti=ssdSwapParti, ssdCacheParti=ssdCacheParti, hddList=hddList, bootHdd=bootHdd)
-    ret._mnt = MountEfi(mount_dir, _params_for_mount(ret))
+    ret._mnt = MountEfi(mount_dir, _params_for_mount(ret), kwargsDict)
     return ret
 
 
@@ -279,7 +279,7 @@ def detect_and_mount(disk_list, mount_dir, kwargsDict):
     # return
     ret = StorageLayoutImpl()
     ret._cg = EfiCacheGroup(ssd=ssd, ssdEspParti=ssdEspParti, ssdSwapParti=ssdSwapParti, ssdCacheParti=ssdCacheParti, hddList=hddList, bootHdd=bootHdd)
-    ret._mnt = MountEfi(mount_dir, _params_for_mount(ret))
+    ret._mnt = MountEfi(mount_dir, _params_for_mount(ret), kwargsDict)
 
     # mount
     ret._mnt.mount()
@@ -302,7 +302,7 @@ def create_and_mount(disk_list, mount_dir, kwargsDict):
     # return
     ret = StorageLayoutImpl()
     ret._cg = cg
-    ret._mnt = MountEfi(mount_dir, _params_for_mount(ret))
+    ret._mnt = MountEfi(mount_dir, _params_for_mount(ret), kwargsDict)
 
     # mount
     ret._mnt.mount()

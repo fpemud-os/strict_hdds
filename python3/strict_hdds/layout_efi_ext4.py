@@ -120,13 +120,16 @@ def parse(boot_dev, root_dev, mount_dir):
     if Util.getBlkDevFsType(root_dev) != Util.fsTypeExt4:
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.ROOT_PARTITION_FS_SHOULD_BE(Util.fsTypeExt4))
 
+    # FIXME: get kwargsDict from mount options
+    kwargsDict = dict()
+
     # return
     ret = StorageLayoutImpl()
     ret._hdd = PartiUtil.partiToDisk(boot_dev)
     ret._hddEspParti = boot_dev
     ret._hddRootParti = root_dev
     ret._swap = HandyUtil.swapFileDetectAndNew(StorageLayoutImpl.name, mount_dir)
-    ret._mnt = MountEfi(mount_dir, _params_for_mount(ret))
+    ret._mnt = MountEfi(mount_dir, _params_for_mount(ret), kwargsDict)
     return ret
 
 
@@ -156,7 +159,7 @@ def detect_and_mount(disk_list, mount_dir, kwargsDict):
     ret._hddEspParti = espAndRootPartitionList[0][1]
     ret._hddRootParti = espAndRootPartitionList[0][2]
     ret._swap = HandyUtil.swapFileDetectAndNew(StorageLayoutImpl.name, mount_dir)
-    ret._mnt = MountEfi(mount_dir, _params_for_mount(ret))
+    ret._mnt = MountEfi(mount_dir, _params_for_mount(ret), kwargsDict)
 
     # mount
     ret._mnt.mount()
@@ -181,7 +184,7 @@ def create_and_mount(disk_list, mount_dir, kwargsDict):
     ret._hddEspParti = espParti
     ret._hddRootParti = rootParti
     ret._swap = SwapFile(False)
-    ret._mnt = MountEfi(mount_dir, _params_for_mount(ret))
+    ret._mnt = MountEfi(mount_dir, _params_for_mount(ret), kwargsDict)
 
     # mount
     ret._mnt.mount()

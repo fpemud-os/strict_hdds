@@ -117,12 +117,15 @@ def parse(boot_dev, root_dev, mount_dir):
     if Util.getBlkDevPartitionTableType(hdd) != Util.diskPartTableMbr:
         raise errors.StorageLayoutParseError(StorageLayoutImpl.name, errors.PARTITION_TYPE_SHOULD_BE(hdd, Util.diskPartTableMbr))
 
+    # FIXME: get kwargsDict from mount options
+    kwargsDict = dict()
+
     # return
     ret = StorageLayoutImpl()
     ret._hdd = hdd
     ret._hddRootParti = root_dev
     ret._swap = HandyUtil.swapFileDetectAndNew(StorageLayoutImpl.name, "/")
-    ret._mnt = MountBios(mount_dir, _params_for_mount(ret.dev_rootfs))
+    ret._mnt = MountBios(mount_dir, _params_for_mount(ret), kwargsDict)
     return ret
 
 
@@ -152,7 +155,7 @@ def detect_and_mount(disk_list, mount_dir, kwargsDict):
     ret._hdd = PartiUtil.partiToDisk(rootPartitionList[0])
     ret._hddRootParti = rootPartitionList[0]
     ret._swap = HandyUtil.swapFileDetectAndNew(StorageLayoutImpl.name, mount_dir)
-    ret._mnt = MountBios(mount_dir, _params_for_mount(ret))
+    ret._mnt = MountBios(mount_dir, _params_for_mount(ret), kwargsDict)
 
     # mount
     ret._mnt.mount()
@@ -174,7 +177,7 @@ def create_and_mount(disk_list, mount_dir, kwargsDict):
     ret._hdd = hdd
     ret._hddRootParti = rootParti
     ret._swap = SwapFile(False)
-    ret._mnt = MountBios(mount_dir, _params_for_mount(ret))
+    ret._mnt = MountBios(mount_dir, _params_for_mount(ret), kwargsDict)
 
     # mount
     ret._mnt.mount()

@@ -205,7 +205,7 @@ def parse(boot_dev, root_dev, mount_dir):
     ret = StorageLayoutImpl()
     ret._md = EfiMultiDisk(diskList=diskList, bootHdd=bootHdd)
     ret._snapshot = SnapshotBtrfs(mount_dir)
-    ret._mnt = MountEfi(mount_dir, _params_for_mount(ret, partiList, kwargsDict))
+    ret._mnt = MountEfi(mount_dir, _params_for_mount(ret, kwargsDict), kwargsDict)
     return ret
 
 
@@ -232,7 +232,7 @@ def detect_and_mount(disk_list, mount_dir, kwargsDict):
     ret = StorageLayoutImpl()
     ret._md = EfiMultiDisk(diskList=diskList, bootHdd=bootHdd)
     ret._snapshot = SnapshotBtrfs(mount_dir)
-    ret._mnt = MountEfi(mount_dir, _params_for_mount(ret, [ret._md.get_disk_data_partition(x) for x in ret._md.get_disk_list()], kwargsDict))
+    ret._mnt = MountEfi(mount_dir, _params_for_mount(ret, kwargsDict), kwargsDict)
 
     # mount
     ret._mnt.mount()
@@ -253,17 +253,17 @@ def create_and_mount(disk_list, mount_dir, kwargsDict):
     ret = StorageLayoutImpl()
     ret._md = md
     ret._snapshot = SnapshotBtrfs(mount_dir)
-    ret._mnt = MountEfi(mount_dir, _params_for_mount(ret, partiList, kwargsDict))
+    ret._mnt = MountEfi(mount_dir, _params_for_mount(ret, kwargsDict), kwargsDict)
 
     # mnount
     ret._mnt.mount()
     return ret
 
 
-def _params_for_mount(obj, partiList, kwargsDict):
+def _params_for_mount(obj, kwargsDict):
     ret = []
     for dirPath, dirMode, dirUid, dirGid, mntOptList in obj._snapshot.getParamsForMount(kwargsDict):
-        tlist = mntOptList + ["device=%s" % (x) for x in partiList]
+        tlist = mntOptList + ["device=%s" % (obj._md.get_disk_data_partition(x)) for x in obj._md.get_disk_list()]
         ret.append(MountParam(dirPath, dirMode, dirUid, dirGid, target=obj.dev_rootfs, fs_type=Util.fsTypeBtrfs, mnt_opt_list=tlist))
     ret.append(MountParam(Util.bootDir, 0o0755, 0, 0, target=obj.dev_boot, fs_type=Util.fsTypeFat, mnt_opt_list=Util.bootDirMntOptList))
     return ret

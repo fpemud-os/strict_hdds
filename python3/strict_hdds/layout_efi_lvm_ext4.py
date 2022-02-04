@@ -207,11 +207,14 @@ def parse(boot_dev, root_dev, mount_dir):
     diskList = [PartiUtil.partiToDisk(x) for x in pvDevPathList]
     bootHdd = HandyMd.checkAndGetBootDiskFromBootDev(StorageLayoutImpl.name, boot_dev, diskList)
 
+    # FIXME: get kwargsDict from mount options
+    kwargsDict = dict()
+
     # return
     ret = StorageLayoutImpl()
     ret._md = EfiMultiDisk(diskList=diskList, bootHdd=bootHdd)
     ret._swap = HandyUtil.swapLvDetectAndNew(StorageLayoutImpl.name)
-    ret._mnt = MountEfi(mount_dir, _params_for_mount(ret))
+    ret._mnt = MountEfi(mount_dir, _params_for_mount(ret), kwargsDict)
     return ret
 
 
@@ -232,7 +235,7 @@ def detect_and_mount(disk_list, mount_dir, kwargsDict):
     ret = StorageLayoutImpl()
     ret._md = EfiMultiDisk(diskList=diskList, bootHdd=bootHdd)
     ret._swap = HandyUtil.swapLvDetectAndNew(StorageLayoutImpl.name)
-    ret._mnt = MountEfi(mount_dir, _params_for_mount(ret))
+    ret._mnt = MountEfi(mount_dir, _params_for_mount(ret), kwargsDict)
 
     # mount
     ret._mnt.mount()
@@ -253,7 +256,7 @@ def create_and_mount(disk_list, mount_dir, kwargsDict):
     ret = StorageLayoutImpl()
     ret._md = md
     ret._swap = SwapLvmLv(False)
-    ret._mnt = MountEfi(mount_dir, _params_for_mount(ret))
+    ret._mnt = MountEfi(mount_dir, _params_for_mount(ret), kwargsDict)
 
     # mount
     ret._mnt.mount()
