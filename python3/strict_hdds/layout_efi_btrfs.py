@@ -129,7 +129,7 @@ class StorageLayoutImpl(StorageLayout):
         self._md.add_disk(disk, Util.fsTypeBtrfs)
 
         # hdd partition 2: make it as backing device and add it to btrfs filesystem
-        Util.cmdCall("btrfs", "device", "add", self._md.get_disk_data_partition(disk), self._mnt.mount_point)
+        Util.cmdCall("btrfs", "device", "add", "-f", self._md.get_disk_data_partition(disk), self._mnt.mount_point)
 
         # boot disk change
         if disk == self._md.boot_disk:
