@@ -180,7 +180,7 @@ class StorageLayoutImpl(StorageLayout):
         else:
             self._cg.add_hdd(disk, "bcache")
             self._bcache.add_backing(self._cg.get_ssd_cache_partition(), disk, self._cg.get_hdd_data_partition(disk))
-            Util.cmdCall("btrfs", "device", "add", self._bcache.get_bcache_dev(disk), self._mnt.mount_point)
+            Util.cmdCall("btrfs", "device", "add", "-f", self._bcache.get_bcache_dev(disk), self._mnt.mount_point)
             if disk == self._cg.boot_disk:
                 self._mnt.mount_esp(self._cg.get_hdd_esp_partition(disk))
                 return True
