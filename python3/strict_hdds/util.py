@@ -1060,6 +1060,13 @@ class BtrfsUtil:
             ret.append(m.group(1))
         return ret
 
+    @staticmethod
+    def addDiskToBtrfs(disk, mountPoint):
+        with open(disk, "wb") as f:
+            for i in range(0, 1024):
+                f.write(bytearray(4096))            # we found -f is not enough for robustly adding disk
+        Util.cmdCall("btrfs", "device", "add", "-f", disk, mountPoint)
+
 
 class LvmUtil:
 
