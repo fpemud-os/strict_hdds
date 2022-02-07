@@ -216,7 +216,7 @@ class EfiCacheGroup:
 
     @property
     def dev_swap(self):
-        return self.get_ssd_swap_partition()
+        return self._ssdSwapParti if self._ssdSwapParti is not None else None
 
     @property
     def boot_disk(self):
@@ -280,7 +280,8 @@ class EfiCacheGroup:
         return PartiUtil.diskToParti(disk, 2)
 
     def get_swap_size(self):
-        return Util.getBlkDevSize(self.get_ssd_swap_partition())
+        assert self._ssdSwapParti is not None
+        return Util.getBlkDevSize(self._ssdSwapParti)
 
     def add_ssd(self, ssd, fsType):
         assert self._ssd is None
