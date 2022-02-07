@@ -160,6 +160,10 @@ class StorageLayoutImpl(StorageLayout):
     def get_hdd_bcache_dev(self, disk):
         return self._bcache.get_bcache_dev(disk)
 
+    @EfiCacheGroup.proxy
+    def get_swap_size(self):
+        pass
+
     @Snapshot.proxy
     def get_snapshot_list(self):
         pass

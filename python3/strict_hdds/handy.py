@@ -279,6 +279,9 @@ class EfiCacheGroup:
         assert disk in self._hddList
         return PartiUtil.diskToParti(disk, 2)
 
+    def get_swap_size(self):
+        return Util.getBlkDevSize(self.get_ssd_swap_partition())
+
     def add_ssd(self, ssd, fsType):
         assert self._ssd is None
         assert ssd is not None and ssd not in self._hddList
@@ -525,6 +528,10 @@ class SwapLvmLv:
         Util.cmdCall("lvm", "lvremove", LvmUtil.swapLvDevPath)
         self._bSwapLv = False
 
+    def get_swap_size(self):
+        assert self._bSwapLv
+        return Util.getBlkDevSize(LvmUtil.swapLvDevPath)
+
     def check(self, auto_fix, error_callback):
         if not self._bSwapLv:
             error_callback(errors.CheckCode.SWAP_NOT_ENABLED)
@@ -568,6 +575,10 @@ class SwapFile:
         assert self._bSwapFile
         os.remove(Util.swapFilepath)
         self._bSwapFile = False
+
+    def get_swap_size(self):
+        assert self._bSwapFile
+        return os.path.getsize(Util.swapFilepath)
 
     def check(self, auto_fix, error_callback):
         if not self._bSwapFile:

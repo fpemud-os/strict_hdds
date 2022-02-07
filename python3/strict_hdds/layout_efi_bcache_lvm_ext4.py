@@ -155,6 +155,10 @@ class StorageLayoutImpl(StorageLayout):
     def get_hdd_bcache_dev(self, disk):
         return self._bcache.get_bcache_dev(disk)
 
+    @EfiCacheGroup.proxy
+    def get_swap_size(self):
+        pass
+
     def add_disk(self, disk):
         assert disk is not None
 

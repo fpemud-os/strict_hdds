@@ -122,6 +122,10 @@ class StorageLayoutImpl(StorageLayout):
     def get_disk_data_partition(self, disk):
         pass
 
+    @SwapLvmLv.proxy
+    def get_swap_size(self):
+        pass
+
     def add_disk(self, disk):
         assert disk is not None
 

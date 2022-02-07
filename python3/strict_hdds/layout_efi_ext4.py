@@ -100,6 +100,10 @@ class StorageLayoutImpl(StorageLayout):
     def remove_swap_file(self):
         pass
 
+    @SwapFile.proxy
+    def get_swap_size(self):
+        pass
+
     def _check_impl(self, check_item, *kargs, auto_fix=False, error_callback=None):
         if check_item == Util.checkItemBasic:
             dc = DisksChecker([self._hdd])
