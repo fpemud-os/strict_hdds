@@ -157,6 +157,9 @@ class StorageLayoutImpl(StorageLayout):
     def get_hdd_data_partition(self, disk):
         pass
 
+    def get_bcache_set_uuid(self):
+        return BcacheUtil.getSetUuid(self._cg.get_ssd_cache_partition())
+
     def get_hdd_bcache_dev(self, disk):
         return self._bcache.get_bcache_dev(disk)
 
