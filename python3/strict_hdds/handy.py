@@ -437,7 +437,7 @@ class Bcache:
             ret = 0
             for cacheDev in self._cacheDevSet:
                 fullfn = os.path.join("/sys", "fs", "bcache", BcacheUtil.getSetUuid(cacheDev), "stats_%s" % (name), "cache_hit_ratio")
-                ret += int(pathlib.Path(fullfn).read_text(fullfn).rstrip("\n"))
+                ret += int(pathlib.Path(fullfn).read_text().rstrip("\n"))
             return ret / len(self._cacheDevSet) / 100
         else:
             assert False
