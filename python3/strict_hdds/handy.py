@@ -29,6 +29,7 @@ import glob
 import time
 import struct
 import parted
+import pathlib
 
 from .util import Util, PartiUtil, GptUtil, BcacheUtil, LvmUtil, PhysicalDiskMounts, TmpMount
 from . import errors
@@ -426,6 +427,21 @@ class Bcache:
     def __init__(self, keyList=[], bcacheDevPathList=[]):
         self._backingDict = Util.keyValueListToDict(keyList, bcacheDevPathList)
 
+        self._cacheDevSet = set()
+        for bcacheDevPath in bcacheDevPathList:
+            self._cacheDevSet += set(BcacheUtil.getSlaveDevPathList(bcacheDevPath)[:-1])
+
+    def get_stats(self, name):
+        if name in ["cache_hit_ratio_five_minute", "cache_hit_ratio_hour", "cache_hit_ratio_day", "cache_hit_ratio_total"]:
+            name = name.replace("cache_hit_ratio_", "")
+            ret = 0
+            for cacheDev in self._cacheDevSet:
+                fullfn = os.path.join("/sys", "fs", "bcache", BcacheUtil.getSetUuid(cacheDev), "stats_%s" % (name), "cache_hit_ratio")
+                ret += int(pathlib.Path(fullfn).read_text(fullfn).rstrip("\n"))
+            return ret / len(self._cacheDevSet) / 100
+        else:
+            assert False
+
     def get_bcache_dev(self, key):
         return self._backingDict[key]
 
@@ -435,6 +451,7 @@ class Bcache:
     def add_cache(self, cacheDevPath):
         BcacheUtil.makeAndRegisterCacheDevice(cacheDevPath)
         BcacheUtil.attachCacheDevice(self._backingDict.values(), cacheDevPath)
+        self._cacheDevSet.add(cacheDevPath)
 
     def add_backing(self, cacheDevPath, key, devPath):
         BcacheUtil.makeAndRegisterBackingDevice(devPath)
@@ -466,6 +483,7 @@ class Bcache:
 
     def remove_cache(self, cacheDevPath):
         BcacheUtil.unregisterCacheDevice(cacheDevPath)
+        self._cacheDevSet.remove(cacheDevPath)
 
     def remove_backing(self, key):
         BcacheUtil.stopBackingDevice(self._backingDict[key])
