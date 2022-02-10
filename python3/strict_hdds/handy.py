@@ -429,7 +429,7 @@ class Bcache:
 
         self._cacheDevSet = set()
         for bcacheDevPath in bcacheDevPathList:
-            self._cacheDevSet += set(BcacheUtil.getSlaveDevPathList(bcacheDevPath)[:-1])
+            self._cacheDevSet.update(set(BcacheUtil.getSlaveDevPathList(bcacheDevPath)[:-1]))
 
     def get_stats(self, name):
         if name in ["cache_hit_ratio_five_minute", "cache_hit_ratio_hour", "cache_hit_ratio_day", "cache_hit_ratio_total"]:
