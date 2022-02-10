@@ -863,8 +863,6 @@ class BcacheUtil:
             f.write(bcacheSb)
             f.write(bytearray(256 * 8))         # cacbe_sb.d
 
-        return (devUuid, setUuid)
-
     @staticmethod
     def isBackingDevice(devPath):
         return BcacheUtil._isBackingDeviceOrCachDevice(devPath, True)
@@ -923,7 +921,7 @@ class BcacheUtil:
         with open(devPath, "rb") as f:
             f.seek(8 * 512 + struct.calcsize(bcacheSbSetUuidPreFmt))
             buf = f.read(struct.calcsize(bcacheSbSetUuidFmt))
-            return uuid.UUID(bytes=buf)
+            return str(uuid.UUID(bytes=buf))
 
     @staticmethod
     def getMode(devPath):
