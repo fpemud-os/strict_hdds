@@ -127,7 +127,7 @@ def get_supported_storage_layouts():
     return ret
 
 
-def get_current_storage_layout(mount_dir="/"):
+def get_storage_layout(mount_dir="/"):
     allLayoutNames = get_supported_storage_layouts()
 
     rootDev = None
@@ -175,6 +175,14 @@ def get_current_storage_layout(mount_dir="/"):
 
         # simplest layout
         return _parseOneStorageLayout("bios-ext4", bootDev, rootDev, mount_dir)
+
+
+def mount_storage_layout(layout_name, mount_dir, **kwargs):
+    diskList = Util.getDevPathListForFixedDisk()
+    if len(diskList) == 0:
+        raise errors.StorageLayoutParseError(errors.NO_DISK_WHEN_PARSE)
+
+    return _detectAndMountOneStorageLayout(layout_name, diskList, mount_dir, kwargs)
 
 
 def detect_and_mount_storage_layout(mount_dir, **kwargs):

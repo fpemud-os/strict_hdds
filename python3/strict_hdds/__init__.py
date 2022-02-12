@@ -39,8 +39,9 @@ from .core import StorageLayout
 from .core import MountEntry
 from .core import BootDirRwController
 
-from .core import get_supported_storage_layouts
-from .core import get_current_storage_layout
+from .core import get_supported_storage_layout_names
+from .core import get_storage_layout
+from .core import mount_storage_layout
 from .core import detect_and_mount_storage_layout
 from .core import create_and_mount_storage_layout
 
@@ -51,3 +52,7 @@ from .errors import StorageLayoutCreateError
 from .errors import StorageLayoutAddDiskError
 from .errors import StorageLayoutRemoveDiskError
 from .errors import StorageLayoutParseError
+
+# for compatibility
+get_current_storage_layout = get_storage_layout
+get_supported_storage_layouts = get_supported_storage_layout_names
