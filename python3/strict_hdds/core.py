@@ -165,16 +165,22 @@ def get_storage_layout(mount_dir="/"):
                 else:
                     return _parseOneStorageLayout("efi-lvm-ext4", bootDev, rootDev, mount_dir)
 
-        # simplest layout
-        return _parseOneStorageLayout("efi-ext4", bootDev, rootDev, mount_dir)
+        # simple layout
+        if Util.anyIn(["efi-ext4"], allLayoutNames):
+            if Util.getBlkDevFsType(rootDev) == Util.fsTypeExt4:
+                return _parseOneStorageLayout("efi-ext4", bootDev, rootDev, mount_dir)
     else:
         # lvm related
         if Util.anyIn(["bios-lvm-ext4"], allLayoutNames):
             if Util.cmdCallTestSuccess("lvm", "vgdisplay", LvmUtil.vgName):         # only call lvm related procedure when corresponding storage layout exists
                 return _parseOneStorageLayout("bios-lvm-ext4", bootDev, rootDev, mount_dir)
 
-        # simplest layout
-        return _parseOneStorageLayout("bios-ext4", bootDev, rootDev, mount_dir)
+        # simple layout
+        if Util.anyIn(["bios-ext4"], allLayoutNames):
+            if Util.getBlkDevFsType(rootDev) == Util.fsTypeExt4:
+                return _parseOneStorageLayout("bios-ext4", bootDev, rootDev, mount_dir)
+
+    raise errors.StorageLayoutParseError("", "unknown storage layout")
 
 
 def mount_storage_layout(layout_name, mount_dir, **kwargs):
@@ -229,8 +235,10 @@ def detect_and_mount_storage_layout(mount_dir, **kwargs):
             if LvmUtil.vgName in LvmUtil.getVgList():
                 return _detectAndMountOneStorageLayout("efi-lvm-ext4", diskList, mount_dir, kwargs)
 
-        # simplest layout
-        return _detectAndMountOneStorageLayout("efi-ext4", diskList, mount_dir, kwargs)
+        # simple layout
+        if Util.anyIn(["efi-ext4"], allLayoutNames):
+            if any([Util.getBlkDevFsType(x) == Util.fsTypeExt4 for x in normalPartiList]):
+                return _detectAndMountOneStorageLayout("efi-ext4", diskList, mount_dir, kwargs)
     else:
         # lvm related
         if Util.anyIn(["bios-lvm-ext4"], allLayoutNames):
@@ -238,8 +246,12 @@ def detect_and_mount_storage_layout(mount_dir, **kwargs):
             if LvmUtil.vgName in LvmUtil.getVgList():
                 return _detectAndMountOneStorageLayout("bios-lvm-ext4", diskList, mount_dir, kwargs)
 
-        # simplest layout
-        return _detectAndMountOneStorageLayout("bios-ext4", diskList, mount_dir, kwargs)
+        # simple layout
+        if Util.anyIn(["bios-ext4"], allLayoutNames):
+            if any([Util.getBlkDevFsType(x) == Util.fsTypeExt4 for x in normalPartiList]):
+                return _detectAndMountOneStorageLayout("bios-ext4", diskList, mount_dir, kwargs)
+
+    raise errors.StorageLayoutParseError("", "unknown storage layout")
 
 
 def create_and_mount_storage_layout(layout_name, mount_dir, disk_list=None, **kwargs):
