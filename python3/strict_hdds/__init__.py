@@ -53,7 +53,3 @@ from .errors import StorageLayoutCreateError
 from .errors import StorageLayoutAddDiskError
 from .errors import StorageLayoutRemoveDiskError
 from .errors import StorageLayoutParseError
-
-# for compatibility
-get_current_storage_layout = get_storage_layout
-get_supported_storage_layouts = get_supported_storage_layout_names
