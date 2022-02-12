@@ -117,7 +117,7 @@ class BootDirRwController(abc.ABC):
         pass
 
 
-def get_supported_storage_layouts():
+def get_supported_storage_layout_names():
     selfDir = os.path.dirname(os.path.realpath(__file__))
     ret = []
     for fn in os.listdir(selfDir):
@@ -128,7 +128,7 @@ def get_supported_storage_layouts():
 
 
 def get_storage_layout(mount_dir="/"):
-    allLayoutNames = get_supported_storage_layouts()
+    allLayoutNames = get_supported_storage_layout_names()
 
     rootDev = None
     rootDevFs = None
@@ -186,7 +186,7 @@ def mount_storage_layout(layout_name, mount_dir, **kwargs):
 
 
 def detect_and_mount_storage_layout(mount_dir, **kwargs):
-    allLayoutNames = get_supported_storage_layouts()
+    allLayoutNames = get_supported_storage_layout_names()
 
     diskList = Util.getDevPathListForFixedDisk()
     if len(diskList) == 0:
