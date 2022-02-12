@@ -157,9 +157,6 @@ class StorageLayoutImpl(StorageLayout):
     def get_hdd_data_partition(self, disk):
         pass
 
-    def get_bcache_stats(self, name):
-        return self._bcache.get_stats(name)
-
     def get_hdd_bcache_dev(self, disk):
         return self._bcache.get_bcache_dev(disk)
 

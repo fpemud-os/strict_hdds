@@ -29,8 +29,6 @@ import glob
 import time
 import struct
 import parted
-import pathlib
-
 from .util import Util, PartiUtil, GptUtil, BcacheUtil, LvmUtil, PhysicalDiskMounts, TmpMount
 from . import errors
 from . import MountEntry
@@ -430,17 +428,6 @@ class Bcache:
         self._cacheDevSet = set()
         for bcacheDevPath in bcacheDevPathList:
             self._cacheDevSet.update(set(BcacheUtil.getSlaveDevPathList(bcacheDevPath)[:-1]))
-
-    def get_stats(self, name):
-        if name in ["cache_hit_ratio_five_minute", "cache_hit_ratio_hour", "cache_hit_ratio_day", "cache_hit_ratio_total"]:
-            name = name.replace("cache_hit_ratio_", "")
-            ret = 0
-            for cacheDev in self._cacheDevSet:
-                fullfn = os.path.join("/sys", "fs", "bcache", BcacheUtil.getSetUuid(cacheDev), "stats_%s" % (name), "cache_hit_ratio")
-                ret += int(pathlib.Path(fullfn).read_text().rstrip("\n"))
-            return ret / len(self._cacheDevSet) / 100
-        else:
-            assert False
 
     def get_bcache_dev(self, key):
         return self._backingDict[key]
