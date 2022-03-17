@@ -32,7 +32,7 @@ import parted
 from .util import Util, PartiUtil, GptUtil, BcacheUtil, LvmUtil, PhysicalDiskMounts, TmpMount
 from . import errors
 from . import MountEntry
-from . import BootDirRwController
+from . import RwController
 
 
 class EfiMultiDisk:
@@ -836,7 +836,7 @@ class Mount(abc.ABC):
 
 class MountBios(Mount):
 
-    class BootDirRwController(BootDirRwController):
+    class RwController(RwController):
 
         def is_writable(self):
             return True
@@ -850,7 +850,7 @@ class MountBios(Mount):
     def __init__(self, bIsMounted, mntDir, mntParams, kwargsDict):
         super().__init__(bIsMounted, mntDir, mntParams, kwargsDict)
         assert len(mntParams) == 1
-        self._rwCtrl = self.BootDirRwController()
+        self._rwCtrl = self.RwController()
 
     def get_bootdir_rw_controller(self):
         return self._rwCtrl
@@ -858,7 +858,7 @@ class MountBios(Mount):
 
 class MountEfi(Mount):
 
-    class BootDirRwController(BootDirRwController):
+    class RwController(RwController):
 
         def __init__(self, parent):
             self._parent = parent
@@ -879,7 +879,7 @@ class MountEfi(Mount):
         super().__init__(bIsMounted, mntDir, mntParams, kwargsDict)
         self._pRootfs = self._findRootfsMountParam()
         self._pEsp = self._findEspMountParam()
-        self._rwCtrl = self.BootDirRwController(self)
+        self._rwCtrl = self.RwController(self)
 
     def get_bootdir_rw_controller(self):
         return self._rwCtrl

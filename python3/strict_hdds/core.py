@@ -102,7 +102,7 @@ class MountEntry:
         self.mnt_opts = None
 
 
-class BootDirRwController(abc.ABC):
+class RwController(abc.ABC):
 
     @abc.abstractmethod
     def is_writable(self):

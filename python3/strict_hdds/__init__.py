@@ -37,7 +37,7 @@ __version__ = "0.0.1"
 
 from .core import StorageLayout
 from .core import MountEntry
-from .core import BootDirRwController
+from .core import RwController
 
 from .core import get_supported_storage_layout_names
 
