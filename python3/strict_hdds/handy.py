@@ -32,6 +32,7 @@ import parted
 from .util import Util, PartiUtil, GptUtil, BcacheUtil, LvmUtil, PhysicalDiskMounts, TmpMount
 from . import errors
 from . import MountEntry
+from . import Snapshot
 from . import RwController
 
 
