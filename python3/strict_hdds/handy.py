@@ -700,7 +700,7 @@ class Snapshot(abc.ABC):
             try:
                 svList.remove(sv)
             except ValueError:
-                error_callback(errors.CheckCode.TRIVIAL, "Sub-volume \"%s\" does not exist." % (e))     # no way to auto fix
+                error_callback(errors.CheckCode.TRIVIAL, "Sub-volume \"%s\" does not exist." % (sv))    # no way to auto fix
 
         # check redundancy
         prefixList = [x[1] + "/" for x in (self._homeSubVols() + self._varSubVols())]
@@ -734,9 +734,8 @@ class Snapshot(abc.ABC):
             ("/var/lib",   "@var_lib",   0o40755, 0, 0)
             ("/var/log",   "@var_log",   0o40755, 0, 0)
             ("/var/spool", "@var_spool", 0o40755, 0, 0)
-            ("/var/svc.d", "@var_svc.d", 0o40755, 0, 0)     # FIXME
             ("/var/tmp",   "@var_tmp",   0o41777, 0, 0)
-            ("/var/www",   "@var_www",   0o40755, 0, 0)     # FIXME        
+            ("/var/www",   "@var_www",   0o40755, 0, 0)     # FIXME
         ]
 
     @staticmethod

@@ -201,7 +201,7 @@ def parse(boot_dev, root_dev, mount_dir):
     # get kwargsDict from mount options
     kwargsDict = dict()
     if True:
-        ret = Util.mntGetSubVol(self._mntDir)
+        ret = Util.mntGetSubVol(mount_dir)
         if ret is not None:
             if not ret.startswith("@"):
                 raise errors.StorageLayoutParseError("sub-volume \"%s\" is not supported" % (ret))
@@ -237,7 +237,7 @@ def detect_and_mount(disk_list, mount_dir, kwargsDict):
 
     # check snapshot
     snapshotName = kwargsDict.get("snapshot", None)
-    SnapshotBtrfs.checkFs(StorageLayoutImpl.name, partiList[0], ",".join(["device=%s" % (md.get_disk_data_partition(x)) for x in md.get_disk_list()]), snapshotName)
+    SnapshotBtrfs.checkFs(StorageLayoutImpl.name, [md.get_disk_data_partition(x) for x in md.get_disk_list()][0], ",".join(["device=%s" % (md.get_disk_data_partition(x)) for x in md.get_disk_list()]), snapshotName)
 
     # return
     ret = StorageLayoutImpl()

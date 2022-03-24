@@ -286,7 +286,7 @@ def parse(boot_dev, root_dev, mount_dir):
     # get kwargsDict from mount options
     kwargsDict = dict()
     if True:
-        ret = Util.mntGetSubVol(self._mntDir)
+        ret = Util.mntGetSubVol(mount_dir)
         if ret is not None:
             if not ret.startswith("@"):
                 raise errors.StorageLayoutParseError("sub-volume \"%s\" is not supported" % (ret))
