@@ -727,14 +727,14 @@ class Snapshot(abc.ABC):
     @staticmethod
     def _varSubVols():
         return [
-            ("/var/cache", "@var_cache", 0o40755, 0, 0)
-            ("/var/db",    "@var_db",    0o40755, 0, 0)
-            ("/var/games", "@var_games", 0o40755, 0, 0)     # FIXME
-            ("/var/lib",   "@var_lib",   0o40755, 0, 0)
-            ("/var/log",   "@var_log",   0o40755, 0, 0)
-            ("/var/spool", "@var_spool", 0o40755, 0, 0)
-            ("/var/tmp",   "@var_tmp",   0o41777, 0, 0)
-            ("/var/www",   "@var_www",   0o40755, 0, 0)     # FIXME
+            ("/var/cache", "@var_cache", 0o40755, 0, 0),
+            ("/var/db",    "@var_db",    0o40755, 0, 0),
+            ("/var/games", "@var_games", 0o40755, 0, 0),     # FIXME
+            ("/var/lib",   "@var_lib",   0o40755, 0, 0),
+            ("/var/log",   "@var_log",   0o40755, 0, 0),
+            ("/var/spool", "@var_spool", 0o40755, 0, 0),
+            ("/var/tmp",   "@var_tmp",   0o41777, 0, 0),
+            ("/var/www",   "@var_www",   0o40755, 0, 0),     # FIXME
         ]
 
     @staticmethod
