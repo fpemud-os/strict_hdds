@@ -320,7 +320,7 @@ def detect_and_mount(disk_list, mount_dir, kwargsDict):
 
     # check snapshot
     snapshotName = kwargsDict.get("snapshot", None)
-    SnapshotBtrfs.checkFs(StorageLayoutImpl.name, bcache.get_all_bcache_dev_list()[0], ",".join(["device=%s" % (x) for x in bcache.get_all_bcache_dev_list()]), snapshotName)
+    SnapshotBtrfs.checkFs(StorageLayoutImpl.name, bcache.get_all_bcache_dev_list()[0], _devMntOptList(bcache), snapshotName)
 
     # return
     ret = StorageLayoutImpl()
@@ -347,7 +347,7 @@ def create_and_mount(disk_list, mount_dir, kwargsDict):
 
     # create btrfs
     Util.cmdCall("mkfs.btrfs", "-f", "-d", "single", "-m", "single", *bcache.get_all_bcache_dev_list())
-    SnapshotBtrfs.initializeFs(bcache.get_all_bcache_dev_list()[0], ",".join(["device=%s" % (x) for x in bcache.get_all_bcache_dev_list()]))
+    SnapshotBtrfs.initializeFs(bcache.get_all_bcache_dev_list()[0], _devMntOptList(bcache))
 
     # return
     ret = StorageLayoutImpl()
@@ -361,7 +361,11 @@ def create_and_mount(disk_list, mount_dir, kwargsDict):
 def _params_for_mount(obj):
     ret = []
     for dirPath, dirMode, dirUid, dirGid, mntOptList in obj._snapshot.getParamsForMount():
-        tlist = mntOptList + ["device=%s" % (x) for x in obj._bcache.get_all_bcache_dev_list()]
+        tlist = mntOptList + _devMntOptList(obj._bcache)
         ret.append(MountParam(dirPath, dirMode, dirUid, dirGid, obj.dev_rootfs, Util.fsTypeBtrfs, mnt_opt_list=tlist))
     ret.append(MountParam(Util.bootDir, 0o40755, 0, 0, obj.dev_boot, Util.fsTypeFat, mnt_opt_list=Util.bootDirMntOptList))
     return ret
+
+
+def _devMntOptList(bcache):
+    return ["device=%s" % (x) for x in bcache.get_all_bcache_dev_list()]
