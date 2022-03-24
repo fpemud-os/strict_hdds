@@ -184,5 +184,5 @@ def create_and_mount(disk_list, mount_dir, kwargsDict):
 
 def _params_for_mount(obj):
     return [
-        MountParam("/", 0o40755, 0, 0, target=obj.dev_rootfs, fs_type=Util.fsTypeExt4, mnt_opt_list=[])
+        MountParam("/", 0o40755, 0, 0, device=obj.dev_rootfs, fstype=Util.fsTypeExt4, mnt_opt_list=[])
     ]

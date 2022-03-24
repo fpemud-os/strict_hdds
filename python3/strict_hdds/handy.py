@@ -801,8 +801,8 @@ class Mount(abc.ABC):
                             raise errors.StorageLayoutMountError("mount directory \"%s\" has invalid owner group" % (p.getRealDir()))
                     else:
                         raise errors.StorageLayoutMountError("mount directory \"%s\" is invalid" % (p.getRealDir()))
-                if p.target is not None:
-                    Util.cmdCall("mount", "-t", p.fs_type, "-o", p.mnt_opts, p.target, p.getRealDir())
+                if p.device is not None:
+                    Util.cmdCall("mount", "-t", p.fstype, "-o", p.opts, p.device, p.getRealDir())
 
     @property
     def mount_point(self):
@@ -816,9 +816,9 @@ class Mount(abc.ABC):
         ret = []
         for p in self._mntParams:
             item = MountEntry()
-            item.device = p.target
+            item.device = p.device
             item.mountpoint = p.dir_path
-            item.fstype = p.fs_type
+            item.fstype = p.fstype
             item.opts = PhysicalDiskMounts.find_entry_by_mount_point(p.getRealDir()).opts
             item.real_dir_path = p.getRealDir()
             ret.append(item)
@@ -826,7 +826,7 @@ class Mount(abc.ABC):
 
     def umount(self):
         for p in reversed(self._mntParams):
-            if p.target is not None:
+            if p.device is not None:
                 Util.cmdCall("umount", p.getRealDir())
 
     @abc.abstractmethod
@@ -885,15 +885,15 @@ class MountEfi(Mount):
         return self._rwCtrl
 
     def mount_esp(self, parti):
-        assert self._pEsp.target is None
-        Util.cmdCall("mount", "-t", self._pEsp.fs_type, "-o", self._pEsp.mnt_opts, parti, self._pEsp.getRealDir())
-        self._pEsp.target = parti
+        assert self._pEsp.device is None
+        Util.cmdCall("mount", "-t", self._pEsp.fstype, "-o", self._pEsp.opts, parti, self._pEsp.getRealDir())
+        self._pEsp.device = parti
 
     def umount_esp(self, parti):
-        assert parti == self._pEsp.target
+        assert parti == self._pEsp.device
         assert not self._isMountParamWritable(self._pEsp)
         Util.cmdCall("umount", self._pEsp.getRealDir())
-        self._pEsp.target = None
+        self._pEsp.device = None
 
     def _findRootfsMountParam(self):
         for p in self.mount_params:
@@ -913,7 +913,7 @@ class MountEfi(Mount):
 
 class MountParam:
 
-    def __init__(self, dir_path, dir_mode, dir_uid, dir_gid, target=None, fs_type=None, mnt_opt_list=None):
+    def __init__(self, dir_path, dir_mode, dir_uid, dir_gid, device=None, fstype=None, mnt_opt_list=None):
         assert dir_path.startswith("/")
 
         if dir_path == "/":
@@ -921,21 +921,21 @@ class MountParam:
         elif dir_path == "/boot":
             assert dir_mode == 0o40755 and dir_uid == 0 and dir_gid == 0 and mnt_opt_list == Util.bootDirMntOptList
 
-        if target is None:
-            assert fs_type is None and mnt_opt_list is None
+        if device is None:
+            assert fstype is None and mnt_opt_list is None
         else:
-            assert fs_type is not None and mnt_opt_list is not None
+            assert fstype is not None and mnt_opt_list is not None
 
         self.dir_path = dir_path
         self.dir_mode = dir_mode
         self.dir_uid = dir_uid
         self.dir_gid = dir_gid
-        self.target = target
-        self.fs_type = fs_type
-        self.mnt_opt_list = mnt_opt_list
+        self.device = device                # can be None
+        self.fstype = fstype                # can be None
+        self.mnt_opt_list = mnt_opt_list    # can be None
 
     @property
-    def mnt_opts(self):
+    def opts(self):
         return ",".join(self.mnt_opt_list)
 
     def setMountObj(self, mountObj):
