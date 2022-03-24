@@ -621,6 +621,19 @@ class Snapshot(abc.ABC):
                 __mkSubVol(name, mode, uid, gid)
             __mkDir("@snapshots", 0o40700, 0, 0)
 
+    @classmethod
+    def checkFs(cls, storageLayoutName, devPath, mntOpts, snapshot):
+        nameList = [x[1] for x in ([cls._rootSubVol()] + cls._homeSubVols() + cls._varSubVols())]
+        with TmpMount(devPath, options=mntOpts) as mp:
+            svList = cls._getSubVolList(mp.mountpoint)
+            for sv in nameList:
+                if snapshot is not None:
+                    sv = "@snapshots/%s/%s" % (snapshot, sv)
+                try:
+                    svList.remove(sv)
+                except ValueError:
+                    raise errors.StorageLayoutParseError(storageLayoutName, "sub-volume \"%s\" not found" % (sv))
+
     @staticmethod
     def proxy(func):
         if isinstance(func, property):
@@ -642,45 +655,90 @@ class Snapshot(abc.ABC):
         return self._snapshotName
 
     def get_snapshot_list(self):
-        ret = []
+        ret = set()
         for sv in self._getSubVolList():
-            m = re.fullmatch("@snapshots/([^/]+)", sv)
+            m = re.fullmatch("@snapshots/([^/]+)/@.+", sv)
             if m is not None:
-                ret.append(m.group(1))
+                ret.add(m.group(1))
         return ret
 
     def create_snapshot(self, snapshot_name):
-        self._createSnapshotSubVol(self._mntDir, "@", os.path.join("@snapshots", snapshot_name))
+        # self._createSnapshotSubVol(self._mntDir, "@", os.path.join("@snapshots", snapshot_name))
+        assert False
 
     def remove_snapshot(self, snapshot_name):
-        self._deleteSubVol(os.path.join("@snapshots", snapshot_name))
+        # self._deleteSubVol(os.path.join("@snapshots", snapshot_name))
+        assert False
 
     def getParamsForMount(self):
         ret = []
-        if self._snapshotName is None:
-            ret.append(("/", 0o40755, 0, 0, ["subvol=/@"]))
-        else:
-            assert self._snapshotName in self.get_snapshot_list()
-            ret.append(("/", 0o40755, 0, 0, ["subvol=/#snapshots/%s/@" % (self._snapshotName)]))
+        if True:
+            path, name, mode, uid, gid = self._rootSubVol()
+            if self._snapshotName is not None:
+                name = "@snapshots/%s/%s" % (self._snapshotName, name)
+            ret.append((path, mode, uid, gid, ["subvol=/%s" % (name)]))
         for path, name, mode, uid, gid in (self._homeSubVols() + self._varSubVols()):
             ret.append((path, mode, uid, gid, ["subvol=/%s" % (name)]))
         return ret
 
-    def getDirpathsForUmount(self):
-        return ["/var", "/home", "/root", "/"]
-
     def check(self, auto_fix, error_callback):
+        nameList = [x[1] for x in ([self._rootSubVol()] + self._homeSubVols() + self._varSubVols())]
         svList = self._getSubVolList(self._mntDir)
-        for sv in ["@", "@root", "@home", "@var", "@snapshots"]:
+
+        # check existence
+        for sv in nameList:
             try:
                 svList.remove(sv)
             except ValueError:
                 # no way to auto fix
-                error_callback(errors.CheckCode.TRIVIAL, "Sub-volume \"%s\" does not exist." % (sv))
+                error_callback(errors.CheckCode.TRIVIAL, "Sub-volume \"%s\" does not exist." % (e))
+
+        # fill sinfoDict
+        sinfoDict = dict()
         for sv in svList:
-            if not re.fullmatch("@snapshots/([^/]+)", sv) is not None:
-                # no way to auto fix
+            if sv.startswith("@var-"):
+                if "/" not in sv:
+                    # too dangerous to auto fix
+                    error_callback(errors.CheckCode.TRIVIAL, "Redundant sub-volume \"%s\"." % (sv))
+                else:
+                    pass
+            elif sv.startswith("@snapshots/"):
+                m = re.fullmatch("@snapshots/([^/]+)/(@.+)", sv)
+                if m is None:
+                    # too dangerous to auto fix
+                    error_callback(errors.CheckCode.TRIVIAL, "Redundant sub-volume \"%s\"." % (sv))
+                if m.group(1) not in sinfoDict:
+                    sinfoDict[m.group(1)] = [m.group(2)]
+                else:
+                    sinfoDict[m.group(1)].append(m.group(2))
+            else:
+                # too dangerous to auto fix
                 error_callback(errors.CheckCode.TRIVIAL, "Redundant sub-volume \"%s\"." % (sv))
+
+        for snapshotName, svList in sinfoDict.items():
+            # check existence
+            for sv in nameList:
+                try:
+                    svList.remove(sv)
+                except ValueError:
+                    # no way to auto fix
+                    error_callback(errors.CheckCode.TRIVIAL, "Sub-volume \"@snapshots/%s/%s\" does not exist." % (snapshotName, sv))
+
+            # check redundancy
+            for sv in svList:
+                if sv.startswith("@var-"):
+                    if "/" not in sv:
+                        # too dangerous to auto fix
+                        error_callback(errors.CheckCode.TRIVIAL, "Redundant sub-volume \"@snapshots/%s/%s\"." % (snapshotName, sv))
+                    else:
+                        pass
+                else:
+                    # too dangerous to auto fix
+                    error_callback(errors.CheckCode.TRIVIAL, "Redundant sub-volume \"@snapshots/%s/%s\"." % (snapshotName, sv))
+
+    @staticmethod
+    def _rootSubVol():
+        return ("/", "@", 0o40700, 0, 0)
 
     @staticmethod
     def _homeSubVols():
