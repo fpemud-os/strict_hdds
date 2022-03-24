@@ -95,11 +95,11 @@ class StorageLayout(abc.ABC):
 class MountEntry:
 
     def __init__(self):
-        self.mnt_point = None
+        self.device = None
+        self.mountpoint = None
+        self.fstype = None
+        self.opts = None
         self.real_dir_path = None
-        self.target = None
-        self.fs_type = None
-        self.mnt_opts = None
 
 
 class RwController(abc.ABC):
