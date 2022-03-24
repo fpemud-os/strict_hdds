@@ -79,13 +79,11 @@ class Util:
 
     @staticmethod
     def mntGetSubVol(mountPoint):
-        for pobj in psutil.disk_partitions():
-            if pobj.mountpoint == mountPoint:
-                for mo in pobj.opts.split(","):
-                    m = re.fullmatch("subvol=(.+)", mo)
-                    if m is not None:
-                        return m.group(1)
-                return None
+        pobj = PhysicalDiskMounts.find_entry_by_mount_point(mountPoint)
+        for mo in pobj.opts.split(","):
+            m = re.fullmatch("subvol=(.+)", mo)
+            if m is not None:
+                return m.group(1)
         return None
 
     @staticmethod

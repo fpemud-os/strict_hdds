@@ -604,25 +604,22 @@ class Snapshot(abc.ABC):
     @classmethod
     def initializeFs(cls, devPath, mntOpts):
         with TmpMount(devPath, options=mntOpts) as mp:
-            cls._createSubVol(mp.mountpoint, "@")
-            os.chown(os.path.join(mp.mountpoint, "@"), 0, 0)
-            os.chmod(os.path.join(mp.mountpoint, "@"), 0o40755)
+            def __mkSubVol(name, mode, uid, gid):
+                cls._createSubVol(mp.mountpoint, name)
+                dirpath = os.path.join(mp.mountpoint, name)
+                os.chown(dirpath, uid, gid)
+                os.chmod(dirpath, mode)
 
-            cls._createSubVol(mp.mountpoint, "@root")
-            os.chown(os.path.join(mp.mountpoint, "@root"), 0, 0)
-            os.chmod(os.path.join(mp.mountpoint, "@root"), 0o40700)
+            def __mkDir(name, mode, uid, gid):
+                dirpath = os.path.join(mp.mountpoint, name)
+                os.mkdir(dirpath)
+                os.chown(dirpath, uid, gid)
+                os.chmod(dirpath, mode)
 
-            cls._createSubVol(mp.mountpoint, "@home")
-            os.chown(os.path.join(mp.mountpoint, "@home"), 0, 0)
-            os.chmod(os.path.join(mp.mountpoint, "@home"), 0o40755)
-
-            cls._createSubVol(mp.mountpoint, "@var")
-            os.chown(os.path.join(mp.mountpoint, "@var"), 0, 0)
-            os.chmod(os.path.join(mp.mountpoint, "@var"), 0o40755)
-
-            cls._createSubVol(mp.mountpoint, "@snapshots")
-            os.chown(os.path.join(mp.mountpoint, "@snapshots"), 0, 0)
-            os.chmod(os.path.join(mp.mountpoint, "@snapshots"), 0o40700)
+            __mkSubVol("@", 0o40755, 0, 0)
+            for path, name, mode, uid, gid in (cls._homeSubVols() + cls._varSubVols()):
+                __mkSubVol(name, mode, uid, gid)
+            __mkDir("@snapshots", 0o40700, 0, 0)
 
     @staticmethod
     def proxy(func):
@@ -636,15 +633,13 @@ class Snapshot(abc.ABC):
                 return getattr(self._snapshot, func.__name__)(*args)
             return f
 
-    def __init__(self, mntDir):
+    def __init__(self, mntDir, snapshot=None):
         self._mntDir = mntDir
+        self._snapshotName = snapshot
 
     @property
     def snapshot(self):
-        ret = Util.mntGetSubVol(self._mntDir)
-        if not ret.startswith("@"):
-            raise errors.StorageLayoutParseError("sub-volume \"%s\" is not supported" % (ret))
-        return ret[1:]
+        return self._snapshotName
 
     def get_snapshot_list(self):
         ret = []
@@ -660,18 +655,15 @@ class Snapshot(abc.ABC):
     def remove_snapshot(self, snapshot_name):
         self._deleteSubVol(os.path.join("@snapshots", snapshot_name))
 
-    def getParamsForMount(self, kwargsDict):
+    def getParamsForMount(self):
         ret = []
-        if "snapshot" not in kwargsDict:
+        if self._snapshotName is None:
             ret.append(("/", 0o40755, 0, 0, ["subvol=/@"]))
         else:
-            assert kwargsDict["snapshot"] in self.get_snapshot_list()
-            ret.append(("/", 0o40755, 0, 0, ["subvol=/@snapshots/%s" % (kwargsDict["snapshot"])]))
-        ret += [
-            ("/root", 0o40700, 0, 0, ["subvol=/@root"]),
-            ("/home", 0o40755, 0, 0, ["subvol=/@home"]),
-            ("/var", 0o40755, 0, 0, ["subvol=/@var"]),
-        ]
+            assert self._snapshotName in self.get_snapshot_list()
+            ret.append(("/", 0o40755, 0, 0, ["subvol=/#snapshots/%s/@" % (self._snapshotName)]))
+        for path, name, mode, uid, gid in (self._homeSubVols() + self._varSubVols()):
+            ret.append((path, mode, uid, gid, ["subvol=/%s" % (name)]))
         return ret
 
     def getDirpathsForUmount(self):
@@ -689,6 +681,27 @@ class Snapshot(abc.ABC):
             if not re.fullmatch("@snapshots/([^/]+)", sv) is not None:
                 # no way to auto fix
                 error_callback(errors.CheckCode.TRIVIAL, "Redundant sub-volume \"%s\"." % (sv))
+
+    @staticmethod
+    def _homeSubVols():
+        return [
+            ("/root", "@root", 0o40700, 0, 0),
+            ("/home", "@home", 0o40755, 0, 0),
+        ]
+
+    @staticmethod
+    def _varSubVols():
+        return [
+            ("/var/cache", "@var-cache", 0o40755, 0, 0)
+            ("/var/db",    "@var-db",    0o40755, 0, 0)
+            ("/var/games", "@var-games", 0o40755, 0, 0)     # FIXME
+            ("/var/lib",   "@var-lib",   0o40755, 0, 0)
+            ("/var/log",   "@var-log",   0o40755, 0, 0)
+            ("/var/spool", "@var-spool", 0o40755, 0, 0)
+            ("/var/svc.d", "@var-svc.d", 0o40755, 0, 0)     # FIXME
+            ("/var/tmp",   "@var-tmp",   0o41777, 0, 0)
+            ("/var/www",   "@var-www",   0o40755, 0, 0)     # FIXME        
+        ]
 
     @staticmethod
     @abc.abstractmethod

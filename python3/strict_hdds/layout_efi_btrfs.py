@@ -198,14 +198,20 @@ def parse(boot_dev, root_dev, mount_dir):
     diskList = [PartiUtil.partiToDisk(x) for x in partiList]
     bootHdd = HandyMd.checkAndGetBootDiskFromBootDev(StorageLayoutImpl.name, boot_dev, diskList)
 
-    # FIXME: get kwargsDict from mount options
+    # get kwargsDict from mount options
     kwargsDict = dict()
+    if True:
+        ret = Util.mntGetSubVol(self._mntDir)
+        if ret is not None:
+            if not ret.startswith("@"):
+                raise errors.StorageLayoutParseError("sub-volume \"%s\" is not supported" % (ret))
+            kwargsDict["snapshot"] = ret[1:]
 
     # return
     ret = StorageLayoutImpl()
     ret._md = EfiMultiDisk(diskList=diskList, bootHdd=bootHdd)
-    ret._snapshot = SnapshotBtrfs(mount_dir)
-    ret._mnt = MountEfi(True, mount_dir, _params_for_mount(ret, kwargsDict), kwargsDict)
+    ret._snapshot = SnapshotBtrfs(mount_dir, snapshot=kwargsDict.get("snapshot", None))
+    ret._mnt = MountEfi(True, mount_dir, _params_for_mount(ret), kwargsDict)
     return ret
 
 
@@ -231,8 +237,8 @@ def detect_and_mount(disk_list, mount_dir, kwargsDict):
     # return
     ret = StorageLayoutImpl()
     ret._md = EfiMultiDisk(diskList=diskList, bootHdd=bootHdd)
-    ret._snapshot = SnapshotBtrfs(mount_dir)
-    ret._mnt = MountEfi(False, mount_dir, _params_for_mount(ret, kwargsDict), kwargsDict)       # do mount during MountEfi initialization
+    ret._snapshot = SnapshotBtrfs(mount_dir, snapshot=kwargsDict.get("snapshot", None))
+    ret._mnt = MountEfi(False, mount_dir, _params_for_mount(ret), kwargsDict)       # do mount during MountEfi initialization
     return ret
 
 
@@ -249,14 +255,14 @@ def create_and_mount(disk_list, mount_dir, kwargsDict):
     # return
     ret = StorageLayoutImpl()
     ret._md = md
-    ret._snapshot = SnapshotBtrfs(mount_dir)
-    ret._mnt = MountEfi(False, mount_dir, _params_for_mount(ret, kwargsDict), kwargsDict)       # do mount during MountEfi initialization
+    ret._snapshot = SnapshotBtrfs(mount_dir, snapshot=kwargsDict.get("snapshot", None))
+    ret._mnt = MountEfi(False, mount_dir, _params_for_mount(ret), kwargsDict)       # do mount during MountEfi initialization
     return ret
 
 
-def _params_for_mount(obj, kwargsDict):
+def _params_for_mount(obj):
     ret = []
-    for dirPath, dirMode, dirUid, dirGid, mntOptList in obj._snapshot.getParamsForMount(kwargsDict):
+    for dirPath, dirMode, dirUid, dirGid, mntOptList in obj._snapshot.getParamsForMount():
         tlist = mntOptList + ["device=%s" % (obj._md.get_disk_data_partition(x)) for x in obj._md.get_disk_list()]
         ret.append(MountParam(dirPath, dirMode, dirUid, dirGid, target=obj.dev_rootfs, fs_type=Util.fsTypeBtrfs, mnt_opt_list=tlist))
     ret.append(MountParam(Util.bootDir, 0o40755, 0, 0, target=obj.dev_boot, fs_type=Util.fsTypeFat, mnt_opt_list=Util.bootDirMntOptList))
