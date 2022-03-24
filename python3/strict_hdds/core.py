@@ -95,6 +95,12 @@ class StorageLayout(abc.ABC):
 class MountEntry:
 
     def __init__(self, device, mountpoint, fstype, opts, real_dir_path):
+        assert device is not None
+        assert os.path.isabs(mountpoint)
+        assert fstype is not None
+        assert opts is not None
+        assert real_dir_path is not None
+
         self.device = device
         self.mountpoint = mountpoint
         self.fstype = fstype

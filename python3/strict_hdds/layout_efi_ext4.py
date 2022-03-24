@@ -191,6 +191,6 @@ def create_and_mount(disk_list, mount_dir, kwargsDict):
 
 def _params_for_mount(obj):
     return [
-        MountParam("/", 0o40755, 0, 0, obj.dev_rootfs, Util.fsTypeExt4),
-        MountParam("/boot", 0o40755, 0, 0, obj.dev_boot, Util.fsTypeFat, mnt_opt_list=Util.bootDirMntOptList),
+        MountParam(Util.rootfsDir, *Util.rootfsDirModeUidGid, obj.dev_rootfs, Util.fsTypeExt4),
+        MountParam(Util.bootDir, *Util.bootDirModeUidGid, obj.dev_boot, Util.fsTypeFat, mnt_opt_list=Util.bootDirMntOptList),
     ]

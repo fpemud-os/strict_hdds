@@ -361,11 +361,11 @@ def create_and_mount(disk_list, mount_dir, kwargsDict):
 
 
 def _params_for_mount(obj):
+    tlist = _devMntOptList(obj._bcache)
     ret = []
     for dirPath, dirMode, dirUid, dirGid, mntOptList in obj._snapshot.getParamsForMount():
-        tlist = mntOptList + _devMntOptList(obj._bcache)
-        ret.append(MountParam(dirPath, dirMode, dirUid, dirGid, obj.dev_rootfs, Util.fsTypeBtrfs, mnt_opt_list=tlist))
-    ret.append(MountParam(Util.bootDir, 0o40755, 0, 0, obj.dev_boot, Util.fsTypeFat, mnt_opt_list=Util.bootDirMntOptList))
+        ret.append(MountParam(dirPath, dirMode, dirUid, dirGid, obj.dev_rootfs, Util.fsTypeBtrfs, mnt_opt_list=(mntOptList + tlist)))
+    ret.append(MountParam(Util.bootDir, *Util.bootDirModeUidGid, obj.dev_boot, Util.fsTypeFat, mnt_opt_list=Util.bootDirMntOptList))
     return ret
 
 

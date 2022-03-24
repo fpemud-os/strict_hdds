@@ -37,8 +37,15 @@ import subprocess
 
 class Util:
 
+    rootfsDir = "/"
+    rootfsDirModeUidGid = (0o40755, 0, 0)
+
     bootDir = "/boot"
+    bootDirModeUidGid = (0o40755, 0, 0)
     bootDirMntOptList = ["ro", "dmask=022", "fmask=133"]
+
+    varDir = "/var"
+    varDirModeuidGid = (0o40755, 0, 0)
 
     swapFilepath = "/var/cache/swap.dat"
 

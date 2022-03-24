@@ -623,7 +623,7 @@ class Snapshot(abc.ABC):
                 __mkSubVol(name, mode, uid, gid)
                 __mkDir(rootName + path, mode, uid, gid)
 
-            __mkDir(rootName + "/var", 0o40755, 0, 0)
+            __mkDir(rootName + Util.varDir, *Util.varDirModeuidGid)
             for path, name, mode, uid, gid in cls._varSubVols():
                 __mkSubVol(name, mode, uid, gid)
                 __mkDir(rootName + path, mode, uid, gid)
@@ -715,7 +715,7 @@ class Snapshot(abc.ABC):
 
     @staticmethod
     def _rootSubVol():
-        return ("/", "@", 0o40700, 0, 0)
+        return (Util.rootfsDir, *Util.rootfsDirModeUidGid)
 
     @staticmethod
     def _homeSubVols():
@@ -959,11 +959,6 @@ class MountParam(MountEntry):
 
     def __init__(self, dir_path, dir_mode, dir_uid, dir_gid, device, fstype, mnt_opt_list=[]):
         assert dir_path.startswith("/")
-
-        if dir_path == "/":
-            assert dir_mode == 0o40755 and dir_uid == 0 and dir_gid == 0
-        elif dir_path == "/boot":
-            assert dir_mode == 0o40755 and dir_uid == 0 and dir_gid == 0 and mnt_opt_list == Util.bootDirMntOptList
 
         super().__init__(device, dir_path, fstype, ",".join(mnt_opt_list))
         self.mnt_dir_mode = dir_mode
