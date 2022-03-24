@@ -747,25 +747,25 @@ class SnapshotBtrfs(Snapshot):
         return ret
 
 
-class SnapshotBcachefs(Snapshot):
+# class SnapshotBcachefs(Snapshot):
 
-    @staticmethod
-    def _createSubVol(mntDir, subVolPath):
-        Util.cmdCall("bcachefs", "subvolume", "create", os.path.join(mntDir, subVolPath))
+#     @staticmethod
+#     def _createSubVol(mntDir, subVolPath):
+#         Util.cmdCall("bcachefs", "subvolume", "create", os.path.join(mntDir, subVolPath))
 
-    @staticmethod
-    def _createSnapshotSubVol(mntDir, srcSubVolPath, subVolPath):
-        Util.cmdCall("bcachefs", "subvolume", "snapshot", os.path.join(mntDir, srcSubVolPath), os.path.join(mntDir, subVolPath))
+#     @staticmethod
+#     def _createSnapshotSubVol(mntDir, srcSubVolPath, subVolPath):
+#         Util.cmdCall("bcachefs", "subvolume", "snapshot", os.path.join(mntDir, srcSubVolPath), os.path.join(mntDir, subVolPath))
 
-    @staticmethod
-    def _deleteSubVol(mntDir, subVolPath):
-        Util.cmdCall("bcachefs", "subvolume", "delete", os.path.join(mntDir, subVolPath))
+#     @staticmethod
+#     def _deleteSubVol(mntDir, subVolPath):
+#         Util.cmdCall("bcachefs", "subvolume", "delete", os.path.join(mntDir, subVolPath))
 
-    @staticmethod
-    def _getSubVolList(mntDir):
-        out = Util.cmdCall("bcachefs", "subvolume", "list", mntDir)
-        # FIXME: parse out
-        assert False
+#     @staticmethod
+#     def _getSubVolList(mntDir):
+#         out = Util.cmdCall("bcachefs", "subvolume", "list", mntDir)
+#         # FIXME: parse out
+#         assert False
 
 
 class Mount(abc.ABC):
