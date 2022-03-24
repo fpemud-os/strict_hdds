@@ -834,22 +834,22 @@ class Mount(abc.ABC):
         if not bIsMounted:
             for p in self._mntParams:
                 if p.mountpoint != "/":
-                    if not os.path.exists(p.real_dir):
-                        os.mkdir(p.real_dir)
-                        os.chmod(p.real_dir, p.mnt_dir_mode)
-                        os.chown(p.real_dir, p.mnt_dir_uid, p.mnt_dir_gid)
-                    elif os.path.isdir(p.real_dir) and not os.path.islink(p.real_dir):
-                        st = os.stat(p.real_dir)
+                    if not os.path.exists(p.real_dir_path):
+                        os.mkdir(p.real_dir_path)
+                        os.chmod(p.real_dir_path, p.mnt_dir_mode)
+                        os.chown(p.real_dir_path, p.mnt_dir_uid, p.mnt_dir_gid)
+                    elif os.path.isdir(p.real_dir_path) and not os.path.islink(p.real_dir_path):
+                        st = os.stat(p.real_dir_path)
                         if st.st_mode != p.mnt_dir_mode:
-                            raise errors.StorageLayoutMountError("mount directory \"%s\" has invalid permission" % (p.real_dir))
+                            raise errors.StorageLayoutMountError("mount directory \"%s\" has invalid permission" % (p.real_dir_path))
                         if st.st_uid != p.mnt_dir_uid:
-                            raise errors.StorageLayoutMountError("mount directory \"%s\" has invalid owner" % (p.real_dir))
+                            raise errors.StorageLayoutMountError("mount directory \"%s\" has invalid owner" % (p.real_dir_path))
                         if st.st_gid != p.mnt_dir_gid:
-                            raise errors.StorageLayoutMountError("mount directory \"%s\" has invalid owner group" % (p.real_dir))
+                            raise errors.StorageLayoutMountError("mount directory \"%s\" has invalid owner group" % (p.real_dir_path))
                     else:
-                        raise errors.StorageLayoutMountError("mount directory \"%s\" is invalid" % (p.real_dir))
+                        raise errors.StorageLayoutMountError("mount directory \"%s\" is invalid" % (p.real_dir_path))
                 if p.device is not None:
-                    Util.cmdCall("mount", "-t", p.fstype, "-o", p.opts, p.device, p.real_dir)
+                    Util.cmdCall("mount", "-t", p.fstype, "-o", p.opts, p.device, p.real_dir_path)
 
     @property
     def mount_point(self):
@@ -863,15 +863,15 @@ class Mount(abc.ABC):
         ret = []
         for p in self._mntParams:
             item = MountEntry(p.device, p.mountpoint, p.fstype,
-                              PhysicalDiskMounts.find_entry_by_mount_point(p.real_dir).opts,
-                              p.real_dir)
+                              PhysicalDiskMounts.find_entry_by_mount_point(p.real_dir_path).opts,
+                              p.real_dir_path)
             ret.append(item)
         return ret
 
     def umount(self):
         for p in reversed(self._mntParams):
             if p.device is not None:
-                Util.cmdCall("umount", p.real_dir)
+                Util.cmdCall("umount", p.real_dir_path)
 
     @abc.abstractmethod
     def get_bootdir_rw_controller(self):
@@ -913,11 +913,11 @@ class MountEfi(Mount):
         def to_read_write(self):
             assert self._parent._isMountParamWritable(self._parent._pRootfs)
             assert not self._parent._isMountParamWritable(self._parent._pEsp)
-            Util.cmdCall("mount", self._parent._pEsp.real_dir, "-o", "rw,remount")
+            Util.cmdCall("mount", self._parent._pEsp.real_dir_path, "-o", "rw,remount")
 
         def to_read_only(self):
             assert self._parent._isMountParamWritable(self._parent._pEsp)
-            Util.cmdCall("mount", self._parent._pEsp.real_dir, "-o", "ro,remount")
+            Util.cmdCall("mount", self._parent._pEsp.real_dir_path, "-o", "ro,remount")
 
     def __init__(self, bIsMounted, mntDir, mntParams, kwargsDict):
         super().__init__(bIsMounted, mntDir, mntParams, kwargsDict)
@@ -930,13 +930,13 @@ class MountEfi(Mount):
 
     def mount_esp(self, parti):
         assert self._pEsp.device is None
-        Util.cmdCall("mount", "-t", self._pEsp.fstype, "-o", self._pEsp.opts, parti, self._pEsp.real_dir)
+        Util.cmdCall("mount", "-t", self._pEsp.fstype, "-o", self._pEsp.opts, parti, self._pEsp.real_dir_path)
         self._pEsp.device = parti
 
     def umount_esp(self, parti):
         assert parti == self._pEsp.device
         assert not self._isMountParamWritable(self._pEsp)
-        Util.cmdCall("umount", self._pEsp.real_dir)
+        Util.cmdCall("umount", self._pEsp.real_dir_path)
         self._pEsp.device = None
 
     def _findRootfsMountParam(self):
@@ -952,24 +952,36 @@ class MountEfi(Mount):
         assert False
 
     def _isMountParamWritable(self, p):
-        return ("rw" in PhysicalDiskMounts.find_entry_by_mount_point(p.real_dir).mnt_opt_list)
+        return ("rw" in PhysicalDiskMounts.find_entry_by_mount_point(p.real_dir_path).mnt_opt_list)
 
 
 class MountParam(MountEntry):
 
     def __init__(self, dir_path, dir_mode, dir_uid, dir_gid, device, fstype, mnt_opt_list=[]):
-        assert dir_path.startswith("/")
+        assert os.path.isabs(dir_path)
+        assert dir_mode is not None
+        assert isinstance(dir_uid, int)
+        assert isinstance(dir_gid, int)
+        assert device is not None
+        assert fstype is not None
+        assert mnt_opt_list is not None
 
-        super().__init__(device, dir_path, fstype, ",".join(mnt_opt_list))
+        self.device = device
+        self.mountpoint = dir_path
+        self.fstype = fstype
+        self.opts = ",".join(mnt_opt_list)
+
+        self.mnt_opt_list = mnt_opt_list
         self.mnt_dir_mode = dir_mode
         self.mnt_dir_uid = dir_uid
         self.mnt_dir_gid = dir_gid
+        self.real_dir_path = None           # the whole object is not valid until self.real_dir_path gets its value
 
     def setMountObj(self, mountObj):
         if self.mountpoint == "/":
-            self.real_dir = mountObj.mount_point
+            self.real_dir_path = mountObj.mount_point
         else:
-            self.real_dir = os.path.join(mountObj.mount_point, self.mountpoint[1:])
+            self.real_dir_path = os.path.join(mountObj.mount_point, self.mountpoint[1:])
 
 
 class HandyMd:
