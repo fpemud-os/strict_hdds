@@ -955,7 +955,7 @@ class MountEfi(Mount):
         return ("rw" in PhysicalDiskMounts.find_entry_by_mount_point(p.real_dir_path).mnt_opt_list)
 
 
-class MountParam(MountEntry):
+class MountParam:
 
     def __init__(self, dir_path, dir_mode, dir_uid, dir_gid, device, fstype, mnt_opt_list=[]):
         assert os.path.isabs(dir_path)
