@@ -715,7 +715,7 @@ class Snapshot(abc.ABC):
 
     @staticmethod
     def _rootSubVol():
-        return (Util.rootfsDir, *Util.rootfsDirModeUidGid)
+        return (Util.rootfsDir, "@", *Util.rootfsDirModeUidGid)
 
     @staticmethod
     def _homeSubVols():
