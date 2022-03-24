@@ -628,7 +628,7 @@ class Snapshot(abc.ABC):
                 __mkSubVol(name, mode, uid, gid)
                 __mkDir(rootName + path, mode, uid, gid)
 
-            __mkDir("@snapshots", 0o40700, 0, 0)
+            __mkSubVol("@snapshots", 0o40700, 0, 0)
 
     @classmethod
     def checkFs(cls, storageLayoutName, devPath, mntOpts, snapshot):
@@ -664,16 +664,15 @@ class Snapshot(abc.ABC):
         return self._snapshotName
 
     def get_snapshot_list(self):
-        # ret = []
-        # for sv in self._getSubVolList():
-        #     m = re.fullmatch("@snapshots/([^/]+)/snapshot", sv)
-        #     if m is not None:
-        #         ret.append(m.group(1))
-        # return ret
-        assert False
+        ret = []
+        for sv in self._getSubVolList():
+            m = re.fullmatch("@snapshots/([^/]+)/snapshot", sv)
+            if m is not None:
+                ret.append(m.group(1))
+        return ret
 
     def create_snapshot(self, snapshot_name):
-        # self._createSnapshotSubVol(self._mntDir, "@", os.path.join("@snapshots", snapshot_name))
+        # self._createSnapshotSubVol(self._mntDir, "@", os.path.join("@snapshots", snapshot_name, "snapshot"))
         assert False
 
     def remove_snapshot(self, snapshot_name):
