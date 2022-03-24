@@ -106,14 +106,6 @@ class MountEntry:
         return self.opts.split(",")
 
 
-class Snapshot:
-
-    def __init__(self):
-        self.name = None
-        self.description = None     # FIXME
-        self.datetime = None        # FIXME
-
-
 class RwController(abc.ABC):
 
     @abc.abstractmethod
