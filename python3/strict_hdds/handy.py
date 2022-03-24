@@ -949,7 +949,10 @@ class MountParam:
 
     @property
     def opts(self):
-        return ",".join(self.mnt_opt_list)
+        if self.mnt_opt_list is not None:
+            return ",".join(self.mnt_opt_list)
+        else:
+            return None
 
     def setMountObj(self, mountObj):
         if self.dir_path == "/":
