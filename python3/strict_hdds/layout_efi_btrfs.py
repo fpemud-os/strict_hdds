@@ -264,6 +264,6 @@ def _params_for_mount(obj):
     ret = []
     for dirPath, dirMode, dirUid, dirGid, mntOptList in obj._snapshot.getParamsForMount():
         tlist = mntOptList + ["device=%s" % (obj._md.get_disk_data_partition(x)) for x in obj._md.get_disk_list()]
-        ret.append(MountParam(dirPath, dirMode, dirUid, dirGid, device=obj.dev_rootfs, fstype=Util.fsTypeBtrfs, mnt_opt_list=tlist))
-    ret.append(MountParam(Util.bootDir, 0o40755, 0, 0, device=obj.dev_boot, fstype=Util.fsTypeFat, mnt_opt_list=Util.bootDirMntOptList))
+        ret.append(MountParam(dirPath, dirMode, dirUid, dirGid, obj.dev_rootfs, Util.fsTypeBtrfs, mnt_opt_list=tlist))
+    ret.append(MountParam(Util.bootDir, 0o40755, 0, 0, obj.dev_boot, Util.fsTypeFat, mnt_opt_list=Util.bootDirMntOptList))
     return ret
