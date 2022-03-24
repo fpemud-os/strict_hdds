@@ -828,12 +828,9 @@ class Mount(abc.ABC):
     def get_mount_entries(self):
         ret = []
         for p in self._mntParams:
-            item = MountEntry()
-            item.device = p.device
-            item.mountpoint = p.dir_path
-            item.fstype = p.fstype
-            item.opts = PhysicalDiskMounts.find_entry_by_mount_point(p.getRealDir()).opts
-            item.real_dir_path = p.getRealDir()
+            item = MountEntry(p.device, p.dir_path, p.fstype,
+                              PhysicalDiskMounts.find_entry_by_mount_point(p.getRealDir()).opts,
+                              p.getRealDir())
             ret.append(item)
         return ret
 
