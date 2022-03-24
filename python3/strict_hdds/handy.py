@@ -624,11 +624,11 @@ class Snapshot(abc.ABC):
     @classmethod
     def checkFs(cls, storageLayoutName, devPath, mntOpts, snapshot):
         nameList = [x[1] for x in ([cls._rootSubVol()] + cls._homeSubVols() + cls._varSubVols())]
+        if snapshot is not None:
+            nameList.append("@snapshots/%s/snapshot" % (snapshot))
         with TmpMount(devPath, options=mntOpts) as mp:
             svList = cls._getSubVolList(mp.mountpoint)
             for sv in nameList:
-                if snapshot is not None:
-                    sv = "@snapshots/%s/%s" % (snapshot, sv)
                 try:
                     svList.remove(sv)
                 except ValueError:
@@ -655,12 +655,13 @@ class Snapshot(abc.ABC):
         return self._snapshotName
 
     def get_snapshot_list(self):
-        ret = set()
-        for sv in self._getSubVolList():
-            m = re.fullmatch("@snapshots/([^/]+)/@.+", sv)
-            if m is not None:
-                ret.add(m.group(1))
-        return ret
+        # ret = []
+        # for sv in self._getSubVolList():
+        #     m = re.fullmatch("@snapshots/([^/]+)/snapshot", sv)
+        #     if m is not None:
+        #         ret.append(m.group(1))
+        # return ret
+        assert False
 
     def create_snapshot(self, snapshot_name):
         # self._createSnapshotSubVol(self._mntDir, "@", os.path.join("@snapshots", snapshot_name))
@@ -675,7 +676,7 @@ class Snapshot(abc.ABC):
         if True:
             path, name, mode, uid, gid = self._rootSubVol()
             if self._snapshotName is not None:
-                name = "@snapshots/%s/%s" % (self._snapshotName, name)
+                name = "@snapshots/%s/snapshot" % (self._snapshotName)
             ret.append((path, mode, uid, gid, ["subvol=/%s" % (name)]))
         for path, name, mode, uid, gid in (self._homeSubVols() + self._varSubVols()):
             ret.append((path, mode, uid, gid, ["subvol=/%s" % (name)]))
@@ -690,51 +691,19 @@ class Snapshot(abc.ABC):
             try:
                 svList.remove(sv)
             except ValueError:
-                # no way to auto fix
-                error_callback(errors.CheckCode.TRIVIAL, "Sub-volume \"%s\" does not exist." % (e))
+                error_callback(errors.CheckCode.TRIVIAL, "Sub-volume \"%s\" does not exist." % (e))     # no way to auto fix
 
-        # fill sinfoDict
-        sinfoDict = dict()
+        # check redundancy
+        prefixList = [x[1] + "/" for x in (self._homeSubVols() + self._varSubVols())]
         for sv in svList:
-            if sv.startswith("@var-"):
-                if "/" not in sv:
-                    # too dangerous to auto fix
-                    error_callback(errors.CheckCode.TRIVIAL, "Redundant sub-volume \"%s\"." % (sv))
-                else:
-                    pass
+            if any([sv.startswith(x) for x in prefixList]):
+                # sub-volumes created by other programs
+                pass
             elif sv.startswith("@snapshots/"):
-                m = re.fullmatch("@snapshots/([^/]+)/(@.+)", sv)
-                if m is None:
-                    # too dangerous to auto fix
-                    error_callback(errors.CheckCode.TRIVIAL, "Redundant sub-volume \"%s\"." % (sv))
-                if m.group(1) not in sinfoDict:
-                    sinfoDict[m.group(1)] = [m.group(2)]
-                else:
-                    sinfoDict[m.group(1)].append(m.group(2))
+                if not re.fullmatch("@snapshots/[^/]+/snapshot", sv):
+                    error_callback(errors.CheckCode.TRIVIAL, "Redundant sub-volume \"%s\"." % (sv))     # too dangerous to auto fix
             else:
-                # too dangerous to auto fix
-                error_callback(errors.CheckCode.TRIVIAL, "Redundant sub-volume \"%s\"." % (sv))
-
-        for snapshotName, svList in sinfoDict.items():
-            # check existence
-            for sv in nameList:
-                try:
-                    svList.remove(sv)
-                except ValueError:
-                    # no way to auto fix
-                    error_callback(errors.CheckCode.TRIVIAL, "Sub-volume \"@snapshots/%s/%s\" does not exist." % (snapshotName, sv))
-
-            # check redundancy
-            for sv in svList:
-                if sv.startswith("@var-"):
-                    if "/" not in sv:
-                        # too dangerous to auto fix
-                        error_callback(errors.CheckCode.TRIVIAL, "Redundant sub-volume \"@snapshots/%s/%s\"." % (snapshotName, sv))
-                    else:
-                        pass
-                else:
-                    # too dangerous to auto fix
-                    error_callback(errors.CheckCode.TRIVIAL, "Redundant sub-volume \"@snapshots/%s/%s\"." % (snapshotName, sv))
+                error_callback(errors.CheckCode.TRIVIAL, "Redundant sub-volume \"%s\"." % (sv))         # too dangerous to auto fix
 
     @staticmethod
     def _rootSubVol():
@@ -750,15 +719,15 @@ class Snapshot(abc.ABC):
     @staticmethod
     def _varSubVols():
         return [
-            ("/var/cache", "@var-cache", 0o40755, 0, 0)
-            ("/var/db",    "@var-db",    0o40755, 0, 0)
-            ("/var/games", "@var-games", 0o40755, 0, 0)     # FIXME
-            ("/var/lib",   "@var-lib",   0o40755, 0, 0)
-            ("/var/log",   "@var-log",   0o40755, 0, 0)
-            ("/var/spool", "@var-spool", 0o40755, 0, 0)
-            ("/var/svc.d", "@var-svc.d", 0o40755, 0, 0)     # FIXME
-            ("/var/tmp",   "@var-tmp",   0o41777, 0, 0)
-            ("/var/www",   "@var-www",   0o40755, 0, 0)     # FIXME        
+            ("/var/cache", "@var_cache", 0o40755, 0, 0)
+            ("/var/db",    "@var_db",    0o40755, 0, 0)
+            ("/var/games", "@var_games", 0o40755, 0, 0)     # FIXME
+            ("/var/lib",   "@var_lib",   0o40755, 0, 0)
+            ("/var/log",   "@var_log",   0o40755, 0, 0)
+            ("/var/spool", "@var_spool", 0o40755, 0, 0)
+            ("/var/svc.d", "@var_svc.d", 0o40755, 0, 0)     # FIXME
+            ("/var/tmp",   "@var_tmp",   0o41777, 0, 0)
+            ("/var/www",   "@var_www",   0o40755, 0, 0)     # FIXME        
         ]
 
     @staticmethod
