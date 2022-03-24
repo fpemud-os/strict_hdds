@@ -79,12 +79,7 @@ class Util:
 
     @staticmethod
     def mntGetSubVol(mountPoint):
-<<<<<<< HEAD
-        pobj = PhysicalDiskMounts.find_entry_by_mount_point(mountPoint)
-        for mo in pobj.opts.split(","):
-=======
         for mo in PhysicalDiskMounts.find_entry_by_mount_point(mountPoint).mnt_opt_list:
->>>>>>> da89b0c (fix)
             m = re.fullmatch("subvol=(.+)", mo)
             if m is not None:
                 return m.group(1)
