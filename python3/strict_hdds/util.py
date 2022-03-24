@@ -79,13 +79,10 @@ class Util:
 
     @staticmethod
     def mntGetSubVol(mountPoint):
-        for pobj in psutil.disk_partitions():
-            if pobj.mountpoint == mountPoint:
-                for mo in pobj.opts.split(","):
-                    m = re.fullmatch("subvol=(.+)", mo)
-                    if m is not None:
-                        return m.group(1)
-                return None
+        for mo in PhysicalDiskMounts.find_entry_by_mount_point(mountPoint).mnt_opt_list:
+            m = re.fullmatch("subvol=(.+)", mo)
+            if m is not None:
+                return m.group(1)
         return None
 
     @staticmethod
@@ -1138,14 +1135,30 @@ class PhysicalDiskMounts:
     class Entry:
 
         def __init__(self, p):
-            self.dev = p.device
-            self.mount_point = p.mountpoint
-            self.fs_type = p.fstype
-            self.mnt_opts = p.opts
+            self._p = p
+
+        @property
+        def device(self):
+            return self._p.device
+
+        @property
+        def mountpoint(self):
+            return self._p.mountpoint
+
+        @property
+        def fstype(self):
+            return self._p.fstype
+
+        @property
+        def opts(self):
+            return self._p.opts
 
         @property
         def mnt_opt_list(self):
-            return self.mnt_opts.split(",")
+            return self._p.opts.split(",")
+
+        def __repr__(self):
+            return "<%s %r>" % (self.__class__.__name__, self.__dict__)
 
     class NotFoundError(Exception):
         pass
@@ -1153,6 +1166,14 @@ class PhysicalDiskMounts:
     @classmethod
     def get_entries(cls):
         return [cls.Entry(p) for p in psutil.disk_partitions()]
+
+    @classmethod
+    def find_root_entry(cls):
+        ret = cls.find_entry_by_mount_point("/")
+        if ret is None:
+            raise cls.NotFoundError("no rootfs mount point")
+        else:
+            return ret
 
     @classmethod
     def find_entry_by_mount_point(cls, mount_point_path):

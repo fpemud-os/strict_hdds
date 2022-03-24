@@ -820,7 +820,7 @@ class Mount(abc.ABC):
             item.real_dir_path = p.getRealDir()
             item.target = p.target
             item.fs_type = p.fs_type
-            item.mnt_opts = PhysicalDiskMounts.find_entry_by_mount_point(p.getRealDir()).mnt_opts
+            item.mnt_opts = PhysicalDiskMounts.find_entry_by_mount_point(p.getRealDir()).opts
             ret.append(item)
         return ret
 
