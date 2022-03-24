@@ -692,9 +692,10 @@ class Snapshot(abc.ABC):
 
     def check(self, auto_fix, error_callback):
         nameList = [x[1] for x in ([self._rootSubVol()] + self._homeSubVols() + self._varSubVols())]
-        svList = self._getSubVolList(self._mntDir)
+        nameList.append("@snapshots")
 
         # check existence
+        svList = self._getSubVolList(self._mntDir)
         for sv in nameList:
             try:
                 svList.remove(sv)
