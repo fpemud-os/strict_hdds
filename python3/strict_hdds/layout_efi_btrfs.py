@@ -204,7 +204,7 @@ def parse(boot_dev, root_dev, mount_dir):
         ret = Util.mntGetSubVol(mount_dir)
         if ret is not None:
             if not ret.startswith("@"):
-                raise errors.StorageLayoutParseError("sub-volume \"%s\" is not supported" % (ret))
+                raise errors.StorageLayoutParseError(StorageLayoutImpl.name, "sub-volume \"%s\" is not supported" % (ret))
             kwargsDict["snapshot"] = ret[1:]
 
     # return
