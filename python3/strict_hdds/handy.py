@@ -616,7 +616,7 @@ class Snapshot(abc.ABC):
                 os.chown(dirpath, uid, gid)
                 os.chmod(dirpath, mode)
 
-            rootPath, rootName, mode, uid, gid = cls._rootSubVol()
+            path, rootName, mode, uid, gid = cls._rootSubVol()
             __mkSubVol(rootName, mode, uid, gid)
 
             for path, name, mode, uid, gid in cls._homeSubVols():
